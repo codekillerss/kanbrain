@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { buildSearchQuery } from './wiql';
 
 describe('buildSearchQuery', () => {
-  it('returns a title-ordered query with no filter when search text is empty', () => {
+  it('returns a title-ordered query capped at 50 results with no filter when search text is empty', () => {
     const query = buildSearchQuery('');
-    expect(query).toContain('SELECT [System.Id] FROM WorkItems');
+    expect(query).toContain('SELECT TOP 50 [System.Id] FROM WorkItems');
     expect(query).toContain('ORDER BY [System.ChangedDate] DESC');
     expect(query).not.toContain('CONTAINS');
   });
