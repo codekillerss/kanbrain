@@ -9,6 +9,11 @@ export interface WorkItemTypeState {
   color: string;
 }
 
+export interface WorkItemTypeIcon {
+  color: string;
+  iconSvg: string;
+}
+
 export type DiscoveredBacklogLevels = Record<string, Record<string, string>>;
 
 export function discoverBacklogLevelStates(

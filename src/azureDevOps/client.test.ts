@@ -5,6 +5,10 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
   return { ok, status, statusText: ok ? 'OK' : 'Error', json: async () => body, text: async () => JSON.stringify(body) } as Response;
 }
 
+function textResponse(body: string, ok = true, status = 200) {
+  return { ok, status, statusText: ok ? 'OK' : 'Error', text: async () => body, json: async () => JSON.parse(body) } as Response;
+}
+
 describe('AzureDevOpsClient', () => {
   it('lists organizations for the current user', async () => {
     const fetchImpl = vi
@@ -164,5 +168,41 @@ describe('AzureDevOpsClient', () => {
       'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/User%20Story/states?api-version=7.1',
       expect.anything(),
     );
+  });
+
+  it('fetches a work item type icon (type info, then the icon svg)', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          color: 'CC293D',
+          icon: { id: 'icon_insect', url: 'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect?color=CC293D&v=2' },
+        }),
+      )
+      .mockResolvedValueOnce(textResponse('<svg><path d="M0 0"/></svg>'));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const icon = await client.getWorkItemTypeIcon('my-org', 'MyProject', 'Bug');
+
+    expect(icon).toEqual({ color: 'CC293D', iconSvg: '<svg><path d="M0 0"/></svg>' });
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/Bug?api-version=7.1',
+      expect.anything(),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect?color=CC293D&v=2',
+      expect.anything(),
+    );
+  });
+
+  it('returns null when the work item type has no icon', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ color: 'CC293D' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const icon = await client.getWorkItemTypeIcon('my-org', 'MyProject', 'Bug');
+
+    expect(icon).toBeNull();
   });
 });

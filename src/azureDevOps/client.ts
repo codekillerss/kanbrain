@@ -1,7 +1,7 @@
 import type { WorkItem } from '../types';
 import { buildSearchQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
-import type { BacklogLevel, WorkItemTypeState } from './backlogLevels';
+import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
 
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
@@ -21,7 +21,7 @@ export interface AzureDevOpsProject {
 export class AzureDevOpsClient {
   constructor(private readonly deps: AzureDevOpsClientDeps) {}
 
-  private async request<T>(url: string, init?: RequestInit): Promise<T> {
+  private async fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
     const token = await this.deps.getToken();
     const response = await this.deps.fetchImpl(url, {
       ...init,
@@ -40,7 +40,17 @@ export class AzureDevOpsClient {
       }
       throw new Error(`Azure DevOps request failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`);
     }
+    return response;
+  }
+
+  private async request<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await this.fetchWithAuth(url, init);
     return (await response.json()) as T;
+  }
+
+  private async requestText(url: string, init?: RequestInit): Promise<string> {
+    const response = await this.fetchWithAuth(url, init);
+    return response.text();
   }
 
   async listOrganizations(): Promise<AzureDevOpsOrg[]> {
@@ -107,5 +117,16 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`,
     );
     return data.value.map(s => ({ name: s.name, category: s.category, color: s.color }));
+  }
+
+  async getWorkItemTypeIcon(organization: string, project: string, type: string): Promise<WorkItemTypeIcon | null> {
+    const typeInfo = await this.request<{ color?: string; icon?: { url: string } }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}?api-version=7.1`,
+    );
+    if (!typeInfo.icon?.url) {
+      return null;
+    }
+    const iconSvg = await this.requestText(typeInfo.icon.url);
+    return { color: typeInfo.color ?? '', iconSvg };
   }
 }
