@@ -62,6 +62,11 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] `Kanbrain: Setup`, after picking a project, asks whether to generate placeholder skill files per backlog level/category, and writes `backlogLevels`/`typeToBacklogLevel` reflecting the project's real process either way.
 - [ ] Answering "Sim" creates one skill file per backlog level + category (Proposed/InProgress/Resolved) under `.kanbrain/skills/`, and `Done`/`Removed`-category statuses map to `null`.
 - [ ] `Kanbrain: Select Work Item` search returns matching work items by title and by `#id`.
+- [ ] With no active work item, the panel shows a search box and, without typing anything, a list of up to 50 recent work items grouped by status.
+- [ ] Typing in the search box filters the list by title or `#id`.
+- [ ] Clicking a result in the list sets it as the active work item and persists the selection (survives a window reload).
+- [ ] With an active work item, the header shows a "🔍 Trocar work item" button that toggles the same search box open/closed without leaving the panel.
+- [ ] If the search request fails (e.g. token expired), the results area shows an inline error message instead of hanging or throwing.
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status/type badges and title.
 - [ ] Subtasks (Parent/Child linked work items) render under "Subtasks (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
