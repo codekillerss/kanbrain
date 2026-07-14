@@ -1,5 +1,6 @@
 import type { WorkItem, KanbrainConfig } from '../types';
 import { resolveSkillPath } from '../config/resolveSkillPath';
+import { escapeHtml } from './escapeHtml';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -9,21 +10,13 @@ export interface RenderState {
   subtasks: WorkItem[];
 }
 
-function esc(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skillPath = resolveSkillPath(config, workItem);
   if (!skillPath) {
     return '';
   }
   const label = skillPath.split('/').pop() ?? skillPath;
-  return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}">▶ ${esc(label)}</button>`;
+  return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}">▶ ${escapeHtml(label)}</button>`;
 }
 
 function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass: string): string {
@@ -31,10 +24,10 @@ function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass
     <div class="${cssClass}">
       <div class="kb-card-header">
         <span class="kb-id">#${workItem.id}</span>
-        <span class="kb-badge kb-status">${esc(workItem.status)}</span>
-        <span class="kb-badge kb-type">${esc(workItem.type)}</span>
+        <span class="kb-badge kb-status">${escapeHtml(workItem.status)}</span>
+        <span class="kb-badge kb-type">${escapeHtml(workItem.type)}</span>
       </div>
-      <div class="kb-title">${esc(workItem.title)}</div>
+      <div class="kb-title">${escapeHtml(workItem.title)}</div>
       ${renderActionButton(workItem, config)}
     </div>
   `;
