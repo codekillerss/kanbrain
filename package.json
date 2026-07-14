@@ -10,9 +10,24 @@
   },
   "categories": ["Other"],
   "main": "./out/src/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:kanbrain.view"
+  ],
   "contributes": {
-    "commands": []
+    "commands": [
+      { "command": "kanbrain.setup", "title": "Kanbrain: Setup" },
+      { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "kanbrain", "title": "Kanbrain", "icon": "media/icon.svg" }
+      ]
+    },
+    "views": {
+      "kanbrain": [
+        { "type": "webview", "id": "kanbrain.view", "name": "Kanbrain" }
+      ]
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",
