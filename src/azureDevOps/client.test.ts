@@ -103,7 +103,7 @@ describe('AzureDevOpsClient', () => {
     expect(children[0].id).toBe(101);
   });
 
-  it('lists backlog levels, skipping hidden ones and ones without work item types', async () => {
+  it('lists backlog levels for a team, skipping hidden ones and ones without work item types', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         value: [
@@ -116,14 +116,29 @@ describe('AzureDevOpsClient', () => {
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const levels = await client.listBacklogLevels('my-org', 'MyProject');
+    const levels = await client.listBacklogLevels('my-org', 'MyProject', 'MyProject Team');
 
     expect(levels).toEqual([
       { name: 'Epics', workItemTypes: ['Epic'] },
       { name: 'Stories', workItemTypes: ['User Story', 'Bug'] },
     ]);
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://dev.azure.com/my-org/MyProject/_apis/work/backlogs?api-version=7.1',
+      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/backlogs?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it("gets the project's default team name", async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ id: 'p1', name: 'MyProject', defaultTeam: { id: 't1', name: 'MyProject Team' } }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const team = await client.getDefaultTeamName('my-org', 'MyProject');
+
+    expect(team).toBe('MyProject Team');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/projects/MyProject?api-version=7.1',
       expect.anything(),
     );
   });

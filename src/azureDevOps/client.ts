@@ -77,10 +77,20 @@ export class AzureDevOpsClient {
     return this.getWorkItems(organization, project, workItem.childIds);
   }
 
-  async listBacklogLevels(organization: string, project: string): Promise<BacklogLevel[]> {
+  async getDefaultTeamName(organization: string, project: string): Promise<string> {
+    const data = await this.request<{ defaultTeam?: { name: string } }>(
+      `https://dev.azure.com/${organization}/_apis/projects/${project}?api-version=7.1`,
+    );
+    if (!data.defaultTeam) {
+      throw new Error(`O projeto ${project} não tem um time padrão configurado.`);
+    }
+    return data.defaultTeam.name;
+  }
+
+  async listBacklogLevels(organization: string, project: string, team: string): Promise<BacklogLevel[]> {
     const data = await this.request<{
       value: { name: string; isHidden?: boolean; workItemTypes?: { name: string }[] }[];
-    }>(`https://dev.azure.com/${organization}/${project}/_apis/work/backlogs?api-version=7.1`);
+    }>(`https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/backlogs?api-version=7.1`);
     return data.value
       .filter(level => !level.isHidden && (level.workItemTypes?.length ?? 0) > 0)
       .map(level => ({ name: level.name, workItemTypes: (level.workItemTypes ?? []).map(t => t.name) }));

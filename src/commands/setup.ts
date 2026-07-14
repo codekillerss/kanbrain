@@ -50,7 +50,8 @@ export function registerSetupCommand(client: AzureDevOpsClient, workspaceRoot: s
 
     let levels;
     try {
-      levels = await client.listBacklogLevels(orgPick.org.name, projectPick.project.name);
+      const team = await client.getDefaultTeamName(orgPick.org.name, projectPick.project.name);
+      levels = await client.listBacklogLevels(orgPick.org.name, projectPick.project.name, team);
     } catch (error) {
       vscode.window.showErrorMessage(
         `Não foi possível ler os backlog levels do processo: ${error instanceof Error ? error.message : String(error)}`,
