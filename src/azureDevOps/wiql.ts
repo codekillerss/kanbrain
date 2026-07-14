@@ -1,4 +1,4 @@
-const BASE_QUERY = 'SELECT TOP 50 [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project';
+const BASE_QUERY = 'SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project';
 const ORDER_BY = 'ORDER BY [System.ChangedDate] DESC';
 
 export function buildSearchQuery(searchText: string): string {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { AzureDevOpsClient } from './client';
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
-  return { ok, status, statusText: ok ? 'OK' : 'Error', json: async () => body } as Response;
+  return { ok, status, statusText: ok ? 'OK' : 'Error', json: async () => body, text: async () => JSON.stringify(body) } as Response;
 }
 
 describe('AzureDevOpsClient', () => {
@@ -49,7 +49,7 @@ describe('AzureDevOpsClient', () => {
 
     expect(ids).toEqual([1, 2]);
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql?api-version=7.1',
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql?api-version=7.1&$top=50',
       expect.objectContaining({ method: 'POST' }),
     );
   });
@@ -81,11 +81,11 @@ describe('AzureDevOpsClient', () => {
     expect(items[0].title).toBe('Bug');
   });
 
-  it('throws when the response is not ok', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 401));
+  it('throws when the response is not ok, including the response body for diagnostics', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'TF51005: invalid query' }, false, 400));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    await expect(client.listProjects('my-org')).rejects.toThrow(/401/);
+    await expect(client.listProjects('my-org')).rejects.toThrow(/400.*TF51005/s);
   });
 
   it('getChildren fetches work items for a parent childIds', async () => {

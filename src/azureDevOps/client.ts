@@ -32,7 +32,13 @@ export class AzureDevOpsClient {
       },
     });
     if (!response.ok) {
-      throw new Error(`Azure DevOps request failed: ${response.status} ${response.statusText}`);
+      let body = '';
+      try {
+        body = await response.text();
+      } catch {
+        body = '';
+      }
+      throw new Error(`Azure DevOps request failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`);
     }
     return (await response.json()) as T;
   }
@@ -57,7 +63,7 @@ export class AzureDevOpsClient {
   async searchWorkItems(organization: string, project: string, searchText: string): Promise<number[]> {
     const query = buildSearchQuery(searchText);
     const data = await this.request<{ workItems: { id: number }[] }>(
-      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1`,
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1&$top=50`,
       { method: 'POST', body: JSON.stringify({ query }) },
     );
     return data.workItems.map(w => w.id);
