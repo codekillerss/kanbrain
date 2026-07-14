@@ -5,6 +5,7 @@ import { readConfig } from '../config/config';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
+import { escapeHtml } from './escapeHtml';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
@@ -72,8 +73,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
       html = renderSearchResults(items);
-    } catch {
-      html = '<div class="kb-empty">Erro ao buscar work items.</div>';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
     }
 
     this.view.webview.postMessage({ type: 'search-results', html });
@@ -205,8 +207,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin-top: 12px; font-size: 11px; text-transform: uppercase; opacity: 0.7; }
       .kb-hidden { display: none; }
-      .kb-result-item { display: block; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; }
+      .kb-result-item { display: block; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
+      #kb-search-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      #kb-toggle-search-btn { display: block; width: 100%; box-sizing: border-box; padding: 4px 6px; text-align: left; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      #kb-toggle-search-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
     `;
   }
 }
