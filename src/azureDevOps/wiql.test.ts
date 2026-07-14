@@ -9,9 +9,8 @@ describe('buildSearchQuery', () => {
     expect(query).not.toContain('CONTAINS');
   });
 
-  it('filters by exact ID when the search text is numeric', () => {
-    const query = buildSearchQuery('482');
-    expect(query).toContain('[System.Id] = 482');
+  it('returns the same unfiltered query as an empty search when the search text is numeric (id filtering happens client-side)', () => {
+    expect(buildSearchQuery('482')).toBe(buildSearchQuery(''));
   });
 
   it('filters by title CONTAINS when the search text is not numeric', () => {
