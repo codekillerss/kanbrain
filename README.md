@@ -35,11 +35,19 @@ VS Code extension that shows the active Azure DevOps work item and its subtasks 
        "New": "b2b2b2",
        "Committed": "007acc",
        "Done": "339933"
+     },
+     "typeColors": {
+       "Task": "f2cb1d",
+       "Bug": "cc293d"
+     },
+     "typeIcons": {
+       "Task": "<svg>...</svg>",
+       "Bug": "<svg>...</svg>"
      }
    }
    ```
 
-   `statusColors` maps each status name to the hex color Azure DevOps assigns it (used as a small dot next to the status badge). It's captured automatically during Setup — projects configured before this field existed need to re-run **Kanbrain: Setup** to get colors.
+   `statusColors`/`typeColors` map each status/type name to the hex color Azure DevOps assigns it (used as the badge background, with the text color computed automatically for contrast). `typeIcons` holds the real work item type icon as inline SVG markup, fetched and sanitized during Setup. All three are captured automatically during Setup — projects configured before these fields existed need to re-run **Kanbrain: Setup** to get colors/icons.
 
 5. Run **Kanbrain: Select Work Item** to pick which work item shows in the panel. Drag the "Kanbrain" view (from the activity bar) into the secondary sidebar if you want it on the right, like the backoffice flow mode.
 
@@ -76,8 +84,10 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] If the search request fails (e.g. token expired), the results area shows an inline error message instead of hanging or throwing.
 - [ ] Typing a number in the search box (e.g. `88`) matches work items whose id contains those digits (e.g. `88` and `880`), not just an exact id match.
 - [ ] Each status section in the search results can be collapsed/expanded by clicking its header, independently of the others.
-- [ ] Status badges (main card, subtasks, and search results) show a small colored dot matching the status's color in Azure DevOps Boards.
 - [ ] The header shows a "✕ Limpar" button next to "🔍 Trocar work item" that clears the active work item and returns to the empty/search state.
+- [ ] Status and type badges (main card and subtasks) use the real Azure DevOps color as their background, with readable black/white text.
+- [ ] The type badge shows the real Azure DevOps icon for that work item type.
+- [ ] Status group headers in the search results still show a small colored dot matching the status's color.
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status/type badges and title.
 - [ ] Subtasks (Parent/Child linked work items) render under "Subtasks (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
