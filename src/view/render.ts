@@ -56,6 +56,7 @@ export function render(state: RenderState): string {
   return `
     <div class="kb-header">
       <button id="kb-toggle-search-btn">🔍 Trocar work item</button>
+      <button id="kb-clear-btn">✕ Limpar</button>
     </div>
     <div id="kb-search-section" class="kb-hidden">
       <input id="kb-search-input" placeholder="Buscar por título ou #id...">

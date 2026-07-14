@@ -52,6 +52,11 @@ describe('render', () => {
     expect(html).toContain('Trocar work item');
   });
 
+  it('shows a clear button when there is an active work item', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
+    expect(html).toContain('id="kb-clear-btn"');
+  });
+
   it('shows an action button when the status has a configured skill', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
     expect(html).toContain('data-action="run-skill"');

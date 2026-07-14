@@ -24,7 +24,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly workspaceRoot: string | undefined,
     private readonly client: AzureDevOpsClient | undefined,
     private readonly getCurrentBranch: () => Promise<string>,
-    private readonly persistActiveWorkItem: (id: number) => void,
+    private readonly persistActiveWorkItem: (id: number | undefined) => void,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -38,6 +38,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.searchWorkItems(String(message.query ?? ''));
       } else if (message.type === 'pick-work-item') {
         this.setActiveWorkItem(Number(message.id));
+      } else if (message.type === 'clear-work-item') {
+        this.setActiveWorkItem(undefined);
       }
     });
 
@@ -52,9 +54,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   setActiveWorkItem(id: number | undefined): void {
     this.activeWorkItemId = id;
-    if (id !== undefined) {
-      this.persistActiveWorkItem(id);
-    }
+    this.persistActiveWorkItem(id);
     this.lastState = '';
     void this.refresh();
   }
@@ -165,6 +165,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             vscode.postMessage({ type: 'search-work-items', query: '' });
           }
         }
+      } else if (target.id === 'kb-clear-btn') {
+        vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.dataset && target.dataset.action === 'pick-work-item') {
@@ -211,8 +213,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
       #kb-search-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
-      #kb-toggle-search-btn { display: block; width: 100%; box-sizing: border-box; padding: 4px 6px; text-align: left; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
-      #kb-toggle-search-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
+      #kb-toggle-search-btn, #kb-clear-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      #kb-toggle-search-btn:hover, #kb-clear-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
     `;
   }
 }

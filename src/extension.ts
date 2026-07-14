@@ -33,10 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   context.subscriptions.push(
-    registerSetupCommand(client, workspaceRoot, () => {
-      context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, undefined);
-      provider.setActiveWorkItem(undefined);
-    }),
+    registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined)),
     registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
   );
 
