@@ -9,7 +9,6 @@ interface WorkItemQuickPickItem extends vscode.QuickPickItem {
 export function registerSelectWorkItemCommand(
   client: AzureDevOpsClient,
   workspaceRoot: string,
-  context: vscode.ExtensionContext,
   onSelect: (id: number) => void,
 ): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.selectWorkItem', async () => {
@@ -33,7 +32,6 @@ export function registerSelectWorkItemCommand(
     quickPick.onDidAccept(() => {
       const selected = quickPick.selectedItems[0];
       if (selected) {
-        void context.workspaceState.update('kanbrain.activeWorkItemId', selected.id);
         onSelect(selected.id);
       }
       quickPick.hide();

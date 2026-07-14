@@ -19,7 +19,12 @@ export function activate(context: vscode.ExtensionContext): void {
       })
     : undefined;
 
-  const provider = new KanbrainViewProvider(workspaceRoot, client, () => getCurrentBranch(workspaceRoot ?? ''));
+  const provider = new KanbrainViewProvider(
+    workspaceRoot,
+    client,
+    () => getCurrentBranch(workspaceRoot ?? ''),
+    id => context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, id),
+  );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
 
@@ -29,7 +34,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     registerSetupCommand(client, workspaceRoot),
-    registerSelectWorkItemCommand(client, workspaceRoot, context, id => provider.setActiveWorkItem(id)),
+    registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

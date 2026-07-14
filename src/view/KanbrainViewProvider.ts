@@ -4,6 +4,7 @@ import type { WorkItem } from '../types';
 import { readConfig } from '../config/config';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { render } from './render';
+import { renderSearchResults } from './renderSearchResults';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
@@ -22,6 +23,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly workspaceRoot: string | undefined,
     private readonly client: AzureDevOpsClient | undefined,
     private readonly getCurrentBranch: () => Promise<string>,
+    private readonly persistActiveWorkItem: (id: number) => void,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -29,10 +31,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.options = { enableScripts: true };
 
     webviewView.webview.onDidReceiveMessage(async message => {
-      if (message.type === 'select-work-item') {
-        await vscode.commands.executeCommand('kanbrain.selectWorkItem');
-      } else if (message.type === 'run-skill') {
+      if (message.type === 'run-skill') {
         await this.runSkill(Number(message.id));
+      } else if (message.type === 'search-work-items') {
+        await this.searchWorkItems(String(message.query ?? ''));
+      } else if (message.type === 'pick-work-item') {
+        this.setActiveWorkItem(Number(message.id));
       }
     });
 
@@ -47,8 +51,32 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   setActiveWorkItem(id: number | undefined): void {
     this.activeWorkItemId = id;
+    if (id !== undefined) {
+      this.persistActiveWorkItem(id);
+    }
     this.lastState = '';
     void this.refresh();
+  }
+
+  private async searchWorkItems(query: string): Promise<void> {
+    if (!this.view || !this.workspaceRoot || !this.client) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+
+    let html: string;
+    try {
+      const ids = await this.client.searchWorkItems(config.organization, config.project, query);
+      const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
+      html = renderSearchResults(items);
+    } catch {
+      html = '<div class="kb-empty">Erro ao buscar work items.</div>';
+    }
+
+    this.view.webview.postMessage({ type: 'search-results', html });
   }
 
   private async runSkill(id: number): Promise<void> {
@@ -123,14 +151,45 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   ${body}
   <script>
     const vscode = acquireVsCodeApi();
+
     document.addEventListener('click', (e) => {
       const target = e.target;
-      if (target.id === 'kb-select-btn') {
-        vscode.postMessage({ type: 'select-work-item' });
+      if (target.id === 'kb-toggle-search-btn') {
+        const section = document.getElementById('kb-search-section');
+        if (section) {
+          const wasHidden = section.classList.contains('kb-hidden');
+          section.classList.toggle('kb-hidden');
+          if (wasHidden) {
+            vscode.postMessage({ type: 'search-work-items', query: '' });
+          }
+        }
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
+      } else if (target.dataset && target.dataset.action === 'pick-work-item') {
+        vscode.postMessage({ type: 'pick-work-item', id: target.dataset.id });
       }
     });
+
+    const searchInput = document.getElementById('kb-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        vscode.postMessage({ type: 'search-work-items', query: e.target.value });
+      });
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'search-results') {
+        const results = document.getElementById('kb-search-results');
+        if (results) {
+          results.innerHTML = event.data.html;
+        }
+      }
+    });
+
+    const searchSection = document.getElementById('kb-search-section');
+    if (searchSection && !searchSection.classList.contains('kb-hidden')) {
+      vscode.postMessage({ type: 'search-work-items', query: '' });
+    }
   </script>
 </body>
 </html>`;
@@ -145,6 +204,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-action-btn { margin-top: 6px; }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin-top: 12px; font-size: 11px; text-transform: uppercase; opacity: 0.7; }
+      .kb-hidden { display: none; }
+      .kb-result-item { display: block; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; }
+      .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
     `;
   }
 }
