@@ -22,6 +22,8 @@ const config: KanbrainConfig = {
   typeToBacklogLevel: { Task: 'Tasks' },
   backlogLevels: { Tasks: { Active: 'skills/fix.md', Closed: null } },
   statusColors: { Active: 'b2b2b2' },
+  typeColors: { Task: 'f2cb1d' },
+  typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
 };
 
 describe('render', () => {
@@ -82,9 +84,16 @@ describe('render', () => {
     expect(html).toContain('Nenhuma subtask');
   });
 
-  it('shows a status dot colored from config.statusColors', () => {
+  it('colors the status badge background from config.statusColors', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
-    expect(html).toContain('kb-status-dot');
-    expect(html).toContain('#b2b2b2');
+    expect(html).toContain('kb-badge kb-status');
+    expect(html).toContain('background-color: #b2b2b2');
+  });
+
+  it('colors the type badge and includes its icon from config.typeColors/typeIcons', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem({ type: 'Task' }), parent: null, subtasks: [] });
+    expect(html).toContain('kb-badge kb-type');
+    expect(html).toContain('background-color: #f2cb1d');
+    expect(html).toContain('<svg><path d="M0 0"/></svg>');
   });
 });

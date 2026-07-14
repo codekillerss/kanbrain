@@ -6,6 +6,7 @@ import type { WorkItemTypeState } from '../azureDevOps/backlogLevels';
 import { discoverBacklogLevelStates, discoverStatusColors, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
+import { sanitizeSvg } from '../view/sanitizeSvg';
 
 const EXAMPLE_SKILL = `# Skill de exemplo
 
@@ -77,6 +78,20 @@ export function registerSetupCommand(
     const typeToBacklogLevel = buildTypeToBacklogLevel(levels, new Set(Object.keys(statesByType)));
     const statusColors = discoverStatusColors(levels, statesByType);
 
+    const typeColors: Record<string, string> = {};
+    const typeIcons: Record<string, string> = {};
+    for (const type of uniqueTypes) {
+      try {
+        const icon = await client.getWorkItemTypeIcon(orgPick.org.name, projectPick.project.name, type);
+        if (icon) {
+          typeColors[type] = icon.color;
+          typeIcons[type] = sanitizeSvg(icon.iconSvg);
+        }
+      } catch {
+        // Falha pontual num tipo: segue sem ícone/cor pra ele em vez de abortar o Setup inteiro.
+      }
+    }
+
     const generateFilesPick = await vscode.window.showQuickPick(
       [
         { label: 'Sim', generate: true },
@@ -110,6 +125,8 @@ export function registerSetupCommand(
       typeToBacklogLevel,
       backlogLevels: preset.backlogLevels,
       statusColors,
+      typeColors,
+      typeIcons,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

@@ -32,6 +32,8 @@ describe('readConfig', () => {
       typeToBacklogLevel: { Task: 'Tasks' },
       backlogLevels: { Tasks: { New: '.kanbrain/skills/a.md' } },
       statusColors: { New: 'b2b2b2' },
+      typeColors: { Task: 'f2cb1d' },
+      typeIcons: { Task: '<svg></svg>' },
     };
     writeConfig(workspaceRoot, config);
     expect(readConfig(workspaceRoot)).toEqual(config);
@@ -40,7 +42,15 @@ describe('readConfig', () => {
 
 describe('writeConfig', () => {
   it('creates the .kanbrain directory if missing', () => {
-    writeConfig(workspaceRoot, { organization: 'o', project: 'p', typeToBacklogLevel: {}, backlogLevels: {}, statusColors: {} });
+    writeConfig(workspaceRoot, {
+      organization: 'o',
+      project: 'p',
+      typeToBacklogLevel: {},
+      backlogLevels: {},
+      statusColors: {},
+      typeColors: {},
+      typeIcons: {},
+    });
     expect(fs.existsSync(path.join(workspaceRoot, '.kanbrain'))).toBe(true);
   });
 });
