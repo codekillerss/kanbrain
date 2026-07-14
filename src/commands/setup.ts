@@ -20,7 +20,11 @@ Subtasks:
 Descreva aqui o que o agente deve fazer quando o work item estiver neste status.
 `;
 
-export function registerSetupCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {
+export function registerSetupCommand(
+  client: AzureDevOpsClient,
+  workspaceRoot: string,
+  onSetupComplete: () => void,
+): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.setup', async () => {
     const organizations = await client.listOrganizations();
     if (organizations.length === 0) {
@@ -107,6 +111,8 @@ export function registerSetupCommand(client: AzureDevOpsClient, workspaceRoot: s
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');
+
+    onSetupComplete();
 
     vscode.window.showInformationMessage(
       `Kanbrain configurado: ${orgPick.org.name}/${projectPick.project.name}. Edite .kanbrain/config.json para mapear skills por status.`,
