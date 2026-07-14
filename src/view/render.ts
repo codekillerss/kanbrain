@@ -41,7 +41,12 @@ export function render(state: RenderState): string {
     return '<div class="kb-empty">Nenhum projeto configurado. Rode o comando <b>Kanbrain: Setup</b>.</div>';
   }
   if (!state.workItem) {
-    return '<div class="kb-empty">Nenhum work item selecionado. Rode o comando <b>Kanbrain: Select Work Item</b>.</div>';
+    return `
+      <div id="kb-search-section">
+        <input id="kb-search-input" placeholder="Buscar por título ou #id...">
+        <div id="kb-search-results"></div>
+      </div>
+    `;
   }
 
   const subtasksHtml = state.subtasks.length
@@ -50,7 +55,11 @@ export function render(state: RenderState): string {
 
   return `
     <div class="kb-header">
-      <button id="kb-select-btn">Selecionar work item</button>
+      <button id="kb-toggle-search-btn">🔍 Trocar work item</button>
+    </div>
+    <div id="kb-search-section" class="kb-hidden">
+      <input id="kb-search-input" placeholder="Buscar por título ou #id...">
+      <div id="kb-search-results"></div>
     </div>
     ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card')}
     <div class="kb-section-label">Subtasks (${state.subtasks.length})</div>

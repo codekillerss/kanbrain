@@ -34,15 +34,22 @@ describe('render', () => {
     expect(html).toContain('Kanbrain: Setup');
   });
 
-  it('shows a select-work-item prompt when there is config but no active work item', () => {
+  it('shows an inline search box when there is config but no active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [] });
-    expect(html).toContain('Kanbrain: Select Work Item');
+    expect(html).toContain('id="kb-search-input"');
+    expect(html).toContain('id="kb-search-results"');
   });
 
   it('escapes HTML in the work item title', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
     expect(html).toContain('Corrigir &lt;bug&gt; no login');
     expect(html).not.toContain('Corrigir <bug> no login');
+  });
+
+  it('shows a toggle-search button when there is an active work item', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
+    expect(html).toContain('id="kb-toggle-search-btn"');
+    expect(html).toContain('Trocar work item');
   });
 
   it('shows an action button when the status has a configured skill', () => {
