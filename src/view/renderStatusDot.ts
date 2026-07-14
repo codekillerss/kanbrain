@@ -1,10 +1,9 @@
-const HEX_COLOR = /^#?[0-9a-fA-F]{6}$/;
+import { isValidHexColor, normalizeHex } from './badgeColor';
 
 export function renderStatusDot(status: string, statusColors: Record<string, string>): string {
   const color = statusColors[status];
-  if (!color || !HEX_COLOR.test(color)) {
+  if (!color || !isValidHexColor(color)) {
     return '';
   }
-  const hex = color.startsWith('#') ? color : `#${color}`;
-  return `<span class="kb-status-dot" style="background-color: ${hex}"></span>`;
+  return `<span class="kb-status-dot" style="background-color: ${normalizeHex(color)}"></span>`;
 }

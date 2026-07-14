@@ -71,29 +71,37 @@ describe('render', () => {
     expect(html).not.toContain('data-action="run-skill"');
   });
 
-  it('lists subtasks with their own action buttons', () => {
+  it('lists children with their own action buttons', () => {
     const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks });
     expect(html).toContain('Sub 1');
     expect(html).toContain('data-id="101"');
-    expect(html).toContain('Subtasks (1)');
+    expect(html).toContain('Children (1)');
   });
 
-  it('shows an empty message when there are no subtasks', () => {
+  it('shows an empty message when there are no children', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
-    expect(html).toContain('Nenhuma subtask');
+    expect(html).toContain('Nenhum item filho');
   });
 
-  it('colors the status badge background from config.statusColors', () => {
+  it('shows the status as a colored dot next to the plain status text', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
-    expect(html).toContain('kb-badge kb-status');
+    expect(html).toContain('kb-status-dot');
     expect(html).toContain('background-color: #b2b2b2');
+    expect(html).not.toContain('kb-badge');
   });
 
-  it('colors the type badge and includes its icon from config.typeColors/typeIcons', () => {
+  it('shows the type icon and a colored right border instead of a type badge', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem({ type: 'Task' }), parent: null, subtasks: [] });
-    expect(html).toContain('kb-badge kb-type');
-    expect(html).toContain('background-color: #f2cb1d');
+    expect(html).toContain('kb-type-icon');
     expect(html).toContain('<svg><path d="M0 0"/></svg>');
+    expect(html).toContain('border-right: 4px solid #f2cb1d');
+  });
+
+  it('wraps the search section in an overlay dialog with a close button when there is an active work item', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
+    expect(html).toContain('kb-search-overlay');
+    expect(html).toContain('kb-search-dialog');
+    expect(html).toContain('id="kb-search-close-btn"');
   });
 });

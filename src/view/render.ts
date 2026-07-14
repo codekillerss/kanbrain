@@ -1,7 +1,8 @@
 import type { WorkItem, KanbrainConfig } from '../types';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { escapeHtml } from './escapeHtml';
-import { renderColoredBadge } from './renderColoredBadge';
+import { renderStatusDot } from './renderStatusDot';
+import { isValidHexColor, normalizeHex } from './badgeColor';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -21,14 +22,19 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
 }
 
 function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass: string): string {
+  const typeColor = config.typeColors?.[workItem.type];
+  const typeIcon = config.typeIcons?.[workItem.type];
+  const borderStyle = typeColor && isValidHexColor(typeColor) ? ` style="border-right: 4px solid ${normalizeHex(typeColor)};"` : '';
+  const iconHtml = typeIcon ? `<span class="kb-type-icon">${typeIcon}</span>` : '';
+
   return `
-    <div class="${cssClass}">
+    <div class="${cssClass}"${borderStyle}>
       <div class="kb-card-header">
+        ${iconHtml}
         <span class="kb-id">#${workItem.id}</span>
-        ${renderColoredBadge(workItem.status, config.statusColors?.[workItem.status], 'kb-status')}
-        ${renderColoredBadge(workItem.type, config.typeColors?.[workItem.type], 'kb-type', config.typeIcons?.[workItem.type])}
       </div>
       <div class="kb-title">${escapeHtml(workItem.title)}</div>
+      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${renderActionButton(workItem, config)}
     </div>
   `;
@@ -52,19 +58,24 @@ export function render(state: RenderState): string {
 
   const subtasksHtml = state.subtasks.length
     ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card')).join('')
-    : '<div class="kb-empty">Nenhuma subtask.</div>';
+    : '<div class="kb-empty">Nenhum item filho.</div>';
 
   return `
     <div class="kb-header">
       <button id="kb-toggle-search-btn">🔍 Trocar work item</button>
       <button id="kb-clear-btn">✕ Limpar</button>
     </div>
-    <div id="kb-search-section" class="kb-hidden">
-      <input id="kb-search-input" placeholder="Buscar por título ou #id...">
-      <div id="kb-search-results"></div>
+    <div id="kb-search-section" class="kb-search-overlay kb-hidden">
+      <div class="kb-search-dialog">
+        <div class="kb-search-dialog-header">
+          <input id="kb-search-input" placeholder="Buscar por título ou #id...">
+          <button id="kb-search-close-btn">✕</button>
+        </div>
+        <div id="kb-search-results"></div>
+      </div>
     </div>
     ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card')}
-    <div class="kb-section-label">Subtasks (${state.subtasks.length})</div>
+    <div class="kb-section-label">Children (${state.subtasks.length})</div>
     ${subtasksHtml}
   `;
 }

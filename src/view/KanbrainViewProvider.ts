@@ -168,6 +168,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
+      } else if (target.id === 'kb-search-close-btn') {
+        const section = document.getElementById('kb-search-section');
+        if (section) {
+          section.classList.add('kb-hidden');
+        }
+      } else if (target.id === 'kb-search-section' && target.classList.contains('kb-search-overlay')) {
+        target.classList.add('kb-hidden');
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.dataset && target.dataset.action === 'pick-work-item') {
@@ -208,10 +215,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px; }
-      .kb-badge { display: inline-flex; align-items: center; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; margin-right: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 11px; }
-      .kb-badge-icon { display: inline-flex; width: 12px; height: 12px; margin-right: 4px; }
-      .kb-badge-icon svg { width: 100%; height: 100%; }
       .kb-main-card, .kb-subtask-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-card-header { display: flex; align-items: center; }
+      .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
+      .kb-type-icon svg { width: 100%; height: 100%; }
+      .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }
       .kb-title { font-weight: 600; margin: 4px 0; }
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
@@ -220,7 +228,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-hidden { display: none; }
       .kb-result-item { display: block; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
-      #kb-search-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
       #kb-toggle-search-btn, #kb-clear-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
@@ -228,6 +236,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
       .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 0; margin-top: 12px; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
+      .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
+      .kb-search-overlay.kb-hidden { display: none; }
+      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; overflow-y: auto; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+      .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; }
+      #kb-search-close-btn { flex-shrink: 0; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px 6px; border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
     `;
   }
 }
