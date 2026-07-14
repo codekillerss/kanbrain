@@ -224,7 +224,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-toggle-search-btn:hover, #kb-clear-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
-      .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-top: 12px; cursor: pointer; }
+      .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 0; margin-top: 12px; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
     `;
   }
 }
