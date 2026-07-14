@@ -1,6 +1,6 @@
 # Kanbrain
 
-VS Code extension that shows the active Azure DevOps work item and its subtasks in a side panel, with per-status "skill" buttons that generate a context file and send a read command to an integrated terminal.
+VS Code extension that shows the active Azure DevOps work item and its children in a side panel, with per-status "skill" buttons that generate a context file and send a read command to an integrated terminal.
 
 ## Setup
 
@@ -47,7 +47,7 @@ VS Code extension that shows the active Azure DevOps work item and its subtasks 
    }
    ```
 
-   `statusColors`/`typeColors` map each status/type name to the hex color Azure DevOps assigns it (used as the badge background, with the text color computed automatically for contrast). `typeIcons` holds the real work item type icon as inline SVG markup, fetched and sanitized during Setup. All three are captured automatically during Setup — projects configured before these fields existed need to re-run **Kanbrain: Setup** to get colors/icons.
+   `statusColors` maps each status name to the hex color Azure DevOps assigns it (shown as a small dot next to the status text). `typeColors` colors the right border of each work item card, and `typeIcons` holds the real work item type icon as inline SVG markup shown next to the `#id` — both fetched and sanitized during Setup. All three are captured automatically during Setup — projects configured before these fields existed need to re-run **Kanbrain: Setup** to get colors/icons.
 
 5. Run **Kanbrain: Select Work Item** to pick which work item shows in the panel. Drag the "Kanbrain" view (from the activity bar) into the secondary sidebar if you want it on the right, like the backoffice flow mode.
 
@@ -80,16 +80,16 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] With no active work item, the panel shows a search box and, without typing anything, a list of up to 50 recent work items grouped by status.
 - [ ] Typing in the search box filters the list by title or `#id`.
 - [ ] Clicking a result in the list sets it as the active work item and persists the selection (survives a window reload).
-- [ ] With an active work item, the header shows a "🔍 Trocar work item" button that toggles the same search box open/closed without leaving the panel.
+- [ ] With an active work item, the header shows a "🔍 Trocar work item" button that opens the search as a floating dialog over the current card, without pushing it down the page.
+- [ ] The search dialog closes via the "✕" button in its header or by clicking the darkened backdrop outside it, without changing the active work item.
 - [ ] If the search request fails (e.g. token expired), the results area shows an inline error message instead of hanging or throwing.
 - [ ] Typing a number in the search box (e.g. `88`) matches work items whose id contains those digits (e.g. `88` and `880`), not just an exact id match.
 - [ ] Each status section in the search results can be collapsed/expanded by clicking its header, independently of the others.
 - [ ] The header shows a "✕ Limpar" button next to "🔍 Trocar work item" that clears the active work item and returns to the empty/search state.
-- [ ] Status and type badges (main card and subtasks) use the real Azure DevOps color as their background, with readable black/white text.
-- [ ] The type badge shows the real Azure DevOps icon for that work item type.
-- [ ] Status group headers in the search results still show a small colored dot matching the status's color.
-- [ ] Selecting a work item renders it in the Kanbrain view with correct status/type badges and title.
-- [ ] Subtasks (Parent/Child linked work items) render under "Subtasks (N)".
+- [ ] Each work item card shows the real Azure DevOps type icon next to its `#id`, and a colored right border matching that type's color.
+- [ ] The status is shown as a small colored dot next to the plain status text (main card, children, and search result group headers) — not a filled badge.
+- [ ] Selecting a work item renders it in the Kanbrain view with correct status dot, type icon/border, and title.
+- [ ] Children (Parent/Child linked work items) render under "Children (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
 - [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Leia o arquivo .kanbrain/generated/<id>-<timestamp>.md e siga as instruções nele.`
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
