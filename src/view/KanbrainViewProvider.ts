@@ -18,8 +18,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private activeWorkItemId: number | undefined;
 
   constructor(
-    private readonly workspaceRoot: string,
-    private readonly client: AzureDevOpsClient,
+    private readonly workspaceRoot: string | undefined,
+    private readonly client: AzureDevOpsClient | undefined,
     private readonly getCurrentBranch: () => Promise<string>,
   ) {}
 
@@ -51,6 +51,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async runSkill(id: number): Promise<void> {
+    if (!this.workspaceRoot || !this.client) {
+      return;
+    }
     const config = readConfig(this.workspaceRoot);
     if (!config) {
       return;
@@ -86,13 +89,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) {
       return;
     }
-    const config = readConfig(this.workspaceRoot);
+    const config = this.workspaceRoot ? readConfig(this.workspaceRoot) : null;
 
     let workItem: WorkItem | null = null;
     let parent: WorkItem | null = null;
     let subtasks: WorkItem[] = [];
 
-    if (config && this.activeWorkItemId) {
+    if (config && this.client && this.activeWorkItemId) {
       const [fetched] = await this.client.getWorkItems(config.organization, config.project, [this.activeWorkItemId]);
       workItem = fetched ?? null;
       if (workItem) {
@@ -108,7 +111,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.lastState = serializeState(workItem, subtasks);
-    this.view.webview.html = this.wrapHtml(render({ config, workItem, parent, subtasks }));
+    this.view.webview.html = this.wrapHtml(render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks }));
   }
 
   private wrapHtml(body: string): string {

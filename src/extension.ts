@@ -11,19 +11,23 @@ const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (!workspaceRoot) {
+
+  const client = workspaceRoot
+    ? new AzureDevOpsClient({
+        fetchImpl: fetch,
+        getToken: () => ensureAzureSession(getVscodeMicrosoftSession),
+      })
+    : undefined;
+
+  const provider = new KanbrainViewProvider(workspaceRoot, client, () => getCurrentBranch(workspaceRoot ?? ''));
+
+  context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
+
+  if (!workspaceRoot || !client) {
     return;
   }
 
-  const client = new AzureDevOpsClient({
-    fetchImpl: fetch,
-    getToken: () => ensureAzureSession(getVscodeMicrosoftSession),
-  });
-
-  const provider = new KanbrainViewProvider(workspaceRoot, client, () => getCurrentBranch(workspaceRoot));
-
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider),
     registerSetupCommand(client, workspaceRoot),
     registerSelectWorkItemCommand(client, workspaceRoot, context, id => provider.setActiveWorkItem(id)),
   );

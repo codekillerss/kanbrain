@@ -1,6 +1,7 @@
 import type { WorkItem, KanbrainConfig } from '../types';
 
 export interface RenderState {
+  hasWorkspace: boolean;
   config: KanbrainConfig | null;
   workItem: WorkItem | null;
   parent: WorkItem | null;
@@ -39,6 +40,9 @@ function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass
 }
 
 export function render(state: RenderState): string {
+  if (!state.hasWorkspace) {
+    return '<div class="kb-empty">Abra uma pasta de workspace para usar o Kanbrain.</div>';
+  }
   if (!state.config) {
     return '<div class="kb-empty">Nenhum projeto configurado. Rode o comando <b>Kanbrain: Setup</b>.</div>';
   }
