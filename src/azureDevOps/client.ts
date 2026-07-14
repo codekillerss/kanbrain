@@ -1,6 +1,7 @@
 import type { WorkItem } from '../types';
 import { buildSearchQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
+import type { BacklogLevel, WorkItemTypeState } from './backlogLevels';
 
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
@@ -74,5 +75,21 @@ export class AzureDevOpsClient {
 
   async getChildren(organization: string, project: string, workItem: WorkItem): Promise<WorkItem[]> {
     return this.getWorkItems(organization, project, workItem.childIds);
+  }
+
+  async listBacklogLevels(organization: string, project: string): Promise<BacklogLevel[]> {
+    const data = await this.request<{
+      value: { name: string; isHidden?: boolean; workItemTypes?: { name: string }[] }[];
+    }>(`https://dev.azure.com/${organization}/${project}/_apis/work/backlogs?api-version=7.1`);
+    return data.value
+      .filter(level => !level.isHidden && (level.workItemTypes?.length ?? 0) > 0)
+      .map(level => ({ name: level.name, workItemTypes: (level.workItemTypes ?? []).map(t => t.name) }));
+  }
+
+  async listWorkItemTypeStates(organization: string, project: string, type: string): Promise<WorkItemTypeState[]> {
+    const data = await this.request<{ value: { name: string; category: string }[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`,
+    );
+    return data.value.map(s => ({ name: s.name, category: s.category }));
   }
 }

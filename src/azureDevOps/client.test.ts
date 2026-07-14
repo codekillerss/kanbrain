@@ -102,4 +102,47 @@ describe('AzureDevOpsClient', () => {
     expect(children).toHaveLength(1);
     expect(children[0].id).toBe(101);
   });
+
+  it('lists backlog levels, skipping hidden ones and ones without work item types', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { name: 'Epics', isHidden: false, workItemTypes: [{ name: 'Epic' }] },
+          { name: 'Stories', isHidden: false, workItemTypes: [{ name: 'User Story' }, { name: 'Bug' }] },
+          { name: 'Hidden Level', isHidden: true, workItemTypes: [{ name: 'Ghost' }] },
+          { name: 'Empty Level', isHidden: false, workItemTypes: [] },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const levels = await client.listBacklogLevels('my-org', 'MyProject');
+
+    expect(levels).toEqual([
+      { name: 'Epics', workItemTypes: ['Epic'] },
+      { name: 'Stories', workItemTypes: ['User Story', 'Bug'] },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/work/backlogs?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('lists states for a work item type', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ value: [{ name: 'New', category: 'Proposed' }, { name: 'Done', category: 'Completed' }] }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const states = await client.listWorkItemTypeStates('my-org', 'MyProject', 'User Story');
+
+    expect(states).toEqual([
+      { name: 'New', category: 'Proposed' },
+      { name: 'Done', category: 'Completed' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/User%20Story/states?api-version=7.1',
+      expect.anything(),
+    );
+  });
 });
