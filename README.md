@@ -30,9 +30,16 @@ VS Code extension that shows the active Azure DevOps work item and its subtasks 
          "In Progress": ".kanbrain/skills/tasks-inprogress.md",
          "Done": null
        }
+     },
+     "statusColors": {
+       "New": "b2b2b2",
+       "Committed": "007acc",
+       "Done": "339933"
      }
    }
    ```
+
+   `statusColors` maps each status name to the hex color Azure DevOps assigns it (used as a small dot next to the status badge). It's captured automatically during Setup — projects configured before this field existed need to re-run **Kanbrain: Setup** to get colors.
 
 5. Run **Kanbrain: Select Work Item** to pick which work item shows in the panel. Drag the "Kanbrain" view (from the activity bar) into the secondary sidebar if you want it on the right, like the backoffice flow mode.
 
@@ -67,6 +74,10 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] Clicking a result in the list sets it as the active work item and persists the selection (survives a window reload).
 - [ ] With an active work item, the header shows a "🔍 Trocar work item" button that toggles the same search box open/closed without leaving the panel.
 - [ ] If the search request fails (e.g. token expired), the results area shows an inline error message instead of hanging or throwing.
+- [ ] Typing a number in the search box (e.g. `88`) matches work items whose id contains those digits (e.g. `88` and `880`), not just an exact id match.
+- [ ] Each status section in the search results can be collapsed/expanded by clicking its header, independently of the others.
+- [ ] Status badges (main card, subtasks, and search results) show a small colored dot matching the status's color in Azure DevOps Boards.
+- [ ] The header shows a "✕ Limpar" button next to "🔍 Trocar work item" that clears the active work item and returns to the empty/search state.
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status/type badges and title.
 - [ ] Subtasks (Parent/Child linked work items) render under "Subtasks (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
