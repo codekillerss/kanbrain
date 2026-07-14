@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { discoverBacklogLevelStates, buildTypeToBacklogLevel, type BacklogLevel, type WorkItemTypeState } from './backlogLevels';
+import {
+  discoverBacklogLevelStates,
+  discoverStatusColors,
+  buildTypeToBacklogLevel,
+  type BacklogLevel,
+  type WorkItemTypeState,
+} from './backlogLevels';
 
 const levels: BacklogLevel[] = [
   { name: 'Stories', workItemTypes: ['User Story', 'Bug'] },
@@ -8,20 +14,20 @@ const levels: BacklogLevel[] = [
 
 const statesByType: Record<string, WorkItemTypeState[]> = {
   'User Story': [
-    { name: 'New', category: 'Proposed' },
-    { name: 'Committed', category: 'InProgress' },
-    { name: 'Done', category: 'Completed' },
+    { name: 'New', category: 'Proposed', color: 'b2b2b2' },
+    { name: 'Committed', category: 'InProgress', color: '007acc' },
+    { name: 'Done', category: 'Completed', color: '339933' },
   ],
   Bug: [
-    { name: 'New', category: 'Proposed' },
-    { name: 'Active', category: 'InProgress' },
-    { name: 'Resolved', category: 'Resolved' },
-    { name: 'Closed', category: 'Completed' },
+    { name: 'New', category: 'Proposed', color: 'cc293d' },
+    { name: 'Active', category: 'InProgress', color: 'cc293d' },
+    { name: 'Resolved', category: 'Resolved', color: 'ff9d00' },
+    { name: 'Closed', category: 'Completed', color: '339933' },
   ],
   Task: [
-    { name: 'To Do', category: 'Proposed' },
-    { name: 'In Progress', category: 'InProgress' },
-    { name: 'Done', category: 'Completed' },
+    { name: 'To Do', category: 'Proposed', color: 'b2b2b2' },
+    { name: 'In Progress', category: 'InProgress', color: '007acc' },
+    { name: 'Done', category: 'Completed', color: '339933' },
   ],
 };
 
@@ -57,6 +63,35 @@ describe('discoverBacklogLevelStates', () => {
     );
 
     expect(discovered.Stories).toEqual({ New: 'Proposed', Committed: 'InProgress', Done: 'Completed' });
+  });
+});
+
+describe('discoverStatusColors', () => {
+  it('maps each status name to its color, merging across work item types', () => {
+    const colors = discoverStatusColors(levels, statesByType);
+
+    expect(colors).toEqual({
+      New: 'b2b2b2',
+      Committed: '007acc',
+      Done: '339933',
+      Active: 'cc293d',
+      Resolved: 'ff9d00',
+      Closed: '339933',
+      'To Do': 'b2b2b2',
+      'In Progress': '007acc',
+    });
+  });
+
+  it('keeps the first-seen color when two types disagree on the same status name', () => {
+    const colors = discoverStatusColors(
+      [{ name: 'Stories', workItemTypes: ['User Story', 'Bug'] }],
+      {
+        'User Story': [{ name: 'New', category: 'Proposed', color: '111111' }],
+        Bug: [{ name: 'New', category: 'Proposed', color: '222222' }],
+      },
+    );
+
+    expect(colors.New).toBe('111111');
   });
 });
 

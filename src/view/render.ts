@@ -1,6 +1,7 @@
 import type { WorkItem, KanbrainConfig } from '../types';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { escapeHtml } from './escapeHtml';
+import { renderStatusDot } from './renderStatusDot';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -24,7 +25,7 @@ function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass
     <div class="${cssClass}">
       <div class="kb-card-header">
         <span class="kb-id">#${workItem.id}</span>
-        <span class="kb-badge kb-status">${escapeHtml(workItem.status)}</span>
+        <span class="kb-badge kb-status">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</span>
         <span class="kb-badge kb-type">${escapeHtml(workItem.type)}</span>
       </div>
       <div class="kb-title">${escapeHtml(workItem.title)}</div>

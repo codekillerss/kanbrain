@@ -6,6 +6,7 @@ export interface BacklogLevel {
 export interface WorkItemTypeState {
   name: string;
   category: string;
+  color: string;
 }
 
 export type DiscoveredBacklogLevels = Record<string, Record<string, string>>;
@@ -33,6 +34,29 @@ export function discoverBacklogLevelStates(
   }
 
   return result;
+}
+
+export function discoverStatusColors(
+  levels: BacklogLevel[],
+  statesByType: Record<string, WorkItemTypeState[]>,
+): Record<string, string> {
+  const colors: Record<string, string> = {};
+
+  for (const level of levels) {
+    for (const type of level.workItemTypes) {
+      const states = statesByType[type];
+      if (!states) {
+        continue;
+      }
+      for (const state of states) {
+        if (!(state.name in colors)) {
+          colors[state.name] = state.color;
+        }
+      }
+    }
+  }
+
+  return colors;
 }
 
 export function buildTypeToBacklogLevel(levels: BacklogLevel[], knownTypes: Set<string>): Record<string, string> {

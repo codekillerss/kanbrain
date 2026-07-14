@@ -14,4 +14,5 @@ export interface KanbrainConfig {
   project: string;
   typeToBacklogLevel: Record<string, string>;
   backlogLevels: Record<string, Record<string, string | null>>;
+  statusColors: Record<string, string>;
 }

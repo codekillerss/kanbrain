@@ -103,9 +103,9 @@ export class AzureDevOpsClient {
   }
 
   async listWorkItemTypeStates(organization: string, project: string, type: string): Promise<WorkItemTypeState[]> {
-    const data = await this.request<{ value: { name: string; category: string }[] }>(
+    const data = await this.request<{ value: { name: string; category: string; color: string }[] }>(
       `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`,
     );
-    return data.value.map(s => ({ name: s.name, category: s.category }));
+    return data.value.map(s => ({ name: s.name, category: s.category, color: s.color }));
   }
 }

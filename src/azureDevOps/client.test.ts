@@ -145,15 +145,20 @@ describe('AzureDevOpsClient', () => {
 
   it('lists states for a work item type', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
-      jsonResponse({ value: [{ name: 'New', category: 'Proposed' }, { name: 'Done', category: 'Completed' }] }),
+      jsonResponse({
+        value: [
+          { name: 'New', category: 'Proposed', color: 'b2b2b2' },
+          { name: 'Done', category: 'Completed', color: '339933' },
+        ],
+      }),
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
     const states = await client.listWorkItemTypeStates('my-org', 'MyProject', 'User Story');
 
     expect(states).toEqual([
-      { name: 'New', category: 'Proposed' },
-      { name: 'Done', category: 'Completed' },
+      { name: 'New', category: 'Proposed', color: 'b2b2b2' },
+      { name: 'Done', category: 'Completed', color: '339933' },
     ]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/User%20Story/states?api-version=7.1',

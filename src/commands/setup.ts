@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import type { WorkItemTypeState } from '../azureDevOps/backlogLevels';
-import { discoverBacklogLevelStates, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
+import { discoverBacklogLevelStates, discoverStatusColors, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
 
@@ -75,6 +75,7 @@ export function registerSetupCommand(
 
     const discovered = discoverBacklogLevelStates(levels, statesByType);
     const typeToBacklogLevel = buildTypeToBacklogLevel(levels, new Set(Object.keys(statesByType)));
+    const statusColors = discoverStatusColors(levels, statesByType);
 
     const generateFilesPick = await vscode.window.showQuickPick(
       [
@@ -108,6 +109,7 @@ export function registerSetupCommand(
       project: projectPick.project.name,
       typeToBacklogLevel,
       backlogLevels: preset.backlogLevels,
+      statusColors,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

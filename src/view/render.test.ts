@@ -21,6 +21,7 @@ const config: KanbrainConfig = {
   project: 'proj',
   typeToBacklogLevel: { Task: 'Tasks' },
   backlogLevels: { Tasks: { Active: 'skills/fix.md', Closed: null } },
+  statusColors: { Active: 'b2b2b2' },
 };
 
 describe('render', () => {
@@ -79,5 +80,11 @@ describe('render', () => {
   it('shows an empty message when there are no subtasks', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
     expect(html).toContain('Nenhuma subtask');
+  });
+
+  it('shows a status dot colored from config.statusColors', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
+    expect(html).toContain('kb-status-dot');
+    expect(html).toContain('#b2b2b2');
   });
 });

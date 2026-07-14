@@ -5,6 +5,7 @@ import { readConfig } from '../config/config';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
+import { filterSearchResults } from './filterSearchResults';
 import { escapeHtml } from './escapeHtml';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
@@ -72,7 +73,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     try {
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-      html = renderSearchResults(items);
+      html = renderSearchResults(filterSearchResults(items, query), config.statusColors ?? {});
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
@@ -171,6 +172,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.dataset && target.dataset.action === 'pick-work-item') {
         vscode.postMessage({ type: 'pick-work-item', id: target.dataset.id });
+      } else if (target.dataset && target.dataset.action === 'toggle-group') {
+        const items = target.nextElementSibling;
+        if (items) {
+          items.classList.toggle('kb-hidden');
+        }
       }
     });
 
@@ -216,6 +222,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
       #kb-toggle-search-btn, #kb-clear-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       #kb-toggle-search-btn:hover, #kb-clear-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+      .kb-result-group { margin-bottom: 4px; }
+      .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-top: 12px; cursor: pointer; }
     `;
   }
 }

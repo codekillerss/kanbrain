@@ -18,24 +18,33 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 
 describe('renderSearchResults', () => {
   it('shows an empty message when there are no results', () => {
-    expect(renderSearchResults([])).toContain('Nenhum work item encontrado.');
+    expect(renderSearchResults([], {})).toContain('Nenhum work item encontrado.');
   });
 
-  it('groups results into status sections with counts', () => {
+  it('groups results into collapsible status sections with counts', () => {
     const items = [workItem({ id: 1, status: 'Active' }), workItem({ id: 2, status: 'New' })];
 
-    const html = renderSearchResults(items);
+    const html = renderSearchResults(items, {});
 
     expect(html).toContain('Active (1)');
     expect(html).toContain('New (1)');
+    expect(html).toContain('data-action="toggle-group"');
+    expect(html).toContain('kb-group-items');
   });
 
   it('renders each item as a pickable button with its id, escaping the title', () => {
-    const html = renderSearchResults([workItem({ id: 482, title: 'Corrigir <bug>' })]);
+    const html = renderSearchResults([workItem({ id: 482, title: 'Corrigir <bug>' })], {});
 
     expect(html).toContain('data-action="pick-work-item"');
     expect(html).toContain('data-id="482"');
     expect(html).toContain('Corrigir &lt;bug&gt;');
     expect(html).not.toContain('Corrigir <bug>');
+  });
+
+  it('shows a status dot when a color is known for the status', () => {
+    const html = renderSearchResults([workItem({ status: 'Active' })], { Active: 'b2b2b2' });
+
+    expect(html).toContain('kb-status-dot');
+    expect(html).toContain('#b2b2b2');
   });
 });
