@@ -1,4 +1,5 @@
 import type { WorkItem, KanbrainConfig } from '../types';
+import { resolveSkillPath } from '../config/resolveSkillPath';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -17,7 +18,7 @@ function esc(value: string): string {
 }
 
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
-  const skillPath = config.statusSkills[workItem.status];
+  const skillPath = resolveSkillPath(config, workItem);
   if (!skillPath) {
     return '';
   }

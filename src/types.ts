@@ -12,5 +12,6 @@ export interface WorkItem {
 export interface KanbrainConfig {
   organization: string;
   project: string;
-  statusSkills: Record<string, string | null>;
+  typeToBacklogLevel: Record<string, string>;
+  backlogLevels: Record<string, Record<string, string | null>>;
 }

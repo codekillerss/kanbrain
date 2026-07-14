@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import type { WorkItem } from '../types';
 import { readConfig } from '../config/config';
+import { resolveSkillPath } from '../config/resolveSkillPath';
 import { render } from './render';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
@@ -64,7 +65,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const skillPath = config.statusSkills[workItem.status];
+    const skillPath = resolveSkillPath(config, workItem);
     if (!skillPath) {
       return;
     }

@@ -26,7 +26,12 @@ describe('readConfig', () => {
   });
 
   it('returns the parsed config when the file exists', () => {
-    const config = { organization: 'my-org', project: 'MyProject', statusSkills: { New: 'skills/a.md' } };
+    const config = {
+      organization: 'my-org',
+      project: 'MyProject',
+      typeToBacklogLevel: { Task: 'Tasks' },
+      backlogLevels: { Tasks: { New: '.kanbrain/skills/a.md' } },
+    };
     writeConfig(workspaceRoot, config);
     expect(readConfig(workspaceRoot)).toEqual(config);
   });
@@ -34,7 +39,7 @@ describe('readConfig', () => {
 
 describe('writeConfig', () => {
   it('creates the .kanbrain directory if missing', () => {
-    writeConfig(workspaceRoot, { organization: 'o', project: 'p', statusSkills: {} });
+    writeConfig(workspaceRoot, { organization: 'o', project: 'p', typeToBacklogLevel: {}, backlogLevels: {} });
     expect(fs.existsSync(path.join(workspaceRoot, '.kanbrain'))).toBe(true);
   });
 });

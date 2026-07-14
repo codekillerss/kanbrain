@@ -16,7 +16,12 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
   };
 }
 
-const config: KanbrainConfig = { organization: 'org', project: 'proj', statusSkills: { Active: 'skills/fix.md' } };
+const config: KanbrainConfig = {
+  organization: 'org',
+  project: 'proj',
+  typeToBacklogLevel: { Task: 'Tasks' },
+  backlogLevels: { Tasks: { Active: 'skills/fix.md', Closed: null } },
+};
 
 describe('render', () => {
   it('shows an open-folder prompt when there is no workspace folder open', () => {

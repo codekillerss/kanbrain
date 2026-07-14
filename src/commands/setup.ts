@@ -2,7 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import { writeConfig, ensureGitignoreEntry, readConfig } from '../config/config';
+import type { WorkItemTypeState } from '../azureDevOps/backlogLevels';
+import { discoverBacklogLevelStates, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
+import { buildPresetPlan } from '../skills/presetSkillFiles';
+import { writeConfig, ensureGitignoreEntry } from '../config/config';
 
 const EXAMPLE_SKILL = `# Skill de exemplo
 
@@ -45,19 +48,62 @@ export function registerSetupCommand(client: AzureDevOpsClient, workspaceRoot: s
       return;
     }
 
-    const existing = readConfig(workspaceRoot);
-    writeConfig(workspaceRoot, {
-      organization: orgPick.org.name,
-      project: projectPick.project.name,
-      statusSkills: existing?.statusSkills ?? {},
-    });
+    let levels;
+    try {
+      levels = await client.listBacklogLevels(orgPick.org.name, projectPick.project.name);
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Não foi possível ler os backlog levels do processo: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+
+    const statesByType: Record<string, WorkItemTypeState[]> = {};
+    const uniqueTypes = Array.from(new Set(levels.flatMap(level => level.workItemTypes)));
+    for (const type of uniqueTypes) {
+      try {
+        statesByType[type] = await client.listWorkItemTypeStates(orgPick.org.name, projectPick.project.name, type);
+      } catch {
+        // Falha pontual num tipo: segue sem ele em vez de abortar o Setup inteiro.
+      }
+    }
+
+    const discovered = discoverBacklogLevelStates(levels, statesByType);
+    const typeToBacklogLevel = buildTypeToBacklogLevel(levels, new Set(Object.keys(statesByType)));
+
+    const generateFilesPick = await vscode.window.showQuickPick(
+      [
+        { label: 'Sim', generate: true },
+        { label: 'Não', generate: false },
+      ],
+      { placeHolder: 'Gerar arquivos de skill placeholder automaticamente por categoria (Proposed/InProgress/Resolved)?' },
+    );
+    if (!generateFilesPick) {
+      return;
+    }
+
+    const preset = buildPresetPlan(discovered, generateFilesPick.generate);
 
     const skillsDir = path.join(workspaceRoot, '.kanbrain', 'skills');
     fs.mkdirSync(skillsDir, { recursive: true });
+    for (const file of preset.filesToWrite) {
+      const fullPath = path.join(workspaceRoot, file.relativePath);
+      if (!fs.existsSync(fullPath)) {
+        fs.writeFileSync(fullPath, file.content, 'utf-8');
+      }
+    }
+
     const exampleSkillPath = path.join(skillsDir, 'example.md');
     if (!fs.existsSync(exampleSkillPath)) {
       fs.writeFileSync(exampleSkillPath, EXAMPLE_SKILL, 'utf-8');
     }
+
+    writeConfig(workspaceRoot, {
+      organization: orgPick.org.name,
+      project: projectPick.project.name,
+      typeToBacklogLevel,
+      backlogLevels: preset.backlogLevels,
+    });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');
 
