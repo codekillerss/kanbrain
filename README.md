@@ -6,17 +6,30 @@ VS Code extension that shows the active Azure DevOps work item and its subtasks 
 
 1. Open a workspace folder.
 2. Run **Kanbrain: Setup** from the command palette. Sign in with your Microsoft account when prompted, then pick an Azure DevOps organization and project.
-3. This creates `.kanbrain/config.json` (commit it — it's shared team config) and `.kanbrain/skills/example.md` (a starter skill template).
-4. Edit `.kanbrain/config.json`'s `statusSkills` map to point each work item status at a skill file:
+3. Setup reads the project's real backlog levels (Epics/Features/Stories/Tasks, or whatever your process defines) and state categories from Azure DevOps, then asks whether to generate placeholder skill files automatically for each category (Proposed/InProgress/Resolved). This creates `.kanbrain/config.json` (commit it — it's shared team config) and, if you said yes, one skill file per backlog level + category under `.kanbrain/skills/`.
+4. Edit the generated skill files and, if needed, `.kanbrain/config.json`'s `backlogLevels` map (`{ [backlogLevel]: { [status]: skillPathOrNull } }`) to fine-tune which skill runs for which status:
 
    ```json
    {
      "organization": "my-org",
      "project": "MyProject",
-     "statusSkills": {
-       "New": ".kanbrain/skills/brainstorm.md",
-       "Active": null,
-       "Resolved": ".kanbrain/skills/review.md"
+     "typeToBacklogLevel": {
+       "Epic": "Epics",
+       "User Story": "Stories",
+       "Bug": "Stories",
+       "Task": "Tasks"
+     },
+     "backlogLevels": {
+       "Stories": {
+         "New": ".kanbrain/skills/stories-proposed.md",
+         "Committed": ".kanbrain/skills/stories-inprogress.md",
+         "Done": null
+       },
+       "Tasks": {
+         "To Do": ".kanbrain/skills/tasks-proposed.md",
+         "In Progress": ".kanbrain/skills/tasks-inprogress.md",
+         "Done": null
+       }
      }
    }
    ```
@@ -46,6 +59,8 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 
 - [ ] `Kanbrain: Setup` prompts for Microsoft login, lists real organizations, lists real projects, and writes `.kanbrain/config.json`.
 - [ ] `.kanbrain/generated/` is added to `.gitignore` after setup.
+- [ ] `Kanbrain: Setup`, after picking a project, asks whether to generate placeholder skill files per backlog level/category, and writes `backlogLevels`/`typeToBacklogLevel` reflecting the project's real process either way.
+- [ ] Answering "Sim" creates one skill file per backlog level + category (Proposed/InProgress/Resolved) under `.kanbrain/skills/`, and `Done`/`Removed`-category statuses map to `null`.
 - [ ] `Kanbrain: Select Work Item` search returns matching work items by title and by `#id`.
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status/type badges and title.
 - [ ] Subtasks (Parent/Child linked work items) render under "Subtasks (N)".
