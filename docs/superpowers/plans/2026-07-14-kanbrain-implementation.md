@@ -1238,13 +1238,15 @@ const execFileAsync = promisify(execFile);
 
 export async function getCurrentBranch(workspaceRoot: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: workspaceRoot });
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: workspaceRoot });
     return stdout.trim();
   } catch {
     return '';
   }
 }
 ```
+
+> **Deviation found during implementation:** `git rev-parse --abbrev-ref HEAD` exits 128 on a repo with no commits yet (unborn HEAD) — it can't resolve HEAD to an object. `git symbolic-ref --short HEAD` resolves the branch name regardless of whether there are commits, and only fails on genuinely detached HEAD (which the `catch` already handles by returning `''`). Used in the implementation instead.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
