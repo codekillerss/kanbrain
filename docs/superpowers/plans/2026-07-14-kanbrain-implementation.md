@@ -2109,6 +2109,8 @@ Expected: a VS Code test instance launches headlessly and exits 0, with output s
 
 If this environment cannot launch the VS Code test instance (e.g., no display / sandboxed CI), note that in the task result and treat Step 6 (manual checklist) as the authoritative verification instead — do not mark this task done on the strength of unit tests alone, since none of the vscode-dependent modules (auth, client wiring, view provider, commands) are covered by Vitest.
 
+> **Deviation found during implementation:** in this environment, `npm run test:integration` failed with `Cannot find module 'C:\Users\...\Área'` — `@vscode/test-electron` spawns the Code binary through a shell without escaping arguments on Windows, so the repo path breaks at the space in "Área de Trabalho". This is an upstream path-with-spaces limitation, not a defect in the extension's code (compile is clean and all 50 unit tests pass). Documented in the README; the manual checklist is the authoritative verification for this task.
+
 - [ ] **Step 6: Write `README.md`**
 
 ```markdown
