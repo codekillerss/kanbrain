@@ -3,22 +3,29 @@ import { serializeState, hasStateChanged } from './hasStateChanged';
 
 describe('hasStateChanged', () => {
   it('is false when the serialized state is identical', () => {
+    const config = { a: 1 };
     const workItem = { id: 1, title: 'A' };
     const subtasks = [{ id: 2, title: 'B' }];
-    const previous = serializeState(workItem, subtasks);
+    const previous = serializeState(config, workItem, subtasks);
 
-    expect(hasStateChanged(previous, { id: 1, title: 'A' }, [{ id: 2, title: 'B' }])).toBe(false);
+    expect(hasStateChanged(previous, { a: 1 }, { id: 1, title: 'A' }, [{ id: 2, title: 'B' }])).toBe(false);
   });
 
   it('is true when a field changes', () => {
-    const previous = serializeState({ id: 1, title: 'A' }, []);
+    const previous = serializeState(null, { id: 1, title: 'A' }, []);
 
-    expect(hasStateChanged(previous, { id: 1, title: 'A (edited)' }, [])).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1, title: 'A (edited)' }, [])).toBe(true);
   });
 
   it('is true when the subtasks array changes', () => {
-    const previous = serializeState({ id: 1 }, []);
+    const previous = serializeState(null, { id: 1 }, []);
 
-    expect(hasStateChanged(previous, { id: 1 }, [{ id: 2 }])).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1 }, [{ id: 2 }])).toBe(true);
+  });
+
+  it('is true when config changes from null to a value, even if workItem and subtasks stay the same', () => {
+    const previous = serializeState(null, null, []);
+
+    expect(hasStateChanged(previous, { organization: 'org' }, null, [])).toBe(true);
   });
 });
