@@ -28,50 +28,55 @@ const config: KanbrainConfig = {
 
 describe('render', () => {
   it('shows an open-folder prompt when there is no workspace folder open', () => {
-    const html = render({ hasWorkspace: false, config: null, workItem: null, parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: false, config: null, workItem: null, parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('Open a workspace folder');
   });
 
   it('shows a setup prompt when there is no config', () => {
-    const html = render({ hasWorkspace: true, config: null, workItem: null, parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config: null, workItem: null, parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('Kanbrain: Setup');
   });
 
   it('shows a button to run Setup when there is no config', () => {
-    const html = render({ hasWorkspace: true, config: null, workItem: null, parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config: null, workItem: null, parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-run-setup-btn"');
   });
 
-  it('delegates to the home screen when showHome is true', () => {
-    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], showHome: true });
+  it('delegates to the home screen when screen is "home"', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'home' });
     expect(html).toContain('kb-home-section');
   });
 
-  it('shows a Home button on the focused screen', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+  it('delegates to the config screen when screen is "config"', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'config' });
+    expect(html).toContain('kb-config-level');
+  });
+
+  it('shows a Home button on the flow screen', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-home-btn"');
   });
 
   it('shows an inline search box when there is config but no active work item', () => {
-    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-search-input"');
     expect(html).toContain('id="kb-search-results"');
   });
 
   it('escapes HTML in the work item title', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('Fix &lt;bug&gt; in login');
     expect(html).not.toContain('Fix <bug> in login');
   });
 
   it('shows a toggle-search button when there is an active work item', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-toggle-search-btn"');
     expect(html).toContain('Switch work item');
   });
 
   it('shows a clear button when there is an active work item', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-clear-btn"');
   });
 
@@ -82,7 +87,7 @@ describe('render', () => {
       workItem: workItem({ status: 'Active' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).toContain('data-action="run-skill"');
     expect(html).toContain('data-id="482"');
@@ -95,21 +100,21 @@ describe('render', () => {
       workItem: workItem({ status: 'Closed' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).not.toContain('data-action="run-skill"');
   });
 
   it('lists children with their own action buttons', () => {
     const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
     expect(html).toContain('Sub 1');
     expect(html).toContain('data-id="101"');
     expect(html).toContain('Children (1)');
   });
 
   it('shows an empty message when there are no children', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('No child items');
   });
 
@@ -120,7 +125,7 @@ describe('render', () => {
       workItem: workItem({ status: 'Active' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).toContain('kb-status-dot');
     expect(html).toContain('background-color: #b2b2b2');
@@ -134,7 +139,7 @@ describe('render', () => {
       workItem: workItem({ type: 'Task' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).toContain('kb-type-icon');
     expect(html).toContain('<svg><path d="M0 0"/></svg>');
@@ -142,7 +147,7 @@ describe('render', () => {
   });
 
   it('wraps the search section in an overlay dialog with a close button when there is an active work item', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], showHome: false });
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('kb-search-overlay');
     expect(html).toContain('kb-search-dialog');
     expect(html).toContain('id="kb-search-close-btn"');
@@ -159,7 +164,7 @@ describe('render', () => {
       workItem: workItem({ status: 'Active' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).toContain('Fix it now');
     expect(html).not.toContain('fix.md');
@@ -176,7 +181,7 @@ describe('render', () => {
       workItem: workItem({ status: 'Active' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     expect(html).toContain('background: #007acc;');
     expect(html).toContain('color: #ffffff;');
@@ -193,7 +198,7 @@ describe('render', () => {
       workItem: workItem({ status: 'Active' }),
       parent: null,
       subtasks: [],
-      showHome: false,
+      screen: 'flow',
     });
     const buttonIndex = html.indexOf('data-action="run-skill"');
     const buttonMarkup = html.slice(buttonIndex - 40, buttonIndex + 40);
