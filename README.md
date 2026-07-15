@@ -86,6 +86,9 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] Typing a number in the search box (e.g. `88`) matches work items whose id contains those digits (e.g. `88` and `880`), not just an exact id match.
 - [ ] Each status section in the search results can be collapsed/expanded by clicking its header, independently of the others.
 - [ ] Each work item in the search results list shows the real Azure DevOps type icon and a colored right border matching that type's color, without a status dot or action button on the item itself.
+- [ ] The search dialog shows a "Todos" tab plus one tab per backlog level, in the project's real backlog order; clicking a tab filters the already-visible list instantly, with no loading delay.
+- [ ] Each backlog level tab's count reflects the total number of that type of work item in the whole project (not just how many match the current search text), and only changes when the dialog is reopened or cleared — not while typing.
+- [ ] A backlog level tab with 0 items in the project stays visible (dimmed), and clicking it shows the "Nenhum work item encontrado." message.
 - [ ] The header shows a "✕ Limpar" button next to "🔍 Trocar work item" that clears the active work item and returns to the empty/search state.
 - [ ] Each work item card shows the real Azure DevOps type icon next to its `#id`, and a colored right border matching that type's color.
 - [ ] The status is shown as a small colored dot next to the plain status text (main card, children, and search result group headers) — not a filled badge.
