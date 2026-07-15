@@ -73,7 +73,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     try {
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-      html = renderSearchResults(filterSearchResults(items, query), config.statusColors ?? {});
+      html = renderSearchResults(filterSearchResults(items, query), config);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
@@ -226,7 +226,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin-top: 12px; font-size: 11px; text-transform: uppercase; opacity: 0.7; }
       .kb-hidden { display: none; }
-      .kb-result-item { display: block; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-result-item { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
