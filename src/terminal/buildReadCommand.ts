@@ -1,4 +1,4 @@
 export function buildReadCommand(relativeContextFilePath: string): string {
   const normalized = relativeContextFilePath.split('\\').join('/');
-  return `Leia o arquivo ${normalized} e siga as instruções nele.`;
+  return `Read the file ${normalized} and follow the instructions in it.`;
 }

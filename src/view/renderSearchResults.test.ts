@@ -31,7 +31,7 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
 
 describe('renderSearchResults', () => {
   it('shows an empty message when there are no results', () => {
-    expect(renderSearchResults([], config(), {})).toContain('Nenhum work item encontrado.');
+    expect(renderSearchResults([], config(), {})).toContain('No work items found.');
   });
 
   it('groups results into collapsible status sections with counts', () => {
@@ -46,12 +46,12 @@ describe('renderSearchResults', () => {
   });
 
   it('renders each item as a pickable button with its id, escaping the title', () => {
-    const html = renderSearchResults([workItem({ id: 482, title: 'Corrigir <bug>' })], config(), {});
+    const html = renderSearchResults([workItem({ id: 482, title: 'Fix <bug>' })], config(), {});
 
     expect(html).toContain('data-action="pick-work-item"');
     expect(html).toContain('data-id="482"');
-    expect(html).toContain('Corrigir &lt;bug&gt;');
-    expect(html).not.toContain('Corrigir <bug>');
+    expect(html).toContain('Fix &lt;bug&gt;');
+    expect(html).not.toContain('Fix <bug>');
   });
 
   it('shows a status dot on the group header when a color is known for the status', () => {
@@ -107,7 +107,7 @@ describe('renderSearchResults', () => {
     expect(allIndex).toBeGreaterThanOrEqual(0);
     expect(epicsIndex).toBeGreaterThan(allIndex);
     expect(tasksIndex).toBeGreaterThan(epicsIndex);
-    expect(html).toContain('Todos (2)');
+    expect(html).toContain('All (2)');
   });
 
   it('shows the backlog level tab count from backlogLevelCounts, not from the filtered item list', () => {

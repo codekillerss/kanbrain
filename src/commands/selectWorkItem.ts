@@ -14,12 +14,12 @@ export function registerSelectWorkItemCommand(
   return vscode.commands.registerCommand('kanbrain.selectWorkItem', async () => {
     const config = readConfig(workspaceRoot);
     if (!config) {
-      vscode.window.showErrorMessage('Rode "Kanbrain: Setup" antes de selecionar um work item.');
+      vscode.window.showErrorMessage('Run "Kanbrain: Setup" before selecting a work item.');
       return;
     }
 
     const quickPick = vscode.window.createQuickPick<WorkItemQuickPickItem>();
-    quickPick.placeholder = 'Buscar work item por título ou #id…';
+    quickPick.placeholder = 'Search work item by title or #id…';
 
     quickPick.onDidChangeValue(async value => {
       quickPick.busy = true;

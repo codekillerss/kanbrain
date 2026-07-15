@@ -10,7 +10,7 @@ let workspaceRoot: string;
 
 const workItem: WorkItem = {
   id: 482,
-  title: 'Corrigir bug',
+  title: 'Fix bug',
   description: 'desc',
   status: 'Active',
   type: 'Task',
@@ -24,7 +24,7 @@ const context: SkillTemplateContext = { workItem, parent: null, subtasks: [], br
 beforeEach(() => {
   workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kanbrain-ctx-'));
   fs.mkdirSync(path.join(workspaceRoot, 'skills'), { recursive: true });
-  fs.writeFileSync(path.join(workspaceRoot, 'skills', 'fix.md'), 'Título: {{title}} (#{{id}})');
+  fs.writeFileSync(path.join(workspaceRoot, 'skills', 'fix.md'), 'Title: {{title}} (#{{id}})');
 });
 
 afterEach(() => {
@@ -37,7 +37,7 @@ describe('generateContextFile', () => {
 
     expect(relativePath.startsWith(path.join('.kanbrain', 'generated'))).toBe(true);
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
-    expect(written).toBe('Título: Corrigir bug (#482)');
+    expect(written).toBe('Title: Fix bug (#482)');
   });
 
   it('names the file with the work item id and a filesystem-safe timestamp', () => {

@@ -8,17 +8,17 @@ import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
 import { sanitizeSvg } from '../view/sanitizeSvg';
 
-const EXAMPLE_SKILL = `# Skill de exemplo
+const EXAMPLE_SKILL = `# Example skill
 
 Work item: {{title}} (#{{id}})
 Status: {{status}}
-Descrição: {{description}}
+Description: {{description}}
 
 Subtasks:
 {{subtasks}}
 
-## Instruções
-Descreva aqui o que o agente deve fazer quando o work item estiver neste status.
+## Instructions
+Describe here what the agent should do when the work item is in this status.
 `;
 
 export function registerSetupCommand(
@@ -29,12 +29,12 @@ export function registerSetupCommand(
   return vscode.commands.registerCommand('kanbrain.setup', async () => {
     const organizations = await client.listOrganizations();
     if (organizations.length === 0) {
-      vscode.window.showErrorMessage('Nenhuma organização Azure DevOps encontrada para esta conta.');
+      vscode.window.showErrorMessage('No Azure DevOps organization found for this account.');
       return;
     }
     const orgPick = await vscode.window.showQuickPick(
       organizations.map(o => ({ label: o.name, org: o })),
-      { placeHolder: 'Selecione a organização Azure DevOps' },
+      { placeHolder: 'Select the Azure DevOps organization' },
     );
     if (!orgPick) {
       return;
@@ -42,12 +42,12 @@ export function registerSetupCommand(
 
     const projects = await client.listProjects(orgPick.org.name);
     if (projects.length === 0) {
-      vscode.window.showErrorMessage(`Nenhum projeto encontrado na organização ${orgPick.org.name}.`);
+      vscode.window.showErrorMessage(`No project found in the ${orgPick.org.name} organization.`);
       return;
     }
     const projectPick = await vscode.window.showQuickPick(
       projects.map(p => ({ label: p.name, project: p })),
-      { placeHolder: 'Selecione o projeto Azure DevOps' },
+      { placeHolder: 'Select the Azure DevOps project' },
     );
     if (!projectPick) {
       return;
@@ -59,7 +59,7 @@ export function registerSetupCommand(
       levels = await client.listBacklogLevels(orgPick.org.name, projectPick.project.name, team);
     } catch (error) {
       vscode.window.showErrorMessage(
-        `Não foi possível ler os backlog levels do processo: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not read the process's backlog levels: ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
@@ -70,7 +70,7 @@ export function registerSetupCommand(
       try {
         statesByType[type] = await client.listWorkItemTypeStates(orgPick.org.name, projectPick.project.name, type);
       } catch {
-        // Falha pontual num tipo: segue sem ele em vez de abortar o Setup inteiro.
+        // One-off failure for a type: continue without it instead of aborting the whole Setup.
       }
     }
 
@@ -88,16 +88,16 @@ export function registerSetupCommand(
           typeIcons[type] = sanitizeSvg(icon.iconSvg);
         }
       } catch {
-        // Falha pontual num tipo: segue sem ícone/cor pra ele em vez de abortar o Setup inteiro.
+        // One-off failure for a type: continue without its icon/color instead of aborting the whole Setup.
       }
     }
 
     const generateFilesPick = await vscode.window.showQuickPick(
       [
-        { label: 'Sim', generate: true },
-        { label: 'Não', generate: false },
+        { label: 'Yes', generate: true },
+        { label: 'No', generate: false },
       ],
-      { placeHolder: 'Gerar arquivos de skill placeholder automaticamente por categoria (Proposed/InProgress/Resolved)?' },
+      { placeHolder: 'Automatically generate placeholder skill files per category (Proposed/InProgress/Resolved)?' },
     );
     if (!generateFilesPick) {
       return;
@@ -134,7 +134,7 @@ export function registerSetupCommand(
     onSetupComplete();
 
     vscode.window.showInformationMessage(
-      `Kanbrain configurado: ${orgPick.org.name}/${projectPick.project.name}. Edite .kanbrain/config.json para mapear skills por status.`,
+      `Kanbrain configured: ${orgPick.org.name}/${projectPick.project.name}. Edit .kanbrain/config.json to map skills per status.`,
     );
   });
 }

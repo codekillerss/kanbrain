@@ -110,7 +110,7 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/_apis/projects/${project}?api-version=7.1`,
     );
     if (!data.defaultTeam) {
-      throw new Error(`O projeto ${project} não tem um time padrão configurado.`);
+      throw new Error(`The ${project} project has no default team configured.`);
     }
     return data.defaultTeam.name;
   }

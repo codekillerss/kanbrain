@@ -75,27 +75,27 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] `Kanbrain: Setup` prompts for Microsoft login, lists real organizations, lists real projects, and writes `.kanbrain/config.json`.
 - [ ] `.kanbrain/generated/` is added to `.gitignore` after setup.
 - [ ] `Kanbrain: Setup`, after picking a project, asks whether to generate placeholder skill files per backlog level/category, and writes `backlogLevels`/`typeToBacklogLevel` reflecting the project's real process either way.
-- [ ] Answering "Sim" creates one skill file per backlog level + category (Proposed/InProgress/Resolved) under `.kanbrain/skills/`, and `Done`/`Removed`-category statuses map to `null`.
+- [ ] Answering "Yes" creates one skill file per backlog level + category (Proposed/InProgress/Resolved) under `.kanbrain/skills/`, and `Done`/`Removed`-category statuses map to `null`.
 - [ ] `Kanbrain: Select Work Item` search returns matching work items by title and by `#id`.
 - [ ] With no active work item, the panel shows a search box and, without typing anything, a list of up to 50 recent work items grouped by status.
 - [ ] Typing in the search box filters the list by title or `#id`.
 - [ ] Clicking a result in the list sets it as the active work item and persists the selection (survives a window reload).
-- [ ] With an active work item, the header shows a "🔍 Trocar work item" button that opens the search as a floating dialog over the current card, without pushing it down the page.
+- [ ] With an active work item, the header shows a "🔍 Switch work item" button that opens the search as a floating dialog over the current card, without pushing it down the page.
 - [ ] The search dialog closes via the "✕" button in its header or by clicking the darkened backdrop outside it, without changing the active work item.
 - [ ] If the search request fails (e.g. token expired), the results area shows an inline error message instead of hanging or throwing.
 - [ ] Typing a number in the search box (e.g. `88`) matches work items whose id contains those digits (e.g. `88` and `880`), not just an exact id match.
 - [ ] Each status section in the search results can be collapsed/expanded by clicking its header, independently of the others.
 - [ ] Each work item in the search results list shows the real Azure DevOps type icon and a colored right border matching that type's color, without a status dot or action button on the item itself.
-- [ ] The search dialog shows a "Todos" tab plus one tab per backlog level, in the project's real backlog order; clicking a tab filters the already-visible list instantly, with no loading delay.
+- [ ] The search dialog shows an "All" tab plus one tab per backlog level, in the project's real backlog order; clicking a tab filters the already-visible list instantly, with no loading delay.
 - [ ] Each backlog level tab's count reflects the total number of that type of work item in the whole project (not just how many match the current search text), and only changes when the dialog is reopened or cleared — not while typing.
-- [ ] A backlog level tab with 0 items in the project stays visible (dimmed), and clicking it shows the "Nenhum work item encontrado." message.
-- [ ] The header shows a "✕ Limpar" button next to "🔍 Trocar work item" that clears the active work item and returns to the empty/search state.
+- [ ] A backlog level tab with 0 items in the project stays visible (dimmed), and clicking it shows the "No work items found." message.
+- [ ] The header shows a "✕ Clear" button next to "🔍 Switch work item" that clears the active work item and returns to the empty/search state.
 - [ ] Each work item card shows the real Azure DevOps type icon next to its `#id`, and a colored right border matching that type's color.
 - [ ] The status is shown as a small colored dot next to the plain status text (main card, children, and search result group headers) — not a filled badge.
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status dot, type icon/border, and title.
 - [ ] Children (Parent/Child linked work items) render under "Children (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
-- [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Leia o arquivo .kanbrain/generated/<id>-<timestamp>.md e siga as instruções nele.`
+- [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Read the file .kanbrain/generated/<id>-<timestamp>.md and follow the instructions in it.`
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
 - [ ] Changing the work item's status directly in Azure DevOps Boards is reflected in the panel within ~5 seconds (polling).
 - [ ] Reopening the workspace restores the previously selected work item (via `workspaceState`).

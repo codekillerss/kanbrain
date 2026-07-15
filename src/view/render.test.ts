@@ -5,7 +5,7 @@ import type { WorkItem, KanbrainConfig } from '../types';
 function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
   return {
     id: 482,
-    title: 'Corrigir <bug> no login',
+    title: 'Fix <bug> in login',
     description: 'desc',
     status: 'Active',
     type: 'Task',
@@ -29,7 +29,7 @@ const config: KanbrainConfig = {
 describe('render', () => {
   it('shows an open-folder prompt when there is no workspace folder open', () => {
     const html = render({ hasWorkspace: false, config: null, workItem: null, parent: null, subtasks: [] });
-    expect(html).toContain('Abra uma pasta de workspace');
+    expect(html).toContain('Open a workspace folder');
   });
 
   it('shows a setup prompt when there is no config', () => {
@@ -45,14 +45,14 @@ describe('render', () => {
 
   it('escapes HTML in the work item title', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
-    expect(html).toContain('Corrigir &lt;bug&gt; no login');
-    expect(html).not.toContain('Corrigir <bug> no login');
+    expect(html).toContain('Fix &lt;bug&gt; in login');
+    expect(html).not.toContain('Fix <bug> in login');
   });
 
   it('shows a toggle-search button when there is an active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
     expect(html).toContain('id="kb-toggle-search-btn"');
-    expect(html).toContain('Trocar work item');
+    expect(html).toContain('Switch work item');
   });
 
   it('shows a clear button when there is an active work item', () => {
@@ -81,7 +81,7 @@ describe('render', () => {
 
   it('shows an empty message when there are no children', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [] });
-    expect(html).toContain('Nenhum item filho');
+    expect(html).toContain('No child items');
   });
 
   it('shows the status as a colored dot next to the plain status text', () => {

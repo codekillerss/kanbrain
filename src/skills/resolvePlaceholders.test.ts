@@ -5,8 +5,8 @@ import type { WorkItem } from '../types';
 function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
   return {
     id: 482,
-    title: 'Corrigir bug no login',
-    description: 'Descrição do bug',
+    title: 'Fix bug in login',
+    description: 'Bug description',
     status: 'Active',
     type: 'Task',
     url: 'https://dev.azure.com/org/proj/_workitems/edit/482',
@@ -20,7 +20,7 @@ describe('resolvePlaceholders', () => {
   it('replaces simple placeholders with work item fields', () => {
     const context: SkillTemplateContext = { workItem: workItem(), parent: null, subtasks: [], branch: 'feature/90' };
     const result = resolvePlaceholders('# {{title}} (#{{id}}) - {{status}}', context);
-    expect(result).toBe('# Corrigir bug no login (#482) - Active');
+    expect(result).toBe('# Fix bug in login (#482) - Active');
   });
 
   it('replaces {{branch}} and {{url}}', () => {
@@ -36,10 +36,10 @@ describe('resolvePlaceholders', () => {
   });
 
   it('replaces parent placeholders with parent data when present', () => {
-    const parent = workItem({ id: 90, title: 'PBI pai', description: 'desc pai' });
+    const parent = workItem({ id: 90, title: 'Parent PBI', description: 'parent desc' });
     const context: SkillTemplateContext = { workItem: workItem(), parent, subtasks: [], branch: '' };
     const result = resolvePlaceholders('{{parent.id}} {{parent.title}} {{parent.description}}', context);
-    expect(result).toBe('90 PBI pai desc pai');
+    expect(result).toBe('90 Parent PBI parent desc');
   });
 
   it('renders a checklist for subtasks, checking Done/Closed statuses', () => {
@@ -56,6 +56,6 @@ describe('resolvePlaceholders', () => {
   it('shows a placeholder message when there are no subtasks', () => {
     const context: SkillTemplateContext = { workItem: workItem(), parent: null, subtasks: [], branch: '' };
     const result = resolvePlaceholders('{{subtasks}}', context);
-    expect(result).toBe('_Nenhuma subtask._');
+    expect(result).toBe('_No subtasks._');
   });
 });

@@ -5,10 +5,10 @@ function raw(overrides: Partial<RawWorkItem> = {}): RawWorkItem {
   return {
     id: 482,
     fields: {
-      'System.Title': 'Corrigir bug no login',
+      'System.Title': 'Fix bug in login',
       'System.State': 'Active',
       'System.WorkItemType': 'Task',
-      'System.Description': '<div>Descrição <b>com</b> html&nbsp;aqui</div>',
+      'System.Description': '<div>Description <b>with</b> html&nbsp;here</div>',
     },
     relations: [],
     ...overrides,
@@ -19,14 +19,14 @@ describe('mapWorkItem', () => {
   it('maps basic fields', () => {
     const item = mapWorkItem(raw(), 'my-org', 'MyProject');
     expect(item.id).toBe(482);
-    expect(item.title).toBe('Corrigir bug no login');
+    expect(item.title).toBe('Fix bug in login');
     expect(item.status).toBe('Active');
     expect(item.type).toBe('Task');
   });
 
   it('strips HTML from the description', () => {
     const item = mapWorkItem(raw(), 'my-org', 'MyProject');
-    expect(item.description).toBe('Descrição com html aqui');
+    expect(item.description).toBe('Description with html here');
   });
 
   it('builds the work item URL from organization and project', () => {

@@ -16,13 +16,13 @@ function skillSkeleton(levelName: string, category: string): string {
 
 Work item: {{title}} (#{{id}})
 Status: {{status}}
-Descrição: {{description}}
+Description: {{description}}
 
 Subtasks:
 {{subtasks}}
 
-## Instruções
-Descreva aqui o que o agente deve fazer quando o work item estiver neste status.
+## Instructions
+Describe here what the agent should do when the work item is in this status.
 `;
 }
 

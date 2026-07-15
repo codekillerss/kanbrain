@@ -39,15 +39,15 @@ function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass
 
 export function render(state: RenderState): string {
   if (!state.hasWorkspace) {
-    return '<div class="kb-empty">Abra uma pasta de workspace para usar o Kanbrain.</div>';
+    return '<div class="kb-empty">Open a workspace folder to use Kanbrain.</div>';
   }
   if (!state.config) {
-    return '<div class="kb-empty">Nenhum projeto configurado. Rode o comando <b>Kanbrain: Setup</b>.</div>';
+    return '<div class="kb-empty">No project configured. Run the <b>Kanbrain: Setup</b> command.</div>';
   }
   if (!state.workItem) {
     return `
       <div id="kb-search-section">
-        <input id="kb-search-input" placeholder="Buscar por título ou #id...">
+        <input id="kb-search-input" placeholder="Search by title or #id...">
         <div id="kb-search-results"></div>
       </div>
     `;
@@ -55,17 +55,17 @@ export function render(state: RenderState): string {
 
   const subtasksHtml = state.subtasks.length
     ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card')).join('')
-    : '<div class="kb-empty">Nenhum item filho.</div>';
+    : '<div class="kb-empty">No child items.</div>';
 
   return `
     <div class="kb-header">
-      <button id="kb-toggle-search-btn">🔍 Trocar work item</button>
-      <button id="kb-clear-btn">✕ Limpar</button>
+      <button id="kb-toggle-search-btn">🔍 Switch work item</button>
+      <button id="kb-clear-btn">✕ Clear</button>
     </div>
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
         <div class="kb-search-dialog-header">
-          <input id="kb-search-input" placeholder="Buscar por título ou #id...">
+          <input id="kb-search-input" placeholder="Search by title or #id...">
           <button id="kb-search-close-btn">✕</button>
         </div>
         <div id="kb-search-results"></div>

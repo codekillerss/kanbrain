@@ -11,7 +11,7 @@ const DONE_STATUSES = new Set(['done', 'closed']);
 
 function buildSubtasksChecklist(subtasks: WorkItem[]): string {
   if (subtasks.length === 0) {
-    return '_Nenhuma subtask._';
+    return '_No subtasks._';
   }
   return subtasks
     .map(s => `- [${DONE_STATUSES.has(s.status.toLowerCase()) ? 'x' : ' '}] #${s.id} — ${s.title}`)

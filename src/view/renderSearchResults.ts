@@ -6,7 +6,7 @@ import { renderTypeAccent } from './renderTypeAccent';
 
 function renderStatusGroups(items: WorkItem[], config: KanbrainConfig): string {
   if (items.length === 0) {
-    return '<div class="kb-empty">Nenhum work item encontrado.</div>';
+    return '<div class="kb-empty">No work items found.</div>';
   }
 
   return groupByStatus(items)
@@ -32,7 +32,7 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig): string {
 
 export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, backlogLevelCounts: Record<string, number>): string {
   if (items.length === 0) {
-    return '<div class="kb-empty">Nenhum work item encontrado.</div>';
+    return '<div class="kb-empty">No work items found.</div>';
   }
 
   const levels = Object.keys(config.backlogLevels);
@@ -41,7 +41,7 @@ export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, b
   }
 
   const tabs = [
-    { id: 'all', label: 'Todos', count: items.length, items },
+    { id: 'all', label: 'All', count: items.length, items },
     ...levels.map(level => ({
       id: level,
       label: level,

@@ -22,7 +22,7 @@ function stripHtml(html: string): string {
 function extractIdFromUrl(url: string): number {
   const match = url.match(/\/(\d+)$/);
   if (!match) {
-    throw new Error(`Não foi possível extrair o ID do work item da URL: ${url}`);
+    throw new Error(`Could not extract the work item ID from the URL: ${url}`);
   }
   return Number(match[1]);
 }
