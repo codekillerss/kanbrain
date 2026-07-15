@@ -24,7 +24,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private activeWorkItemId: number | undefined;
   private backlogLevelCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
-  private showHome = true;
+  private currentScreen: 'home' | 'flow' | 'config' = 'home';
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -54,8 +54,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand('kanbrain.syncBoardConfig');
       } else if (message.type === 'show-home') {
         this.showHomeScreen();
-      } else if (message.type === 'show-focused') {
-        this.showFocusedScreen();
+      } else if (message.type === 'show-flow') {
+        this.showFlowScreen();
+      } else if (message.type === 'show-config') {
+        this.showConfigScreen();
       } else if (message.type === 'save-skill-entry') {
         this.saveSkillEntry(
           String(message.level ?? ''),
@@ -91,19 +93,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   setActiveWorkItem(id: number | undefined): void {
     this.activeWorkItemId = id;
     this.persistActiveWorkItem(id);
-    this.showHome = id === undefined;
+    this.currentScreen = id === undefined ? 'home' : 'flow';
     this.lastState = '';
     void this.refresh();
   }
 
   showHomeScreen(): void {
-    this.showHome = true;
+    this.currentScreen = 'home';
     this.lastState = '';
     void this.refresh();
   }
 
-  showFocusedScreen(): void {
-    this.showHome = false;
+  showFlowScreen(): void {
+    this.currentScreen = 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  showConfigScreen(): void {
+    this.currentScreen = 'config';
     this.lastState = '';
     void this.refresh();
   }
@@ -255,7 +263,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     this.lastState = serializeState(config, workItem, subtasks);
     this.view.webview.html = this.wrapHtml(
-      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, showHome: this.showHome }),
+      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, screen: this.currentScreen }),
     );
   }
 
@@ -321,7 +329,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.id === 'kb-home-btn') {
         vscode.postMessage({ type: 'show-home' });
       } else if (target.id === 'kb-view-details-btn') {
-        vscode.postMessage({ type: 'show-focused' });
+        vscode.postMessage({ type: 'show-flow' });
+      } else if (target.id === 'kb-show-config-btn') {
+        vscode.postMessage({ type: 'show-config' });
       } else if (target.id === 'kb-search-close-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {
@@ -404,8 +414,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
-      #kb-toggle-search-btn, #kb-clear-btn, #kb-home-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
-      #kb-toggle-search-btn:hover, #kb-clear-btn:hover, #kb-home-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      .kb-secondary-btn { box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-secondary-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      .kb-header .kb-secondary-btn { flex: 1; }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
       .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 0; margin-top: 12px; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
