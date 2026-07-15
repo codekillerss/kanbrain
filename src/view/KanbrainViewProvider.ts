@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem } from '../types';
+import type { WorkItem, KanbrainConfig } from '../types';
 import { readConfig } from '../config/config';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { render } from './render';
@@ -20,6 +20,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private lastState = '';
   private activeWorkItemId: number | undefined;
+  private backlogLevelCounts: Record<string, number> = {};
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -71,15 +72,32 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     let html: string;
     try {
+      if (query.trim() === '') {
+        this.backlogLevelCounts = await this.fetchBacklogLevelCounts(this.client, config);
+      }
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-      html = renderSearchResults(filterSearchResults(items, query), config);
+      html = renderSearchResults(filterSearchResults(items, query), config, this.backlogLevelCounts);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
     }
 
     this.view.webview.postMessage({ type: 'search-results', html });
+  }
+
+  private async fetchBacklogLevelCounts(client: AzureDevOpsClient, config: KanbrainConfig): Promise<Record<string, number>> {
+    const levels = Object.keys(config.backlogLevels);
+    const entries = await Promise.all(
+      levels.map(async level => {
+        const types = Object.entries(config.typeToBacklogLevel)
+          .filter(([, backlogLevel]) => backlogLevel === level)
+          .map(([type]) => type);
+        const count = await client.countWorkItemsByType(config.organization, config.project, types);
+        return [level, count] as const;
+      }),
+    );
+    return Object.fromEntries(entries);
   }
 
   private async runSkill(id: number): Promise<void> {
@@ -154,6 +172,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   ${body}
   <script>
     const vscode = acquireVsCodeApi();
+    let activeSearchTab = 'all';
+
+    function applySearchTab() {
+      document.querySelectorAll('.kb-search-tab').forEach((btn) => {
+        btn.classList.toggle('kb-search-tab-active', btn.dataset.tab === activeSearchTab);
+      });
+      document.querySelectorAll('.kb-search-tab-panel').forEach((panel) => {
+        panel.classList.toggle('kb-hidden', panel.dataset.tabPanel !== activeSearchTab);
+      });
+    }
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -184,6 +212,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (items) {
           items.classList.toggle('kb-hidden');
         }
+      } else if (target.dataset && target.dataset.action === 'select-tab') {
+        activeSearchTab = target.dataset.tab;
+        applySearchTab();
       }
     });
 
@@ -199,6 +230,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const results = document.getElementById('kb-search-results');
         if (results) {
           results.innerHTML = event.data.html;
+          applySearchTab();
         }
       }
     });
@@ -242,6 +274,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; }
       #kb-search-close-btn { flex-shrink: 0; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px 6px; border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
+      .kb-search-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; }
+      .kb-search-tab { flex-shrink: 0; padding: 4px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-search-tab:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
+      .kb-search-tab-empty { opacity: 0.5; }
     `;
   }
 }
