@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { getConfigPath, readConfig, writeConfig, ensureGitignoreEntry } from './config';
+import { getConfigPath, readConfig, writeConfig, ensureGitignoreEntry, readConfigWithDiagnostics } from './config';
 
 let workspaceRoot: string;
 
@@ -37,6 +37,12 @@ describe('readConfig', () => {
     };
     writeConfig(workspaceRoot, config);
     expect(readConfig(workspaceRoot)).toEqual(config);
+  });
+
+  it('returns null when the config file is malformed JSON', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigPath(workspaceRoot), '{ not valid json', 'utf-8');
+    expect(readConfig(workspaceRoot)).toBeNull();
   });
 });
 
@@ -74,5 +80,33 @@ describe('ensureGitignoreEntry', () => {
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');
     const content = fs.readFileSync(path.join(workspaceRoot, '.gitignore'), 'utf-8');
     expect(content.match(/\.kanbrain\/generated\//g)?.length).toBe(1);
+  });
+});
+
+describe('readConfigWithDiagnostics', () => {
+  it('returns status "missing" when no config file exists', () => {
+    expect(readConfigWithDiagnostics(workspaceRoot)).toEqual({ status: 'missing' });
+  });
+
+  it('returns status "ok" with the parsed config when the file is valid', () => {
+    const config = {
+      organization: 'my-org',
+      project: 'MyProject',
+      typeToBacklogLevel: {},
+      backlogLevels: {},
+      statusColors: {},
+      typeColors: {},
+      typeIcons: {},
+    };
+    writeConfig(workspaceRoot, config);
+    expect(readConfigWithDiagnostics(workspaceRoot)).toEqual({ status: 'ok', config });
+  });
+
+  it('returns status "invalid" with the parse error message when the file is malformed JSON', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigPath(workspaceRoot), '{ not valid json', 'utf-8');
+    const result = readConfigWithDiagnostics(workspaceRoot);
+    expect(result.status).toBe('invalid');
+    expect((result as { status: 'invalid'; error: string }).error.length).toBeGreaterThan(0);
   });
 });

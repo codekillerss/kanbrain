@@ -12,7 +12,26 @@ export function readConfig(workspaceRoot: string): KanbrainConfig | null {
     return null;
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
-  return JSON.parse(raw) as KanbrainConfig;
+  try {
+    return JSON.parse(raw) as KanbrainConfig;
+  } catch {
+    return null;
+  }
+}
+
+export type ConfigReadResult = { status: 'ok'; config: KanbrainConfig } | { status: 'missing' } | { status: 'invalid'; error: string };
+
+export function readConfigWithDiagnostics(workspaceRoot: string): ConfigReadResult {
+  const configPath = getConfigPath(workspaceRoot);
+  if (!fs.existsSync(configPath)) {
+    return { status: 'missing' };
+  }
+  const raw = fs.readFileSync(configPath, 'utf-8');
+  try {
+    return { status: 'ok', config: JSON.parse(raw) as KanbrainConfig };
+  } catch (error) {
+    return { status: 'invalid', error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void {
