@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig } from '../types';
-import { readConfig } from '../config/config';
+import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
+import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
@@ -23,6 +24,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private activeWorkItemId: number | undefined;
   private backlogLevelCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
+  private showHome = true;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -46,6 +48,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setActiveWorkItem(undefined);
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
+      } else if (message.type === 'run-check-board-config') {
+        await vscode.commands.executeCommand('kanbrain.checkBoardConfig');
+      } else if (message.type === 'run-sync-board-config') {
+        await vscode.commands.executeCommand('kanbrain.syncBoardConfig');
+      } else if (message.type === 'show-home') {
+        this.showHomeScreen();
+      } else if (message.type === 'show-focused') {
+        this.showFocusedScreen();
+      } else if (message.type === 'save-skill-entry') {
+        this.saveSkillEntry(
+          String(message.level ?? ''),
+          String(message.status ?? ''),
+          String(message.path ?? ''),
+          String(message.label ?? ''),
+          String(message.textColor ?? ''),
+          String(message.buttonColor ?? ''),
+        );
+      } else if (message.type === 'pick-skill-file') {
+        await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
       }
     });
 
@@ -70,6 +91,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   setActiveWorkItem(id: number | undefined): void {
     this.activeWorkItemId = id;
     this.persistActiveWorkItem(id);
+    this.showHome = id === undefined;
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  showHomeScreen(): void {
+    this.showHome = true;
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  showFocusedScreen(): void {
+    this.showHome = false;
     this.lastState = '';
     void this.refresh();
   }
@@ -111,6 +145,52 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }),
     );
     return Object.fromEntries(entries);
+  }
+
+  private saveSkillEntry(level: string, status: string, filePath: string, label: string, textColor: string, buttonColor: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config || !config.backlogLevels[level] || !(status in config.backlogLevels[level])) {
+      return;
+    }
+
+    const trimmedPath = filePath.trim();
+    if (!trimmedPath) {
+      config.backlogLevels[level][status] = null;
+    } else {
+      const entry: SkillEntry = { path: trimmedPath };
+      if (label.trim()) {
+        entry.label = label.trim();
+      }
+      if (textColor.trim()) {
+        entry.textColor = textColor.trim();
+      }
+      if (buttonColor.trim()) {
+        entry.buttonColor = buttonColor.trim();
+      }
+      config.backlogLevels[level][status] = entry;
+    }
+
+    writeConfig(this.workspaceRoot, config);
+  }
+
+  private async pickSkillFile(level: string, status: string): Promise<void> {
+    if (!this.workspaceRoot || !this.view) {
+      return;
+    }
+    const uris = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(this.workspaceRoot),
+      canSelectMany: false,
+      filters: { Markdown: ['md'] },
+    });
+    const picked = uris?.[0];
+    if (!picked) {
+      return;
+    }
+    const relativePath = path.relative(this.workspaceRoot, picked.fsPath).split(path.sep).join('/');
+    this.view.webview.postMessage({ type: 'skill-file-picked', level, status, path: relativePath });
   }
 
   private async runSkill(id: number): Promise<void> {
@@ -174,7 +254,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.lastState = serializeState(config, workItem, subtasks);
-    this.view.webview.html = this.wrapHtml(render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks }));
+    this.view.webview.html = this.wrapHtml(
+      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, showHome: this.showHome }),
+    );
   }
 
   private wrapHtml(body: string): string {
@@ -196,6 +278,27 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    function saveSkillRow(row) {
+      vscode.postMessage({
+        type: 'save-skill-entry',
+        level: row.dataset.level,
+        status: row.dataset.status,
+        path: row.querySelector('[data-field="path"]').value,
+        label: row.querySelector('[data-field="label"]').value,
+        textColor: row.querySelector('[data-field="textColor"]').value,
+        buttonColor: row.querySelector('[data-field="buttonColor"]').value,
+      });
+    }
+
+    document.querySelectorAll('.kb-config-row input').forEach((input) => {
+      input.addEventListener('blur', () => {
+        const row = input.closest('.kb-config-row');
+        if (row) {
+          saveSkillRow(row);
+        }
+      });
+    });
+
     document.addEventListener('click', (e) => {
       const target = e.target;
       if (target.id === 'kb-toggle-search-btn') {
@@ -209,8 +312,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
-      } else if (target.id === 'kb-run-setup-btn') {
+      } else if (target.id === 'kb-run-setup-btn' || target.id === 'kb-run-setup-home-btn') {
         vscode.postMessage({ type: 'run-setup' });
+      } else if (target.id === 'kb-run-check-board-config-btn') {
+        vscode.postMessage({ type: 'run-check-board-config' });
+      } else if (target.id === 'kb-run-sync-board-config-btn') {
+        vscode.postMessage({ type: 'run-sync-board-config' });
+      } else if (target.id === 'kb-home-btn') {
+        vscode.postMessage({ type: 'show-home' });
+      } else if (target.id === 'kb-view-details-btn') {
+        vscode.postMessage({ type: 'show-focused' });
       } else if (target.id === 'kb-search-close-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {
@@ -230,6 +341,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.dataset && target.dataset.action === 'select-tab') {
         activeSearchTab = target.dataset.tab;
         applySearchTab();
+      } else if (target.dataset && target.dataset.action === 'pick-skill-file') {
+        const row = target.closest('.kb-config-row');
+        if (row) {
+          vscode.postMessage({ type: 'pick-skill-file', level: row.dataset.level, status: row.dataset.status });
+        }
       }
     });
 
@@ -246,6 +362,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (results) {
           results.innerHTML = event.data.html;
           applySearchTab();
+        }
+      } else if (event.data.type === 'skill-file-picked') {
+        const rows = document.querySelectorAll('.kb-config-row');
+        for (const row of rows) {
+          if (row.dataset.level === event.data.level && row.dataset.status === event.data.status) {
+            const pathInput = row.querySelector('[data-field="path"]');
+            pathInput.value = event.data.path;
+            saveSkillRow(row);
+            break;
+          }
         }
       }
     });
@@ -278,8 +404,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
-      #kb-toggle-search-btn, #kb-clear-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
-      #kb-toggle-search-btn:hover, #kb-clear-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      #kb-toggle-search-btn, #kb-clear-btn, #kb-home-btn { flex: 1; box-sizing: border-box; padding: 4px 6px; text-align: center; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      #kb-toggle-search-btn:hover, #kb-clear-btn:hover, #kb-home-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
       .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 0; margin-top: 12px; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
@@ -294,6 +420,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-tab:hover { background: var(--vscode-list-hoverBackground); }
       .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
       .kb-search-tab-empty { opacity: 0.5; }
+      .kb-home-section { margin-bottom: 16px; }
+      .kb-home-commands { display: flex; flex-direction: column; gap: 4px; }
+      .kb-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      .kb-config-level { margin-bottom: 8px; }
+      .kb-config-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
+      .kb-config-row-status { display: flex; align-items: center; font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+      .kb-config-field-path { display: flex; gap: 4px; align-items: center; }
+      .kb-config-field-path .kb-input { flex: 1; margin-bottom: 0; }
+      .kb-config-field-path button { flex-shrink: 0; padding: 4px 8px; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-config-field-path button:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
     `;
   }
 }
