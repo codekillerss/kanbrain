@@ -37,24 +37,28 @@ function state(overrides: Partial<RenderState> = {}): RenderState {
     workItem: null,
     parent: null,
     subtasks: [],
-    showHome: true,
+    screen: 'home',
     ...overrides,
   };
 }
 
 describe('renderHome', () => {
-  it('shows buttons for Setup, Check Board Configuration, and Sync Board Configuration', () => {
+  it('shows buttons for Setup, Check Board Configuration, Sync Board Configuration, and Configuration', () => {
     const html = renderHome(state());
 
     expect(html).toContain('id="kb-run-setup-home-btn"');
     expect(html).toContain('id="kb-run-check-board-config-btn"');
     expect(html).toContain('id="kb-run-sync-board-config-btn"');
+    expect(html).toContain('id="kb-show-config-btn"');
   });
 
-  it('shows the inline search box when there is no active work item', () => {
+  it('shows a "Select Work Item" button (not the search box directly) when there is no active work item', () => {
     const html = renderHome(state({ workItem: null }));
 
-    expect(html).toContain('id="kb-search-input"');
+    expect(html).toContain('id="kb-toggle-search-btn"');
+    expect(html).toContain('Select Work Item');
+    expect(html).toContain('kb-search-overlay');
+    expect(html).not.toContain('id="kb-clear-btn"');
     expect(html).not.toContain('id="kb-view-details-btn"');
   });
 
@@ -63,13 +67,14 @@ describe('renderHome', () => {
 
     expect(html).toContain('kb-main-card');
     expect(html).toContain('id="kb-toggle-search-btn"');
+    expect(html).toContain('Switch work item');
     expect(html).toContain('id="kb-clear-btn"');
     expect(html).toContain('id="kb-view-details-btn"');
   });
 
-  it('renders the config editor section', () => {
+  it('does not render a config editor section', () => {
     const html = renderHome(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
 
-    expect(html).toContain('data-level="Tasks"');
+    expect(html).not.toContain('data-level="Tasks"');
   });
 });
