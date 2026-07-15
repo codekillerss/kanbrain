@@ -46,7 +46,7 @@ export function diffBoardConfig(
     }
     for (const status of Object.keys(config.backlogLevels[level])) {
       if (!(status in discovered[level])) {
-        statusesRemoved.push({ level, status, skillPath: config.backlogLevels[level][status] });
+        statusesRemoved.push({ level, status, skillPath: config.backlogLevels[level][status]?.path ?? null });
       }
     }
   }

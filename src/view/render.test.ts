@@ -20,7 +20,7 @@ const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
   typeToBacklogLevel: { Task: 'Tasks' },
-  backlogLevels: { Tasks: { Active: 'skills/fix.md', Closed: null } },
+  backlogLevels: { Tasks: { Active: { path: 'skills/fix.md' }, Closed: null } },
   statusColors: { Active: 'b2b2b2' },
   typeColors: { Task: 'f2cb1d' },
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
@@ -103,5 +103,36 @@ describe('render', () => {
     expect(html).toContain('kb-search-overlay');
     expect(html).toContain('kb-search-dialog');
     expect(html).toContain('id="kb-search-close-btn"');
+  });
+
+  it('uses a custom label when the skill entry defines one', () => {
+    const customConfig: KanbrainConfig = {
+      ...config,
+      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', label: 'Fix it now' }, Closed: null } },
+    };
+    const html = render({ hasWorkspace: true, config: customConfig, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
+    expect(html).toContain('Fix it now');
+    expect(html).not.toContain('fix.md');
+  });
+
+  it('applies textColor and buttonColor as inline style when valid hex', () => {
+    const customConfig: KanbrainConfig = {
+      ...config,
+      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', textColor: 'ffffff', buttonColor: '007acc' }, Closed: null } },
+    };
+    const html = render({ hasWorkspace: true, config: customConfig, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
+    expect(html).toContain('background: #007acc;');
+    expect(html).toContain('color: #ffffff;');
+  });
+
+  it('ignores an invalid hex color and falls back to the theme default', () => {
+    const customConfig: KanbrainConfig = {
+      ...config,
+      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', buttonColor: 'not-a-color' }, Closed: null } },
+    };
+    const html = render({ hasWorkspace: true, config: customConfig, workItem: workItem({ status: 'Active' }), parent: null, subtasks: [] });
+    const buttonIndex = html.indexOf('data-action="run-skill"');
+    const buttonMarkup = html.slice(buttonIndex - 40, buttonIndex + 40);
+    expect(buttonMarkup).not.toContain('background:');
   });
 });

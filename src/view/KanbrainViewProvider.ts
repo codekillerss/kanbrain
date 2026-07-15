@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import type { WorkItem, KanbrainConfig } from '../types';
 import { readConfig } from '../config/config';
-import { resolveSkillPath } from '../config/resolveSkillPath';
+import { resolveSkill } from '../config/resolveSkill';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
 import { filterSearchResults } from './filterSearchResults';
@@ -125,8 +125,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const skillPath = resolveSkillPath(config, workItem);
-    if (!skillPath) {
+    const skill = resolveSkill(config, workItem);
+    if (!skill) {
       return;
     }
 
@@ -136,7 +136,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const subtasks = await this.client.getChildren(config.organization, config.project, workItem);
     const branch = await this.getCurrentBranch();
 
-    const relativePath = generateContextFile(this.workspaceRoot, skillPath, {
+    const relativePath = generateContextFile(this.workspaceRoot, skill.path, {
       workItem,
       parent: parent ?? null,
       subtasks,

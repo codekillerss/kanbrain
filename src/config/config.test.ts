@@ -30,7 +30,7 @@ describe('readConfig', () => {
       organization: 'my-org',
       project: 'MyProject',
       typeToBacklogLevel: { Task: 'Tasks' },
-      backlogLevels: { Tasks: { New: '.kanbrain/skills/a.md' } },
+      backlogLevels: { Tasks: { New: { path: '.kanbrain/skills/a.md' } } },
       statusColors: { New: 'b2b2b2' },
       typeColors: { Task: 'f2cb1d' },
       typeIcons: { Task: '<svg></svg>' },

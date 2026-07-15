@@ -1,4 +1,4 @@
-import type { KanbrainConfig } from '../types';
+import type { KanbrainConfig, SkillEntry } from '../types';
 import type { DiscoveredBacklogLevels } from '../azureDevOps/backlogLevels';
 
 export function syncConfig(
@@ -9,11 +9,11 @@ export function syncConfig(
   freshTypeColors: Record<string, string>,
   freshTypeIcons: Record<string, string>,
 ): KanbrainConfig {
-  const backlogLevels: Record<string, Record<string, string | null>> = {};
+  const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
 
   for (const [level, statuses] of Object.entries(discovered)) {
     const existingLevel = config.backlogLevels[level] ?? {};
-    const merged: Record<string, string | null> = {};
+    const merged: Record<string, SkillEntry | null> = {};
     for (const status of Object.keys(statuses)) {
       merged[status] = status in existingLevel ? existingLevel[status] : null;
     }
@@ -25,9 +25,9 @@ export function syncConfig(
       backlogLevels[level] = { ...statuses };
       continue;
     }
-    for (const [status, skillPath] of Object.entries(statuses)) {
+    for (const [status, skill] of Object.entries(statuses)) {
       if (!(status in backlogLevels[level])) {
-        backlogLevels[level][status] = skillPath;
+        backlogLevels[level][status] = skill;
       }
     }
   }

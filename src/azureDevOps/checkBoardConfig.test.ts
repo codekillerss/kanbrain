@@ -47,7 +47,7 @@ describe('diffBoardConfig', () => {
 
   it('reports a backlog level removed from the board', () => {
     const diff = diffBoardConfig(
-      config({ backlogLevels: { Tasks: { 'To Do': null }, Stories: { New: '.kanbrain/skills/x.md' } } }),
+      config({ backlogLevels: { Tasks: { 'To Do': null }, Stories: { New: { path: '.kanbrain/skills/x.md' } } } }),
       discovered,
       freshTypeToBacklogLevel,
     );
@@ -61,7 +61,9 @@ describe('diffBoardConfig', () => {
 
   it('reports a status removed within an existing backlog level, including its skill path', () => {
     const diff = diffBoardConfig(
-      config({ backlogLevels: { Tasks: { 'To Do': null, Done: null, Cancelled: '.kanbrain/skills/tasks-cancelled.md' } } }),
+      config({
+        backlogLevels: { Tasks: { 'To Do': null, Done: null, Cancelled: { path: '.kanbrain/skills/tasks-cancelled.md' } } },
+      }),
       discovered,
       freshTypeToBacklogLevel,
     );

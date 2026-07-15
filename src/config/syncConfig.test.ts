@@ -7,7 +7,7 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
     organization: 'org',
     project: 'proj',
     typeToBacklogLevel: { Task: 'Tasks' },
-    backlogLevels: { Tasks: { 'To Do': '.kanbrain/skills/tasks-todo.md', Done: null } },
+    backlogLevels: { Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md' }, Done: null } },
     statusColors: { 'To Do': 'old-color' },
     typeColors: { Task: 'old-color' },
     typeIcons: { Task: '<svg>old</svg>' },
@@ -40,7 +40,7 @@ describe('syncConfig', () => {
 
   it('preserves an existing skill mapping for a status that still exists on the board', () => {
     const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed', Done: 'Completed' } }, { Task: 'Tasks' }, {}, {}, {});
-    expect(result.backlogLevels.Tasks['To Do']).toBe('.kanbrain/skills/tasks-todo.md');
+    expect(result.backlogLevels.Tasks['To Do']).toEqual({ path: '.kanbrain/skills/tasks-todo.md' });
     expect(result.backlogLevels.Tasks.Done).toBeNull();
   });
 
@@ -58,21 +58,23 @@ describe('syncConfig', () => {
 
   it('preserves an orphaned status mapping instead of deleting it', () => {
     const withOrphan = config({
-      backlogLevels: { Tasks: { 'To Do': '.kanbrain/skills/tasks-todo.md', Legacy: '.kanbrain/skills/legacy.md' } },
+      backlogLevels: {
+        Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md' }, Legacy: { path: '.kanbrain/skills/legacy.md' } },
+      },
     });
     const result = syncConfig(withOrphan, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
 
-    expect(result.backlogLevels.Tasks.Legacy).toBe('.kanbrain/skills/legacy.md');
-    expect(result.backlogLevels.Tasks['To Do']).toBe('.kanbrain/skills/tasks-todo.md');
+    expect(result.backlogLevels.Tasks.Legacy).toEqual({ path: '.kanbrain/skills/legacy.md' });
+    expect(result.backlogLevels.Tasks['To Do']).toEqual({ path: '.kanbrain/skills/tasks-todo.md' });
   });
 
   it('preserves an orphaned backlog level entirely instead of deleting it', () => {
     const withOrphanLevel = config({
-      backlogLevels: { Tasks: { 'To Do': null }, Stories: { New: '.kanbrain/skills/stories-new.md' } },
+      backlogLevels: { Tasks: { 'To Do': null }, Stories: { New: { path: '.kanbrain/skills/stories-new.md' } } },
     });
     const result = syncConfig(withOrphanLevel, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
 
-    expect(result.backlogLevels.Stories).toEqual({ New: '.kanbrain/skills/stories-new.md' });
+    expect(result.backlogLevels.Stories).toEqual({ New: { path: '.kanbrain/skills/stories-new.md' } });
   });
 
   it('adds a brand new backlog level with all statuses defaulted to null', () => {
@@ -85,5 +87,21 @@ describe('syncConfig', () => {
       {},
     );
     expect(result.backlogLevels.Stories).toEqual({ New: null });
+  });
+
+  it('preserves label and color customizations on a skill entry that still applies', () => {
+    const withCustomization = config({
+      backlogLevels: {
+        Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' } },
+      },
+    });
+    const result = syncConfig(withCustomization, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+
+    expect(result.backlogLevels.Tasks['To Do']).toEqual({
+      path: '.kanbrain/skills/tasks-todo.md',
+      label: 'Refine',
+      textColor: 'ffffff',
+      buttonColor: '007acc',
+    });
   });
 });

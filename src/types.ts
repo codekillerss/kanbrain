@@ -9,11 +9,18 @@ export interface WorkItem {
   childIds: number[];
 }
 
+export interface SkillEntry {
+  path: string;
+  label?: string;
+  textColor?: string;
+  buttonColor?: string;
+}
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
   typeToBacklogLevel: Record<string, string>;
-  backlogLevels: Record<string, Record<string, string | null>>;
+  backlogLevels: Record<string, Record<string, SkillEntry | null>>;
   statusColors: Record<string, string>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;

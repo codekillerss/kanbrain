@@ -18,9 +18,9 @@ describe('buildPresetPlan', () => {
   it('generates one shared skill file per level+category when generateFiles is true', () => {
     const plan = buildPresetPlan(discovered, true);
 
-    expect(plan.backlogLevels.Stories.New).toBe('.kanbrain/skills/stories-proposed.md');
-    expect(plan.backlogLevels.Stories.Approved).toBe('.kanbrain/skills/stories-proposed.md');
-    expect(plan.backlogLevels.Stories.Committed).toBe('.kanbrain/skills/stories-inprogress.md');
+    expect(plan.backlogLevels.Stories.New).toEqual({ path: '.kanbrain/skills/stories-proposed.md' });
+    expect(plan.backlogLevels.Stories.Approved).toEqual({ path: '.kanbrain/skills/stories-proposed.md' });
+    expect(plan.backlogLevels.Stories.Committed).toEqual({ path: '.kanbrain/skills/stories-inprogress.md' });
     expect(plan.filesToWrite.map(f => f.relativePath)).toEqual([
       '.kanbrain/skills/stories-proposed.md',
       '.kanbrain/skills/stories-inprogress.md',
@@ -45,6 +45,6 @@ describe('buildPresetPlan', () => {
   it('keeps files from different backlog levels separate even for the same category', () => {
     const plan = buildPresetPlan(discovered, true);
 
-    expect(plan.backlogLevels.Stories.New).not.toBe(plan.backlogLevels.Tasks['To Do']);
+    expect(plan.backlogLevels.Stories.New).not.toEqual(plan.backlogLevels.Tasks['To Do']);
   });
 });
