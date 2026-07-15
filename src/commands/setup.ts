@@ -2,11 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItemTypeState } from '../azureDevOps/backlogLevels';
 import { discoverBacklogLevelStates, discoverStatusColors, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
+import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
-import { sanitizeSvg } from '../view/sanitizeSvg';
 
 const EXAMPLE_SKILL = `# Example skill
 
@@ -53,44 +52,20 @@ export function registerSetupCommand(
       return;
     }
 
-    let levels;
+    let boardState;
     try {
-      const team = await client.getDefaultTeamName(orgPick.org.name, projectPick.project.name);
-      levels = await client.listBacklogLevels(orgPick.org.name, projectPick.project.name, team);
+      boardState = await discoverBoardState(client, orgPick.org.name, projectPick.project.name);
     } catch (error) {
       vscode.window.showErrorMessage(
         `Could not read the process's backlog levels: ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
-
-    const statesByType: Record<string, WorkItemTypeState[]> = {};
-    const uniqueTypes = Array.from(new Set(levels.flatMap(level => level.workItemTypes)));
-    for (const type of uniqueTypes) {
-      try {
-        statesByType[type] = await client.listWorkItemTypeStates(orgPick.org.name, projectPick.project.name, type);
-      } catch {
-        // One-off failure for a type: continue without it instead of aborting the whole Setup.
-      }
-    }
+    const { levels, statesByType, typeColors, typeIcons } = boardState;
 
     const discovered = discoverBacklogLevelStates(levels, statesByType);
     const typeToBacklogLevel = buildTypeToBacklogLevel(levels, new Set(Object.keys(statesByType)));
     const statusColors = discoverStatusColors(levels, statesByType);
-
-    const typeColors: Record<string, string> = {};
-    const typeIcons: Record<string, string> = {};
-    for (const type of uniqueTypes) {
-      try {
-        const icon = await client.getWorkItemTypeIcon(orgPick.org.name, projectPick.project.name, type);
-        if (icon) {
-          typeColors[type] = icon.color;
-          typeIcons[type] = sanitizeSvg(icon.iconSvg);
-        }
-      } catch {
-        // One-off failure for a type: continue without its icon/color instead of aborting the whole Setup.
-      }
-    }
 
     const generateFilesPick = await vscode.window.showQuickPick(
       [
