@@ -60,6 +60,8 @@ VS Code extension that shows the active Azure DevOps work item and its children 
 
 If the project's process changes later (a status is renamed, a work item type is added/removed, a type moves to a different backlog level), run **Kanbrain: Check Board Configuration** to see whether `.kanbrain/config.json` is still in sync — it never modifies anything by itself. If it finds a difference, it offers a **Sync Now** action (also available directly as **Kanbrain: Sync Board Configuration**) that refreshes colors/icons/type mappings and adds any new statuses, but never deletes a skill mapping you've configured — entries for statuses/levels no longer found on the board are kept as-is so you don't lose your work; the command's summary tells you which ones to review. Kanbrain also runs this check once, silently, each time the panel first opens in a VS Code session, and only shows a message if something needs your attention.
 
+When there's no active work item — or after clicking **🏠 Home** from the work item view — the panel shows a Home screen with three sections: **Commands** (buttons for Setup, Check Board Configuration, and Sync Board Configuration), **Current Work Item** (the active item with Switch/Clear, or the search box if none is active), and **Skill Configuration** (one editable row per backlog level/status, with a path field, a "…" button to browse for the skill file, and label/text color/button color fields — changes save automatically when you leave a field). The skill configuration editor only edits these values; it doesn't add or remove backlog levels, statuses, or types — that stays the job of Setup/Sync.
+
 ## Skill file placeholders
 
 `{{id}}` `{{title}}` `{{description}}` `{{status}}` `{{type}}` `{{url}}` `{{branch}}` `{{parent.id}}` `{{parent.title}}` `{{parent.description}}` `{{subtasks}}`
@@ -105,6 +107,12 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] Children (Parent/Child linked work items) render under "Children (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
 - [ ] A skill entry with a custom `label` shows that text on the action button instead of the skill file's name; a valid `textColor`/`buttonColor` is applied to the button, and an invalid or missing one falls back to the theme's default button colors.
+- [ ] With no active work item, the panel shows the Home screen (Commands / Current Work Item / Skill Configuration sections) instead of a bare search box.
+- [ ] Clicking a Commands button on Home runs the corresponding command (Setup, Check Board Configuration, Sync Board Configuration).
+- [ ] With an active work item, clicking "🏠 Home" shows the Home screen with that item's card, Switch, and Clear in the Current Work Item section, without clearing the active work item; clicking "View details →" returns to the full card + children view.
+- [ ] Editing a skill's path, label, text color, or button color in the Skill Configuration section and moving focus away (Tab or click elsewhere) persists the change to `.kanbrain/config.json` without a Save button; reopening Home shows the saved value.
+- [ ] Clicking the "…" button next to a skill's path field opens a native file picker; choosing a `.md` file inside the workspace fills the path field with the relative path and saves it.
+- [ ] Clearing a skill's path field and moving focus away sets that status back to no skill (`null`) — the action button disappears from that status's card.
 - [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Read the file .kanbrain/generated/<id>-<timestamp>.md and follow the instructions in it.`
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
 - [ ] Changing the work item's status directly in Azure DevOps Boards is reflected in the panel within ~5 seconds (polling).
