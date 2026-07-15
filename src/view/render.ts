@@ -1,5 +1,6 @@
 import type { WorkItem, KanbrainConfig } from '../types';
 import { renderWorkItemCard } from './renderWorkItemCard';
+import { renderHome } from './renderHome';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -7,6 +8,7 @@ export interface RenderState {
   workItem: WorkItem | null;
   parent: WorkItem | null;
   subtasks: WorkItem[];
+  showHome: boolean;
 }
 
 export function render(state: RenderState): string {
@@ -21,6 +23,10 @@ export function render(state: RenderState): string {
       </div>
     `;
   }
+  if (state.showHome) {
+    return renderHome(state);
+  }
+
   if (!state.workItem) {
     return `
       <div id="kb-search-section">
@@ -36,6 +42,7 @@ export function render(state: RenderState): string {
 
   return `
     <div class="kb-header">
+      <button id="kb-home-btn">🏠 Home</button>
       <button id="kb-toggle-search-btn">🔍 Switch work item</button>
       <button id="kb-clear-btn">✕ Clear</button>
     </div>
