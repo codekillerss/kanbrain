@@ -58,6 +58,29 @@ describe('AzureDevOpsClient', () => {
     );
   });
 
+  it('counts work items by type without fetching full details', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [{ id: 1 }, { id: 2 }, { id: 3 }] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const count = await client.countWorkItemsByType('my-org', 'MyProject', ['Epic']);
+
+    expect(count).toBe(3);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql?api-version=7.1',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('returns 0 without calling fetch when types is empty', async () => {
+    const fetchImpl = vi.fn();
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const count = await client.countWorkItemsByType('my-org', 'MyProject', []);
+
+    expect(count).toBe(0);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('returns an empty array from getWorkItems without calling fetch when ids is empty', async () => {
     const fetchImpl = vi.fn();
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });

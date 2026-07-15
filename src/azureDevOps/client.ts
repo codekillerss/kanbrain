@@ -1,5 +1,5 @@
 import type { WorkItem } from '../types';
-import { buildSearchQuery } from './wiql';
+import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
 
@@ -77,6 +77,18 @@ export class AzureDevOpsClient {
       { method: 'POST', body: JSON.stringify({ query }) },
     );
     return data.workItems.map(w => w.id);
+  }
+
+  async countWorkItemsByType(organization: string, project: string, types: string[]): Promise<number> {
+    if (types.length === 0) {
+      return 0;
+    }
+    const query = buildTypeCountQuery(types);
+    const data = await this.request<{ workItems: { id: number }[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1`,
+      { method: 'POST', body: JSON.stringify({ query }) },
+    );
+    return data.workItems.length;
   }
 
   async getWorkItems(organization: string, project: string, ids: number[]): Promise<WorkItem[]> {
