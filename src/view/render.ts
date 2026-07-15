@@ -49,7 +49,12 @@ export function render(state: RenderState): string {
     return '<div class="kb-empty">Open a workspace folder to use Kanbrain.</div>';
   }
   if (!state.config) {
-    return '<div class="kb-empty">No project configured. Run the <b>Kanbrain: Setup</b> command.</div>';
+    return `
+      <div class="kb-empty">
+        No project configured. Run the <b>Kanbrain: Setup</b> command.
+        <div><button id="kb-run-setup-btn" class="kb-action-btn">Run Kanbrain: Setup</button></div>
+      </div>
+    `;
   }
   if (!state.workItem) {
     return `

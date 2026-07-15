@@ -44,6 +44,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setActiveWorkItem(Number(message.id));
       } else if (message.type === 'clear-work-item') {
         this.setActiveWorkItem(undefined);
+      } else if (message.type === 'run-setup') {
+        await vscode.commands.executeCommand('kanbrain.setup');
       }
     });
 
@@ -207,6 +209,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
+      } else if (target.id === 'kb-run-setup-btn') {
+        vscode.postMessage({ type: 'run-setup' });
       } else if (target.id === 'kb-search-close-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {

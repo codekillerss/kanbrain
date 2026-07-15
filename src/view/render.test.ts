@@ -37,6 +37,11 @@ describe('render', () => {
     expect(html).toContain('Kanbrain: Setup');
   });
 
+  it('shows a button to run Setup when there is no config', () => {
+    const html = render({ hasWorkspace: true, config: null, workItem: null, parent: null, subtasks: [] });
+    expect(html).toContain('id="kb-run-setup-btn"');
+  });
+
   it('shows an inline search box when there is config but no active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [] });
     expect(html).toContain('id="kb-search-input"');
