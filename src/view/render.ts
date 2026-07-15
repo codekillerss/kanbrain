@@ -2,7 +2,7 @@ import type { WorkItem, KanbrainConfig } from '../types';
 import { resolveSkillPath } from '../config/resolveSkillPath';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
-import { isValidHexColor, normalizeHex } from './badgeColor';
+import { renderTypeAccent } from './renderTypeAccent';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -22,10 +22,7 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
 }
 
 function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass: string): string {
-  const typeColor = config.typeColors?.[workItem.type];
-  const typeIcon = config.typeIcons?.[workItem.type];
-  const borderStyle = typeColor && isValidHexColor(typeColor) ? ` style="border-right: 4px solid ${normalizeHex(typeColor)};"` : '';
-  const iconHtml = typeIcon ? `<span class="kb-type-icon">${typeIcon}</span>` : '';
+  const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
 
   return `
     <div class="${cssClass}"${borderStyle}>
