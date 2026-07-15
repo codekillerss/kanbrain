@@ -11,3 +11,8 @@ export function buildSearchQuery(searchText: string): string {
   const escaped = trimmed.replace(/'/g, "''");
   return `${BASE_QUERY} AND [System.Title] CONTAINS '${escaped}' ${ORDER_BY}`;
 }
+
+export function buildTypeCountQuery(types: string[]): string {
+  const escapedTypes = types.map(t => `'${t.replace(/'/g, "''")}'`).join(', ');
+  return `${BASE_QUERY} AND [System.WorkItemType] IN (${escapedTypes})`;
+}
