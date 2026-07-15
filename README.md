@@ -51,6 +51,8 @@ VS Code extension that shows the active Azure DevOps work item and its children 
 
 5. Run **Kanbrain: Select Work Item** to pick which work item shows in the panel. Drag the "Kanbrain" view (from the activity bar) into the secondary sidebar if you want it on the right, like the backoffice flow mode.
 
+If the project's process changes later (a status is renamed, a work item type is added/removed, a type moves to a different backlog level), run **Kanbrain: Check Board Configuration** to see whether `.kanbrain/config.json` is still in sync — it never modifies anything by itself. If it finds a difference, it offers a **Sync Now** action (also available directly as **Kanbrain: Sync Board Configuration**) that refreshes colors/icons/type mappings and adds any new statuses, but never deletes a skill mapping you've configured — entries for statuses/levels no longer found on the board are kept as-is so you don't lose your work; the command's summary tells you which ones to review. Kanbrain also runs this check once, silently, each time the panel first opens in a VS Code session, and only shows a message if something needs your attention.
+
 ## Skill file placeholders
 
 `{{id}}` `{{title}}` `{{description}}` `{{status}}` `{{type}}` `{{url}}` `{{branch}}` `{{parent.id}}` `{{parent.title}}` `{{parent.description}}` `{{subtasks}}`
@@ -99,4 +101,8 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
 - [ ] Changing the work item's status directly in Azure DevOps Boards is reflected in the panel within ~5 seconds (polling).
 - [ ] Reopening the workspace restores the previously selected work item (via `workspaceState`).
+- [ ] `Kanbrain: Check Board Configuration` reports "up to date" when the board hasn't changed since Setup, and never writes to `.kanbrain/config.json`.
+- [ ] After renaming/adding/removing a status or work item type on the real Azure DevOps board, `Kanbrain: Check Board Configuration` reports the specific difference, and its "Sync Now" action (or running `Kanbrain: Sync Board Configuration` directly) updates `.kanbrain/config.json` without deleting any existing skill path mapping — including ones for statuses no longer found on the board.
+- [ ] Manually editing `.kanbrain/config.json` into invalid JSON causes the panel, search, and skill actions to show a clear "not valid JSON" message (via `Kanbrain: Check Board Configuration`) instead of failing silently or crashing.
+- [ ] The board configuration check runs once, silently, the first time the panel opens in a VS Code session — no visible message when everything is in sync.
 - [ ] Dragging the Kanbrain view into the secondary/right sidebar works and persists across reloads.
