@@ -7,7 +7,7 @@ VS Code extension that shows the active Azure DevOps work item and its children 
 1. Open a workspace folder.
 2. Run **Kanbrain: Setup** from the command palette. Sign in with your Microsoft account when prompted, then pick an Azure DevOps organization and project.
 3. Setup reads the project's real backlog levels (Epics/Features/Stories/Tasks, or whatever your process defines) and state categories from Azure DevOps, then asks whether to generate placeholder skill files automatically for each category (Proposed/InProgress/Resolved). This creates `.kanbrain/config.json` (commit it — it's shared team config) and, if you said yes, one skill file per backlog level + category under `.kanbrain/skills/`.
-4. Edit the generated skill files and, if needed, `.kanbrain/config.json`'s `backlogLevels` map (`{ [backlogLevel]: { [status]: skillPathOrNull } }`) to fine-tune which skill runs for which status:
+4. Edit the generated skill files and, if needed, `.kanbrain/config.json`'s `backlogLevels` map (`{ [backlogLevel]: { [status]: skillEntryOrNull } }`) to fine-tune which skill runs for which status:
 
    ```json
    {
@@ -21,13 +21,18 @@ VS Code extension that shows the active Azure DevOps work item and its children 
      },
      "backlogLevels": {
        "Stories": {
-         "New": ".kanbrain/skills/stories-proposed.md",
-         "Committed": ".kanbrain/skills/stories-inprogress.md",
+         "New": { "path": ".kanbrain/skills/stories-proposed.md" },
+         "Committed": {
+           "path": ".kanbrain/skills/stories-inprogress.md",
+           "label": "Refine",
+           "textColor": "ffffff",
+           "buttonColor": "007acc"
+         },
          "Done": null
        },
        "Tasks": {
-         "To Do": ".kanbrain/skills/tasks-proposed.md",
-         "In Progress": ".kanbrain/skills/tasks-inprogress.md",
+         "To Do": { "path": ".kanbrain/skills/tasks-proposed.md" },
+         "In Progress": { "path": ".kanbrain/skills/tasks-inprogress.md" },
          "Done": null
        }
      },
@@ -46,6 +51,8 @@ VS Code extension that shows the active Azure DevOps work item and its children 
      }
    }
    ```
+
+   Each `backlogLevels[level][status]` entry is either `null` (no action for that status) or an object with a required `path` (relative to the workspace root) and three optional fields: `label` (overrides the button text — defaults to the skill file's name), `textColor` and `buttonColor` (hex, no `#` needed — override the button's text/background color; an invalid or missing value falls back to the VS Code theme's default button colors). `Kanbrain: Setup` and `Kanbrain: Sync Board Configuration` only ever generate `{ "path": ... }` entries — add `label`/`textColor`/`buttonColor` by hand for the statuses you want to customize.
 
    `statusColors` maps each status name to the hex color Azure DevOps assigns it (shown as a small dot next to the status text). `typeColors` colors the right border of each work item card, and `typeIcons` holds the real work item type icon as inline SVG markup shown next to the `#id` — both fetched and sanitized during Setup. All three are captured automatically during Setup — projects configured before these fields existed need to re-run **Kanbrain: Setup** to get colors/icons.
 
@@ -97,6 +104,7 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] Selecting a work item renders it in the Kanbrain view with correct status dot, type icon/border, and title.
 - [ ] Children (Parent/Child linked work items) render under "Children (N)".
 - [ ] A status with a configured skill shows an action button; a status without one does not.
+- [ ] A skill entry with a custom `label` shows that text on the action button instead of the skill file's name; a valid `textColor`/`buttonColor` is applied to the button, and an invalid or missing one falls back to the theme's default button colors.
 - [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Read the file .kanbrain/generated/<id>-<timestamp>.md and follow the instructions in it.`
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
 - [ ] Changing the work item's status directly in Azure DevOps Boards is reflected in the panel within ~5 seconds (polling).
