@@ -6,6 +6,8 @@ import { KanbrainViewProvider } from './view/KanbrainViewProvider';
 import { getCurrentBranch } from './git/getCurrentBranch';
 import { registerSetupCommand } from './commands/setup';
 import { registerSelectWorkItemCommand } from './commands/selectWorkItem';
+import { registerCheckBoardConfigCommand } from './commands/checkBoardConfig';
+import { registerSyncBoardConfigCommand } from './commands/syncBoardConfig';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 
@@ -35,6 +37,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined)),
     registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
+    registerCheckBoardConfigCommand(client, workspaceRoot),
+    registerSyncBoardConfigCommand(client, workspaceRoot),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

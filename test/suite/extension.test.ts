@@ -10,5 +10,7 @@ suite('Kanbrain Extension', () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes('kanbrain.setup'), 'kanbrain.setup not registered');
     assert.ok(commands.includes('kanbrain.selectWorkItem'), 'kanbrain.selectWorkItem not registered');
+    assert.ok(commands.includes('kanbrain.checkBoardConfig'), 'kanbrain.checkBoardConfig not registered');
+    assert.ok(commands.includes('kanbrain.syncBoardConfig'), 'kanbrain.syncBoardConfig not registered');
   });
 });

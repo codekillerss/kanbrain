@@ -10,6 +10,7 @@ import { escapeHtml } from './escapeHtml';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
+import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -21,6 +22,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastState = '';
   private activeWorkItemId: number | undefined;
   private backlogLevelCounts: Record<string, number> = {};
+  private hasCheckedBoardConfig = false;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -52,6 +54,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         clearInterval(this.pollHandle);
       }
     });
+    void this.runInitialBoardConfigCheck();
+  }
+
+  private async runInitialBoardConfigCheck(): Promise<void> {
+    if (this.hasCheckedBoardConfig || !this.workspaceRoot || !this.client) {
+      return;
+    }
+    this.hasCheckedBoardConfig = true;
+    await presentBoardConfigCheck(this.client, this.workspaceRoot, { quietWhenNothingToReport: true });
   }
 
   setActiveWorkItem(id: number | undefined): void {

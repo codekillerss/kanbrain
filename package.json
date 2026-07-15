@@ -16,7 +16,9 @@
   "contributes": {
     "commands": [
       { "command": "kanbrain.setup", "title": "Kanbrain: Setup" },
-      { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" }
+      { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" },
+      { "command": "kanbrain.checkBoardConfig", "title": "Kanbrain: Check Board Configuration" },
+      { "command": "kanbrain.syncBoardConfig", "title": "Kanbrain: Sync Board Configuration" }
     ],
     "viewsContainers": {
       "activitybar": [
