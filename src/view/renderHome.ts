@@ -30,17 +30,22 @@ function renderHomeWorkItemSection(state: RenderState): string {
 export function renderHome(state: RenderState): string {
   return `
     <div class="kb-home-section">
+      <div class="kb-section-label">Flow</div>
+      ${renderHomeWorkItemSection(state)}
+    </div>
+    <div class="kb-home-section">
       <div class="kb-section-label">Commands</div>
       <div class="kb-home-commands">
         <button id="kb-run-setup-home-btn" class="kb-secondary-btn">⚙ Setup</button>
         <button id="kb-run-check-board-config-btn" class="kb-secondary-btn">✅ Check Board Configuration</button>
         <button id="kb-run-sync-board-config-btn" class="kb-secondary-btn">🔄 Sync Board Configuration</button>
-        <button id="kb-show-config-btn" class="kb-secondary-btn">🛠️ Configuration</button>
       </div>
     </div>
     <div class="kb-home-section">
-      <div class="kb-section-label">Current Work Item</div>
-      ${renderHomeWorkItemSection(state)}
+      <div class="kb-section-label">Configuration</div>
+      <div class="kb-home-commands">
+        <button id="kb-show-config-btn" class="kb-secondary-btn">🛠️ Configuration</button>
+      </div>
     </div>
   `;
 }

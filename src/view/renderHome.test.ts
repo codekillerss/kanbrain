@@ -43,13 +43,34 @@ function state(overrides: Partial<RenderState> = {}): RenderState {
 }
 
 describe('renderHome', () => {
-  it('shows buttons for Setup, Check Board Configuration, Sync Board Configuration, and Configuration', () => {
+  it('shows buttons for Setup, Check Board Configuration, and Sync Board Configuration', () => {
     const html = renderHome(state());
 
     expect(html).toContain('id="kb-run-setup-home-btn"');
     expect(html).toContain('id="kb-run-check-board-config-btn"');
     expect(html).toContain('id="kb-run-sync-board-config-btn"');
+  });
+
+  it('shows the Configuration button in its own section, not inside Commands', () => {
+    const html = renderHome(state());
+
     expect(html).toContain('id="kb-show-config-btn"');
+    const commandsIndex = html.indexOf('Commands');
+    const commandsSectionEnd = html.indexOf('kb-home-section', commandsIndex + 1);
+    const configButtonIndex = html.indexOf('id="kb-show-config-btn"');
+    expect(configButtonIndex).toBeGreaterThan(commandsSectionEnd);
+  });
+
+  it('orders sections as Flow, then Commands, then Configuration', () => {
+    const html = renderHome(state());
+
+    const flowIndex = html.indexOf('Flow');
+    const commandsIndex = html.indexOf('Commands');
+    const configurationLabelIndex = html.indexOf('>Configuration<');
+
+    expect(flowIndex).toBeGreaterThanOrEqual(0);
+    expect(commandsIndex).toBeGreaterThan(flowIndex);
+    expect(configurationLabelIndex).toBeGreaterThan(commandsIndex);
   });
 
   it('shows a "Select Work Item" button (not the search box directly) when there is no active work item', () => {
