@@ -241,13 +241,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const config = this.workspaceRoot ? readConfig(this.workspaceRoot) : null;
+    const activeWorkItemIdAtStart = this.activeWorkItemId;
 
     let workItem: WorkItem | null = null;
     let parent: WorkItem | null = null;
     let subtasks: WorkItem[] = [];
 
-    if (config && this.client && this.activeWorkItemId) {
-      const [fetched] = await this.client.getWorkItems(config.organization, config.project, [this.activeWorkItemId]);
+    if (config && this.client && activeWorkItemIdAtStart) {
+      const [fetched] = await this.client.getWorkItems(config.organization, config.project, [activeWorkItemIdAtStart]);
       workItem = fetched ?? null;
       if (workItem) {
         subtasks = await this.client.getChildren(config.organization, config.project, workItem);
@@ -256,6 +257,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           parent = fetchedParent ?? null;
         }
       }
+    }
+
+    if (this.activeWorkItemId !== activeWorkItemIdAtStart) {
+      // The active work item changed while this refresh was still fetching (e.g. Clear/pick
+      // raced a slower in-flight poll) — discard this now-stale result instead of overwriting
+      // the newer state.
+      return;
     }
 
     if (!hasStateChanged(this.lastState, config, workItem, subtasks)) {
