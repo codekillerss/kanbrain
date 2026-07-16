@@ -1,6 +1,17 @@
 import type { KanbrainConfig, SkillEntry } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
+import { isValidHexColor, normalizeHex } from './badgeColor';
+
+function renderColorField(field: 'textColor' | 'buttonColor', value: string, placeholder: string): string {
+  const pickerValue = value && isValidHexColor(value) ? normalizeHex(value) : '#000000';
+  return `
+    <div class="kb-config-field-color">
+      <input type="text" class="kb-input" data-field="${field}" placeholder="${placeholder}" value="${escapeHtml(value)}">
+      <input type="color" class="kb-color-picker" data-color-for="${field}" value="${pickerValue}">
+    </div>
+  `;
+}
 
 function renderSkillEntryRow(level: string, status: string, entry: SkillEntry | null, statusColors: Record<string, string>): string {
   const path = entry?.path ?? '';
@@ -16,8 +27,8 @@ function renderSkillEntryRow(level: string, status: string, entry: SkillEntry | 
         <button type="button" data-action="pick-skill-file" title="Browse for a file">…</button>
       </div>
       <input type="text" class="kb-input" data-field="label" placeholder="Label (optional)" value="${escapeHtml(label)}">
-      <input type="text" class="kb-input" data-field="textColor" placeholder="Text color hex" value="${escapeHtml(textColor)}">
-      <input type="text" class="kb-input" data-field="buttonColor" placeholder="Button color hex" value="${escapeHtml(buttonColor)}">
+      ${renderColorField('textColor', textColor, 'Text color hex')}
+      ${renderColorField('buttonColor', buttonColor, 'Button color hex')}
     </div>
   `;
 }

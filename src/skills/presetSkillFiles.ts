@@ -1,5 +1,6 @@
 import type { DiscoveredBacklogLevels } from '../azureDevOps/backlogLevels';
 import type { SkillEntry } from '../types';
+import { isValidHexColor, normalizeHex, pickReadableTextColor } from '../view/badgeColor';
 
 export interface PresetPlan {
   backlogLevels: Record<string, Record<string, SkillEntry | null>>;
@@ -7,6 +8,7 @@ export interface PresetPlan {
 }
 
 const FINAL_CATEGORIES = new Set(['Completed', 'Removed']);
+const NEUTRAL_BUTTON_COLOR = 'b2b2b2';
 
 function slugify(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '');
@@ -27,7 +29,29 @@ Describe here what the agent should do when the work item is in this status.
 `;
 }
 
-export function buildPresetPlan(discovered: DiscoveredBacklogLevels, generateFiles: boolean): PresetPlan {
+function buildStatusSkillEntry(
+  relativePath: string,
+  levelName: string,
+  category: string,
+  statusName: string,
+  statusColors: Record<string, string>,
+): SkillEntry {
+  const rawColor = statusColors[statusName];
+  const buttonColor = rawColor && isValidHexColor(rawColor) ? rawColor.replace(/^#/, '') : NEUTRAL_BUTTON_COLOR;
+  const textColor = pickReadableTextColor(normalizeHex(buttonColor)).replace(/^#/, '');
+  return {
+    path: relativePath,
+    label: `${levelName} — ${category}`,
+    textColor,
+    buttonColor,
+  };
+}
+
+export function buildPresetPlan(
+  discovered: DiscoveredBacklogLevels,
+  generateFiles: boolean,
+  statusColors: Record<string, string>,
+): PresetPlan {
   const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
   const filesToWrite: { relativePath: string; content: string }[] = [];
   const pathByKey = new Map<string, string>();
@@ -48,7 +72,7 @@ export function buildPresetPlan(discovered: DiscoveredBacklogLevels, generateFil
         pathByKey.set(key, relativePath);
         filesToWrite.push({ relativePath, content: skillSkeleton(levelName, category) });
       }
-      statusSkills[statusName] = { path: relativePath };
+      statusSkills[statusName] = buildStatusSkillEntry(relativePath, levelName, category, statusName, statusColors);
     }
 
     backlogLevels[levelName] = statusSkills;

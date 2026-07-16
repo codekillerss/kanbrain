@@ -315,6 +315,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    document.querySelectorAll('.kb-color-picker').forEach((picker) => {
+      picker.addEventListener('input', () => {
+        const row = picker.closest('.kb-config-row');
+        if (!row) return;
+        const textInput = row.querySelector('[data-field="' + picker.dataset.colorFor + '"]');
+        if (textInput) {
+          textInput.value = picker.value.replace(/^#/, '');
+        }
+        saveSkillRow(row);
+      });
+    });
+
     document.addEventListener('click', (e) => {
       const target = e.target;
       if (target.id === 'kb-toggle-search-btn') {
@@ -455,6 +467,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-field-path .kb-input { flex: 1; margin-bottom: 0; }
       .kb-config-field-path button { flex-shrink: 0; padding: 4px 8px; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-config-field-path button:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
+      .kb-config-field-color { display: flex; gap: 4px; align-items: center; }
+      .kb-config-field-color .kb-input { flex: 1; margin-bottom: 0; }
+      .kb-color-picker { flex-shrink: 0; width: 28px; height: 26px; padding: 2px; border: 1px solid var(--vscode-panel-border); border-radius: 2px; background: transparent; cursor: pointer; }
     `;
   }
 }

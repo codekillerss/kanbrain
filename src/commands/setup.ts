@@ -78,7 +78,7 @@ export function registerSetupCommand(
       return;
     }
 
-    const preset = buildPresetPlan(discovered, generateFilesPick.generate);
+    const preset = buildPresetPlan(discovered, generateFilesPick.generate, statusColors);
 
     const skillsDir = path.join(workspaceRoot, '.kanbrain', 'skills');
     fs.mkdirSync(skillsDir, { recursive: true });

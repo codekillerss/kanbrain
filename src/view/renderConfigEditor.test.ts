@@ -69,4 +69,32 @@ describe('renderConfigEditor', () => {
 
     expect(html).toContain('data-action="pick-skill-file"');
   });
+
+  it('shows native color pickers for textColor and buttonColor set to the stored hex', () => {
+    const html = renderConfigEditor(
+      config({
+        backlogLevels: {
+          Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md', textColor: 'ffffff', buttonColor: '007acc' } },
+        },
+      }),
+    );
+
+    expect(html).toContain('type="color"');
+    expect(html).toContain('data-color-for="textColor"');
+    expect(html).toContain('data-color-for="buttonColor"');
+    expect(html).toContain('value="#ffffff"');
+    expect(html).toContain('value="#007acc"');
+  });
+
+  it('defaults color pickers to black when the hex field is empty or invalid', () => {
+    const html = renderConfigEditor(
+      config({ backlogLevels: { Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md', buttonColor: 'not-a-color' } } } }),
+    );
+
+    const pickers = [...html.matchAll(/data-color-for="(textColor|buttonColor)" value="([^"]*)"/g)];
+    expect(pickers).toHaveLength(2);
+    for (const [, , value] of pickers) {
+      expect(value).toBe('#000000');
+    }
+  });
 });
