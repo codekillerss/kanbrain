@@ -27,9 +27,9 @@ function renderHomeWorkItemSection(state: RenderState): string {
 
   return `
     ${searchDialog}
-    <div class="kb-home-card-wrapper">
+    <div class="kb-card-wrapper">
       ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false)}
-      <div class="kb-home-card-actions">
+      <div class="kb-card-actions">
         <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">🔍</button>
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
       </div>

@@ -74,15 +74,25 @@ describe('render', () => {
     expect(html).not.toContain('Fix <bug> in login');
   });
 
-  it('shows a toggle-search button when there is an active work item', () => {
+  it('shows an icon toggle-search button when there is an active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-toggle-search-btn"');
-    expect(html).toContain('Switch work item');
+    expect(html).toContain('kb-icon-btn');
   });
 
   it('shows a clear button when there is an active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-clear-btn"');
+  });
+
+  it('only shows the Home button in the header, not Switch/Clear', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    const headerStart = html.indexOf('kb-page-header');
+    const headerEnd = html.indexOf('</div>', headerStart);
+    const header = html.slice(headerStart, headerEnd);
+    expect(header).toContain('id="kb-home-btn"');
+    expect(header).not.toContain('id="kb-toggle-search-btn"');
+    expect(header).not.toContain('id="kb-clear-btn"');
   });
 
   it('shows an action button when the status has a configured skill', () => {

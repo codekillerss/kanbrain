@@ -47,8 +47,6 @@ export function render(state: RenderState): string {
   return `
     <div class="kb-header kb-page-header">
       <button id="kb-home-btn" class="kb-secondary-btn">🏠 Home</button>
-      <button id="kb-toggle-search-btn" class="kb-secondary-btn">🔍 Switch work item</button>
-      <button id="kb-clear-btn" class="kb-secondary-btn">✕ Clear</button>
     </div>
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
@@ -59,7 +57,13 @@ export function render(state: RenderState): string {
         <div id="kb-search-results"></div>
       </div>
     </div>
-    ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card')}
+    <div class="kb-card-wrapper">
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card')}
+      <div class="kb-card-actions">
+        <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">🔍</button>
+        <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
+      </div>
+    </div>
     <div class="kb-section-label">Children (${state.subtasks.length})</div>
     ${subtasksHtml}
   `;
