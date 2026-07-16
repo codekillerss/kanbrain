@@ -89,14 +89,29 @@ describe('renderHome', () => {
     expect(html).not.toContain('id="kb-view-details-btn"');
   });
 
-  it('shows the active work item card with switch/clear/view-details buttons when one is active', () => {
+  it('shows icon switch/clear buttons and a view-details button on the active work item card', () => {
     const html = renderHome(state({ workItem: workItem() }));
 
     expect(html).toContain('kb-main-card');
     expect(html).toContain('id="kb-toggle-search-btn"');
-    expect(html).toContain('Switch work item');
     expect(html).toContain('id="kb-clear-btn"');
+    expect(html).toContain('kb-icon-btn');
     expect(html).toContain('id="kb-view-details-btn"');
+  });
+
+  it('does not show the skill action button on the active work item card, even when a skill is configured', () => {
+    const html = renderHome(
+      state({
+        workItem: workItem(),
+        config: config({
+          typeToBacklogLevel: { Task: 'Tasks' },
+          backlogLevels: { Tasks: { Active: { path: 'skills/fix.md' } } },
+        }),
+      }),
+    );
+
+    expect(html).toContain('kb-main-card');
+    expect(html).not.toContain('data-action="run-skill"');
   });
 
   it('does not render a config editor section', () => {

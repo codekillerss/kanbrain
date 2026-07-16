@@ -3,13 +3,8 @@ import { renderWorkItemCard } from './renderWorkItemCard';
 
 function renderHomeWorkItemSection(state: RenderState): string {
   const config = state.config!;
-  const toggleLabel = state.workItem ? '🔍 Switch work item' : '🔍 Select Work Item';
 
-  return `
-    <div class="kb-header">
-      <button id="kb-toggle-search-btn" class="kb-secondary-btn">${toggleLabel}</button>
-      ${state.workItem ? '<button id="kb-clear-btn" class="kb-secondary-btn">✕ Clear</button>' : ''}
-    </div>
+  const searchDialog = `
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
         <div class="kb-search-dialog-header">
@@ -19,11 +14,27 @@ function renderHomeWorkItemSection(state: RenderState): string {
         <div id="kb-search-results"></div>
       </div>
     </div>
-    ${
-      state.workItem
-        ? `${renderWorkItemCard(state.workItem, config, 'kb-main-card')}<button id="kb-view-details-btn" class="kb-secondary-btn">View details →</button>`
-        : ''
-    }
+  `;
+
+  if (!state.workItem) {
+    return `
+      <div class="kb-home-commands">
+        <button id="kb-toggle-search-btn" class="kb-secondary-btn">🔍 Select Work Item</button>
+      </div>
+      ${searchDialog}
+    `;
+  }
+
+  return `
+    ${searchDialog}
+    <div class="kb-home-card-wrapper">
+      ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false)}
+      <div class="kb-home-card-actions">
+        <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">🔍</button>
+        <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
+      </div>
+    </div>
+    <button id="kb-view-details-btn" class="kb-secondary-btn">View details →</button>
   `;
 }
 

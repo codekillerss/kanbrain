@@ -20,7 +20,12 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
   return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}"${style}>▶ ${escapeHtml(label)}</button>`;
 }
 
-export function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, cssClass: string): string {
+export function renderWorkItemCard(
+  workItem: WorkItem,
+  config: KanbrainConfig,
+  cssClass: string,
+  showActionButton = true,
+): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
 
   return `
@@ -31,7 +36,7 @@ export function renderWorkItemCard(workItem: WorkItem, config: KanbrainConfig, c
       </div>
       <div class="kb-title">${escapeHtml(workItem.title)}</div>
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
-      ${renderActionButton(workItem, config)}
+      ${showActionButton ? renderActionButton(workItem, config) : ''}
     </div>
   `;
 }
