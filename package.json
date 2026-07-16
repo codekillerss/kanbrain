@@ -3,7 +3,7 @@
   "displayName": "Kanbrain",
   "description": "Azure DevOps work item flow panel for VS Code",
   "version": "0.1.0",
-  "publisher": "kanbrain",
+  "publisher": "CodeKillers",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
   "repository": {
