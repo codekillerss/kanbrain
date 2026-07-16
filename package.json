@@ -1,5 +1,5 @@
 {
-  "name": "kanbrain",
+  "name": "kanbrain-vscode",
   "displayName": "Kanbrain",
   "description": "Azure DevOps work item flow panel for VS Code",
   "version": "0.1.0",
