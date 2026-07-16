@@ -6,6 +6,13 @@
   "publisher": "kanbrain",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codekillerss/kanbrain"
+  },
+  "bugs": {
+    "url": "https://github.com/codekillerss/kanbrain/issues"
+  },
   "engines": {
     "vscode": "^1.85.0",
     "node": ">=18"
