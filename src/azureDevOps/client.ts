@@ -18,6 +18,17 @@ export interface AzureDevOpsProject {
   name: string;
 }
 
+export interface AzureDevOpsBoard {
+  id: string;
+  name: string;
+}
+
+export interface BoardColumn {
+  name: string;
+  columnType: string;
+  stateMappings: Record<string, string>;
+}
+
 export class AzureDevOpsClient {
   constructor(private readonly deps: AzureDevOpsClientDeps) {}
 
@@ -140,5 +151,19 @@ export class AzureDevOpsClient {
     }
     const iconSvg = await this.requestText(typeInfo.icon.url);
     return { color: typeInfo.color ?? '', iconSvg };
+  }
+
+  async listBoards(organization: string, project: string, team: string): Promise<AzureDevOpsBoard[]> {
+    const data = await this.request<{ value: { id: string; name: string }[] }>(
+      `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards?api-version=7.1`,
+    );
+    return data.value.map(b => ({ id: b.id, name: b.name }));
+  }
+
+  async listBoardColumns(organization: string, project: string, team: string, boardId: string): Promise<BoardColumn[]> {
+    const data = await this.request<{ value: { name: string; columnType: string; stateMappings: Record<string, string> }[] }>(
+      `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/columns?api-version=7.1`,
+    );
+    return data.value.map(c => ({ name: c.name, columnType: c.columnType, stateMappings: c.stateMappings }));
   }
 }

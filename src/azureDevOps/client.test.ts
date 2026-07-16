@@ -228,4 +228,36 @@ describe('AzureDevOpsClient', () => {
 
     expect(icon).toBeNull();
   });
+
+  it('lists boards for a team', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ value: [{ id: 'b1', name: 'MyProject Team Board' }] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const boards = await client.listBoards('my-org', 'MyProject', 'MyProject Team');
+
+    expect(boards).toEqual([{ id: 'b1', name: 'MyProject Team Board' }]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/boards?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('lists columns for a board, including state mappings by work item type', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [{ name: 'Doing', columnType: 'inProgress', stateMappings: { 'User Story': 'Committed', Bug: 'Active' } }],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const columns = await client.listBoardColumns('my-org', 'MyProject', 'MyProject Team', 'b1');
+
+    expect(columns).toEqual([
+      { name: 'Doing', columnType: 'inProgress', stateMappings: { 'User Story': 'Committed', Bug: 'Active' } },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/boards/b1/columns?api-version=7.1',
+      expect.anything(),
+    );
+  });
 });
