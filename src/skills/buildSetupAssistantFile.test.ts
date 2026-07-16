@@ -70,8 +70,21 @@ describe('buildSetupAssistantContent', () => {
     const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
 
     expect(content).toContain('`label`');
-    expect(content).toContain('Brainstorm');
     expect(content).toContain('auto-generated');
+  });
+
+  it('instructs the agent to propose labels from the real board column names before asking the user', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('Propose a first draft');
+    expect(content).toContain('Boards and columns');
+    expect(content).not.toContain('Ask the user what real flow step each status represents');
+  });
+
+  it('only falls back to asking the user when a status has no clear column name to infer from', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('Only fall back to asking');
   });
 
   it('instructs the agent to write real instructions into each skill file using the template placeholders', () => {
