@@ -1,0 +1,13 @@
+.vscode/**
+.vscode-test/**
+.claude/**
+src/**
+test/**
+docs/**
+out/test/**
+**/*.map
+**/*.test.js
+.gitignore
+tsconfig.json
+vitest.config.ts
+todo.md

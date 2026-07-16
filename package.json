@@ -4,6 +4,8 @@
   "description": "Azure DevOps work item flow panel for VS Code",
   "version": "0.1.0",
   "publisher": "kanbrain",
+  "license": "MIT",
+  "icon": "media/icon-marketplace.png",
   "engines": {
     "vscode": "^1.85.0",
     "node": ">=18"
@@ -39,7 +41,9 @@
     "vscode:prepublish": "npm run compile",
     "pretest": "npm run compile",
     "test:unit": "vitest run",
-    "test:integration": "node ./out/test/runTest.js"
+    "test:integration": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
@@ -47,6 +51,7 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^2.32.0",
     "glob": "^10.3.10",
     "mocha": "^10.3.0",
     "typescript": "^5.4.0",
