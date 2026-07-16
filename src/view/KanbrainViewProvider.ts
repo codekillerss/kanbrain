@@ -12,6 +12,7 @@ import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
+import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -25,12 +26,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private backlogLevelCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
+  private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
 
   constructor(
     private readonly workspaceRoot: string | undefined,
     private readonly client: AzureDevOpsClient | undefined,
     private readonly getCurrentBranch: () => Promise<string>,
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
+    private readonly checkAzureSession: () => Promise<boolean>,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -48,6 +51,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setActiveWorkItem(undefined);
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
+      } else if (message.type === 'run-connect') {
+        await vscode.commands.executeCommand('kanbrain.connect');
       } else if (message.type === 'run-check-board-config') {
         await vscode.commands.executeCommand('kanbrain.checkBoardConfig');
       } else if (message.type === 'run-sync-board-config') {
@@ -114,6 +119,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   showConfigScreen(): void {
     this.currentScreen = 'config';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  markConnected(): void {
+    this.connectionStatus = 'connected';
     this.lastState = '';
     void this.refresh();
   }
@@ -238,11 +249,51 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     sendReadCommand(relativePath);
   }
 
+  private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected'> {
+    if (!this.client) {
+      return 'disconnected';
+    }
+    const hasSession = await this.checkAzureSession();
+    if (!hasSession) {
+      return 'disconnected';
+    }
+    const hasAccess = await validateProjectAccess(this.client, config.organization, config.project);
+    return hasAccess ? 'connected' : 'disconnected';
+  }
+
+  private renderDisconnected(config: KanbrainConfig): void {
+    if (!this.view || this.lastState === 'disconnected') {
+      return;
+    }
+    this.lastState = 'disconnected';
+    this.view.webview.html = this.wrapHtml(
+      render({
+        hasWorkspace: !!this.workspaceRoot,
+        config,
+        workItem: null,
+        parent: null,
+        subtasks: [],
+        screen: this.currentScreen,
+        connectionStatus: 'disconnected',
+      }),
+    );
+  }
+
   private async refresh(): Promise<void> {
     if (!this.view) {
       return;
     }
     const config = this.workspaceRoot ? readConfig(this.workspaceRoot) : null;
+
+    if (config && this.connectionStatus === 'unknown') {
+      this.connectionStatus = await this.checkConnection(config);
+    }
+
+    if (config && this.connectionStatus === 'disconnected') {
+      this.renderDisconnected(config);
+      return;
+    }
+
     const activeWorkItemIdAtStart = this.activeWorkItemId;
 
     let workItem: WorkItem | null = null;
@@ -250,14 +301,22 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     let subtasks: WorkItem[] = [];
 
     if (config && this.client && activeWorkItemIdAtStart) {
-      const [fetched] = await this.client.getWorkItems(config.organization, config.project, [activeWorkItemIdAtStart]);
-      workItem = fetched ?? null;
-      if (workItem) {
-        subtasks = await this.client.getChildren(config.organization, config.project, workItem);
-        if (workItem.parentId) {
-          const [fetchedParent] = await this.client.getWorkItems(config.organization, config.project, [workItem.parentId]);
-          parent = fetchedParent ?? null;
+      try {
+        const [fetched] = await this.client.getWorkItems(config.organization, config.project, [activeWorkItemIdAtStart]);
+        workItem = fetched ?? null;
+        if (workItem) {
+          subtasks = await this.client.getChildren(config.organization, config.project, workItem);
+          if (workItem.parentId) {
+            const [fetchedParent] = await this.client.getWorkItems(config.organization, config.project, [workItem.parentId]);
+            parent = fetchedParent ?? null;
+          }
         }
+      } catch {
+        // A data fetch failed mid-session (e.g. the session expired) — treat it the same as a
+        // failed connection check instead of leaving the panel stuck on a silent rejection.
+        this.connectionStatus = 'disconnected';
+        this.renderDisconnected(config);
+        return;
       }
     }
 
@@ -344,6 +403,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.id === 'kb-run-setup-btn' || target.id === 'kb-run-setup-home-btn') {
         vscode.postMessage({ type: 'run-setup' });
+      } else if (target.id === 'kb-run-connect-btn') {
+        vscode.postMessage({ type: 'run-connect' });
       } else if (target.id === 'kb-run-check-board-config-btn') {
         vscode.postMessage({ type: 'run-check-board-config' });
       } else if (target.id === 'kb-run-sync-board-config-btn') {

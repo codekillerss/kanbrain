@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ensureAzureSession } from './auth/ensureAzureSession';
+import { ensureAzureSession, hasCachedAzureSession } from './auth/ensureAzureSession';
 import { getVscodeMicrosoftSession } from './auth/vscodeSession';
 import { AzureDevOpsClient } from './azureDevOps/client';
 import { KanbrainViewProvider } from './view/KanbrainViewProvider';
@@ -27,6 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
     client,
     () => getCurrentBranch(workspaceRoot ?? ''),
     id => context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, id),
+    () => hasCachedAzureSession(getVscodeMicrosoftSession),
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
