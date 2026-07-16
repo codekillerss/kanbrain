@@ -38,4 +38,9 @@ describe('renderConfig', () => {
     const html = renderConfig(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
     expect(html).toContain('data-level="Tasks"');
   });
+
+  it('makes the header sticky', () => {
+    const html = renderConfig(state());
+    expect(html).toContain('kb-header kb-page-header');
+  });
 });

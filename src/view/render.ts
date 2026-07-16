@@ -45,7 +45,7 @@ export function render(state: RenderState): string {
     : '<div class="kb-empty">No child items.</div>';
 
   return `
-    <div class="kb-header">
+    <div class="kb-header kb-page-header">
       <button id="kb-home-btn" class="kb-secondary-btn">🏠 Home</button>
       <button id="kb-toggle-search-btn" class="kb-secondary-btn">🔍 Switch work item</button>
       <button id="kb-clear-btn" class="kb-secondary-btn">✕ Clear</button>

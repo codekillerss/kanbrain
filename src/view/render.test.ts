@@ -57,6 +57,11 @@ describe('render', () => {
     expect(html).toContain('id="kb-home-btn"');
   });
 
+  it('makes the flow screen header sticky', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    expect(html).toContain('kb-header kb-page-header');
+  });
+
   it('shows an inline search box when there is config but no active work item', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-search-input"');

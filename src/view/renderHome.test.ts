@@ -73,6 +73,12 @@ describe('renderHome', () => {
     expect(configurationLabelIndex).toBeGreaterThan(commandsIndex);
   });
 
+  it('does not make its own work item header sticky (only the Flow/Config screens get that)', () => {
+    const html = renderHome(state({ workItem: workItem() }));
+
+    expect(html).not.toContain('kb-page-header');
+  });
+
   it('shows a "Select Work Item" button (not the search box directly) when there is no active work item', () => {
     const html = renderHome(state({ workItem: null }));
 
