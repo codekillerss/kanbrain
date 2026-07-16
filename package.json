@@ -19,7 +19,8 @@
       { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" },
       { "command": "kanbrain.checkBoardConfig", "title": "Kanbrain: Check Board Configuration" },
       { "command": "kanbrain.syncBoardConfig", "title": "Kanbrain: Sync Board Configuration" },
-      { "command": "kanbrain.configureWithAi", "title": "Kanbrain: Configure with AI" }
+      { "command": "kanbrain.configureWithAi", "title": "Kanbrain: Configure with AI" },
+      { "command": "kanbrain.connect", "title": "Kanbrain: Connect to Azure DevOps" }
     ],
     "viewsContainers": {
       "activitybar": [
