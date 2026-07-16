@@ -57,4 +57,36 @@ describe('buildSetupAssistantContent', () => {
     expect(content).toContain("## This project's real configuration");
     expect(content).toContain('## What to do');
   });
+
+  it('is assertive that Kanbrain only supports one skill per status, never per board column', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('one skill per status, per work item type');
+    expect(content).not.toContain('ask them how they want Kanbrain to work');
+    expect(content).not.toContain('or one skill per board column');
+  });
+
+  it('instructs the agent to rename auto-generated labels to the real flow step', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('`label`');
+    expect(content).toContain('Brainstorm');
+    expect(content).toContain('auto-generated');
+  });
+
+  it('instructs the agent to write real instructions into each skill file using the template placeholders', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('real, useful instructions');
+    expect(content).toContain('{{id}}');
+    expect(content).toContain('{{subtasks}}');
+  });
+
+  it('instructs the agent to delete skill files no longer referenced by the final mapping', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+
+    expect(content).toContain('delete');
+    expect(content).toContain('.kanbrain/skills/');
+    expect(content).toContain('no longer');
+  });
 });

@@ -52,7 +52,7 @@ Kanbrain shows the active Azure DevOps work item in a VS Code side panel, with p
 
 ## Important nuance: status vs. board column
 
-Kanbrain only understands **status** (\`System.State\`) — it has no board-column API access at all. Many teams, though, think and work in terms of **board columns**, not raw statuses, and that's common and often the more natural mental model. A board column can group several statuses together, or have a name that doesn't match any status. Before configuring anything, read both the status list and the board column list below, explain this difference to the user in your own words, and ask them how they want Kanbrain to behave: one skill per status, or one skill shared across every status a column groups together.
+Kanbrain only understands **status** (\`System.State\`) — \`backlogLevels\` maps exactly **one skill per status, per work item type**. There is no board-column mode to choose between; board columns aren't a real Kanbrain configuration option, they're listed below purely for your reference. Many teams still think and work in terms of **board columns** rather than raw statuses (common, and often the more natural mental model) — a column can group several statuses together, or have a name that doesn't match any status. When that's the case here, the way to honor it is to point every status that belongs to the same column at the *same* skill file — not to look for a column-level setting that doesn't exist.
 
 ## This project's real configuration
 
@@ -66,9 +66,11 @@ ${renderBoards(boards)}
 
 ## What to do
 
-1. Read and understand the data above.
-2. Explain the status-vs-column difference to the user, using this project's real levels/types/statuses/boards/columns as examples.
-3. Ask the user how they want Kanbrain to work: one skill per status, or one skill per board column (shared across every status that column maps to).
-4. Based on their answer, edit \`.kanbrain/config.json\`'s \`backlogLevels\` map and the skill files under \`.kanbrain/skills/\` directly — they're regular workspace files, edit them the same way the user would by hand. Only touch the real Azure DevOps board (moving statuses between columns, renaming columns, etc.) if the user explicitly asks for that, and only using your own tools/credentials — never through Kanbrain, which stays read-only.
+1. Read and understand the data above — the real statuses per work item type, and the real board columns each status maps into.
+2. Explain to the user, in your own words, that Kanbrain maps one skill per status (never per board column) — and that if they think in board columns, multiple statuses sharing a column should simply share the same skill file.
+3. Ask the user what real flow step each status represents (e.g. a status in a "Backlog" column might be "Brainstorm", one in "To Do" might be "Implement", one in "Code Review" might be "Review") and update every entry's \`label\` in \`.kanbrain/config.json\`'s \`backlogLevels\` map to that real step name — not the auto-generated \`"{backlog level} — {category}"\` placeholder Setup fills in by default.
+4. For every skill file that stays in use, write real, useful instructions for that flow step into it — not a placeholder. Skill files can use \`{{id}}\`, \`{{title}}\`, \`{{description}}\`, \`{{status}}\`, \`{{type}}\`, \`{{url}}\`, \`{{branch}}\`, \`{{parent.id}}\`, \`{{parent.title}}\`, \`{{parent.description}}\`, and \`{{subtasks}}\` placeholders, resolved with the real work item's data every time a skill button runs.
+5. Once the final mapping is settled, delete any file under \`.kanbrain/skills/\` that no longer has a \`backlogLevels\` entry pointing at it — don't leave unused skill files behind.
+6. Only touch the real Azure DevOps board (moving statuses between columns, renaming columns, etc.) if the user explicitly asks for that, and only using your own tools/credentials — never through Kanbrain, which stays read-only.
 `;
 }
