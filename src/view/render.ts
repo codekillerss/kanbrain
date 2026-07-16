@@ -10,6 +10,7 @@ export interface RenderState {
   parent: WorkItem | null;
   subtasks: WorkItem[];
   screen: 'home' | 'flow' | 'config';
+  connectionStatus?: 'connected' | 'disconnected';
 }
 
 export function render(state: RenderState): string {
@@ -21,6 +22,14 @@ export function render(state: RenderState): string {
       <div class="kb-empty">
         No project configured. Run the <b>Kanbrain: Setup</b> command.
         <div><button id="kb-run-setup-btn" class="kb-action-btn">Run Kanbrain: Setup</button></div>
+      </div>
+    `;
+  }
+  if (state.connectionStatus === 'disconnected') {
+    return `
+      <div class="kb-empty">
+        This project is configured, but not connected to Azure DevOps yet. Run the <b>Kanbrain: Connect to Azure DevOps</b> command.
+        <div><button id="kb-run-connect-btn" class="kb-action-btn">Run Kanbrain: Connect to Azure DevOps</button></div>
       </div>
     `;
   }

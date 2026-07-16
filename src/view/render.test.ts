@@ -42,6 +42,27 @@ describe('render', () => {
     expect(html).toContain('id="kb-run-setup-btn"');
   });
 
+  it('shows a connect prompt when configured but not connected to Azure DevOps', () => {
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: null,
+      parent: null,
+      subtasks: [],
+      screen: 'home',
+      connectionStatus: 'disconnected',
+    });
+
+    expect(html).toContain('Kanbrain: Connect to Azure DevOps');
+    expect(html).toContain('id="kb-run-connect-btn"');
+  });
+
+  it('does not show the connect prompt when connectionStatus is omitted', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'home' });
+
+    expect(html).not.toContain('id="kb-run-connect-btn"');
+  });
+
   it('delegates to the home screen when screen is "home"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'home' });
     expect(html).toContain('kb-home-section');
