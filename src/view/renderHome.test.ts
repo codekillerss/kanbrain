@@ -51,6 +51,12 @@ describe('renderHome', () => {
     expect(html).toContain('id="kb-run-sync-board-config-btn"');
   });
 
+  it('shows a Configure with AI button in Commands', () => {
+    const html = renderHome(state());
+
+    expect(html).toContain('id="kb-run-configure-ai-btn"');
+  });
+
   it('shows the Configuration button in its own section, not inside Commands', () => {
     const html = renderHome(state());
 

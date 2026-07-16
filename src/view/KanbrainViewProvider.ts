@@ -52,6 +52,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand('kanbrain.checkBoardConfig');
       } else if (message.type === 'run-sync-board-config') {
         await vscode.commands.executeCommand('kanbrain.syncBoardConfig');
+      } else if (message.type === 'run-configure-with-ai') {
+        await vscode.commands.executeCommand('kanbrain.configureWithAi');
       } else if (message.type === 'show-home') {
         this.showHomeScreen();
       } else if (message.type === 'show-flow') {
@@ -346,6 +348,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'run-check-board-config' });
       } else if (target.id === 'kb-run-sync-board-config-btn') {
         vscode.postMessage({ type: 'run-sync-board-config' });
+      } else if (target.id === 'kb-run-configure-ai-btn') {
+        vscode.postMessage({ type: 'run-configure-with-ai' });
       } else if (target.id === 'kb-home-btn') {
         vscode.postMessage({ type: 'show-home' });
       } else if (target.id === 'kb-view-details-btn') {

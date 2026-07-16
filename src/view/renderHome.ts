@@ -50,6 +50,7 @@ export function renderHome(state: RenderState): string {
         <button id="kb-run-setup-home-btn" class="kb-secondary-btn">⚙ Setup</button>
         <button id="kb-run-check-board-config-btn" class="kb-secondary-btn">✅ Check Board Configuration</button>
         <button id="kb-run-sync-board-config-btn" class="kb-secondary-btn">🔄 Sync Board Configuration</button>
+        <button id="kb-run-configure-ai-btn" class="kb-secondary-btn">🤖 Configure with AI</button>
       </div>
     </div>
     <div class="kb-home-section">

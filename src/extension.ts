@@ -8,6 +8,7 @@ import { registerSetupCommand } from './commands/setup';
 import { registerSelectWorkItemCommand } from './commands/selectWorkItem';
 import { registerCheckBoardConfigCommand } from './commands/checkBoardConfig';
 import { registerSyncBoardConfigCommand } from './commands/syncBoardConfig';
+import { registerConfigureWithAiCommand } from './commands/configureWithAi';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 
@@ -39,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
     registerCheckBoardConfigCommand(client, workspaceRoot),
     registerSyncBoardConfigCommand(client, workspaceRoot),
+    registerConfigureWithAiCommand(client, workspaceRoot),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);
