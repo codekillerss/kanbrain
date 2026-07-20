@@ -28,4 +28,16 @@ describe('hasStateChanged', () => {
 
     expect(hasStateChanged(previous, { organization: 'org' }, null, [])).toBe(true);
   });
+
+  it('is true when only the avatars map changes', () => {
+    const previous = serializeState(null, { id: 1 }, [], {});
+
+    expect(hasStateChanged(previous, null, { id: 1 }, [], { 'https://example.com/a.png': 'data:image/png;base64,X' })).toBe(true);
+  });
+
+  it('is false when avatars is omitted on both sides (defaults to the same empty object)', () => {
+    const previous = serializeState(null, { id: 1 }, []);
+
+    expect(hasStateChanged(previous, null, { id: 1 }, [])).toBe(false);
+  });
 });
