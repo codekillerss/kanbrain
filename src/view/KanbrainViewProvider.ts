@@ -558,8 +558,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 0; margin-top: 12px; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
-      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; overflow-y: auto; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
-      .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; }
+      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+      .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+      #kb-search-results { overflow-y: auto; flex: 1; min-height: 0; }
       #kb-search-close-btn { flex-shrink: 0; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px 6px; border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-search-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; }
