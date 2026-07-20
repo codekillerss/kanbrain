@@ -148,4 +148,26 @@ describe('renderSearchResults', () => {
     expect(epicsPanel).toContain('An epic');
     expect(epicsPanel).not.toContain('A task');
   });
+
+  it('shows "Unassigned" on a result item when the item has no assignee', () => {
+    const html = renderSearchResults([workItem({ assignedTo: null })], config(), {});
+    expect(html).toContain('kb-result-item-assignee');
+    expect(html).toContain('Unassigned');
+  });
+
+  it('shows the assignee name on a result item when assigned', () => {
+    const html = renderSearchResults([workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } })], config(), {});
+    expect(html).toContain('Jane Doe');
+  });
+
+  it('shows the resolved avatar image on a result item when provided', () => {
+    const item = workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: 'https://example.com/avatar.png' } });
+    const html = renderSearchResults([item], config(), {}, { 'https://example.com/avatar.png': 'data:image/png;base64,X' });
+    expect(html).toContain('<img class="kb-avatar" src="data:image/png;base64,X"');
+  });
+
+  it('hides the assignee row on result items when config.showAssignedTo is false', () => {
+    const html = renderSearchResults([workItem()], config({ showAssignedTo: false }), {});
+    expect(html).not.toContain('kb-result-item-assignee');
+  });
 });

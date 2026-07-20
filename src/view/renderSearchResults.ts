@@ -3,8 +3,9 @@ import { escapeHtml } from './escapeHtml';
 import { groupByStatus } from './groupByStatus';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
+import { renderAssigneeRow } from './renderAssignee';
 
-function renderStatusGroups(items: WorkItem[], config: KanbrainConfig): string {
+function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: Record<string, string>): string {
   if (items.length === 0) {
     return '<div class="kb-empty">No work items found.</div>';
   }
@@ -18,8 +19,13 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig): string {
             ${group.items
               .map(item => {
                 const { borderStyle, iconHtml } = renderTypeAccent(item.type, config);
+                const assigneeHtml =
+                  config.showAssignedTo === false ? '' : renderAssigneeRow(item.assignedTo, avatars, 'kb-result-item-assignee');
                 return `
-                  <button class="kb-result-item" data-action="pick-work-item" data-id="${item.id}"${borderStyle}>${iconHtml}#${item.id} ${escapeHtml(item.title)}</button>
+                  <button class="kb-result-item" data-action="pick-work-item" data-id="${item.id}"${borderStyle}>
+                    <div class="kb-result-item-main">${iconHtml}#${item.id} ${escapeHtml(item.title)}</div>
+                    ${assigneeHtml}
+                  </button>
                 `;
               })
               .join('')}
@@ -30,14 +36,19 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig): string {
     .join('');
 }
 
-export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, backlogLevelCounts: Record<string, number>): string {
+export function renderSearchResults(
+  items: WorkItem[],
+  config: KanbrainConfig,
+  backlogLevelCounts: Record<string, number>,
+  avatars: Record<string, string> = {},
+): string {
   if (items.length === 0) {
     return '<div class="kb-empty">No work items found.</div>';
   }
 
   const levels = Object.keys(config.backlogLevels);
   if (levels.length === 0) {
-    return renderStatusGroups(items, config);
+    return renderStatusGroups(items, config, avatars);
   }
 
   const tabs = [
@@ -58,7 +69,7 @@ export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, b
     .join('');
 
   const panels = tabs
-    .map(tab => `<div class="kb-search-tab-panel" data-tab-panel="${escapeHtml(tab.id)}">${renderStatusGroups(tab.items, config)}</div>`)
+    .map(tab => `<div class="kb-search-tab-panel" data-tab-panel="${escapeHtml(tab.id)}">${renderStatusGroups(tab.items, config, avatars)}</div>`)
     .join('');
 
   return `<div class="kb-search-tabs">${tabBar}</div>${panels}`;
