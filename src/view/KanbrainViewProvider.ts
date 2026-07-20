@@ -35,6 +35,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly getCurrentBranch: () => Promise<string>,
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
+    private readonly openWorkItemDetail: (id: number) => Promise<void>,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -79,6 +80,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
+      } else if (message.type === 'open-work-item-detail') {
+        await this.openWorkItemDetail(Number(message.id));
       }
     });
 
@@ -477,6 +480,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.dataset && target.dataset.action === 'pick-work-item') {
         vscode.postMessage({ type: 'pick-work-item', id: target.dataset.id });
+      } else if (target.dataset && target.dataset.action === 'open-work-item-detail') {
+        vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
         const toggle = target.closest('[data-action="toggle-group"]');
         const items = toggle.nextElementSibling;
@@ -539,13 +544,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-type-icon svg { width: 100%; height: 100%; }
       .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }
       .kb-title { font-weight: 600; margin: 4px 0; }
+      .kb-title-clickable { cursor: pointer; }
+      .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin-top: 12px; font-size: 11px; text-transform: uppercase; opacity: 0.7; }
       .kb-hidden { display: none; }
-      .kb-result-item { display: flex; flex-direction: column; align-items: stretch; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
-      .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-result-item { width: 100%; margin: 2px 0; }
+      .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
+      .kb-view-details-link { margin-left: auto; background: none; border: none; color: var(--vscode-textLink-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 11px; padding: 2px 4px; }
+      .kb-view-details-link:hover { text-decoration: underline; }
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
@@ -596,9 +605,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
-      .kb-result-item-main { display: flex; align-items: center; min-width: 0; }
+      .kb-result-item-main { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); min-width: 0; }
+      .kb-result-item-main:hover { background: var(--vscode-list-hoverBackground); }
       .kb-result-item-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
-      .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; opacity: 0.75; }
+      .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
     `;

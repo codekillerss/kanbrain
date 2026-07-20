@@ -3,6 +3,7 @@ import { ensureAzureSession, hasCachedAzureSession } from './auth/ensureAzureSes
 import { getVscodeMicrosoftSession } from './auth/vscodeSession';
 import { AzureDevOpsClient } from './azureDevOps/client';
 import { KanbrainViewProvider } from './view/KanbrainViewProvider';
+import { WorkItemDetailPanelManager } from './view/WorkItemDetailPanelManager';
 import { getCurrentBranch } from './git/getCurrentBranch';
 import { registerSetupCommand } from './commands/setup';
 import { registerSelectWorkItemCommand } from './commands/selectWorkItem';
@@ -23,12 +24,19 @@ export function activate(context: vscode.ExtensionContext): void {
       })
     : undefined;
 
+  const detailPanelManager = workspaceRoot && client ? new WorkItemDetailPanelManager(workspaceRoot, client) : undefined;
+
   const provider = new KanbrainViewProvider(
     workspaceRoot,
     client,
     () => getCurrentBranch(workspaceRoot ?? ''),
     id => context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, id),
     () => hasCachedAzureSession(getVscodeMicrosoftSession),
+    async id => {
+      if (detailPanelManager) {
+        await detailPanelManager.open(id);
+      }
+    },
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
