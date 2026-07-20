@@ -104,4 +104,14 @@ describe('syncConfig', () => {
       buttonColor: '007acc',
     });
   });
+
+  it('preserves showAssignedTo across a sync', () => {
+    const result = syncConfig(config({ showAssignedTo: false }), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    expect(result.showAssignedTo).toBe(false);
+  });
+
+  it('leaves showAssignedTo undefined when it was never set', () => {
+    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    expect(result.showAssignedTo).toBeUndefined();
+  });
 });

@@ -40,5 +40,6 @@ export function syncConfig(
     statusColors: freshStatusColors,
     typeColors: freshTypeColors,
     typeIcons: freshTypeIcons,
+    showAssignedTo: config.showAssignedTo,
   };
 }

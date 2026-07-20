@@ -30,4 +30,5 @@ export interface KanbrainConfig {
   statusColors: Record<string, string>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
+  showAssignedTo?: boolean;
 }
