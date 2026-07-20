@@ -43,4 +43,16 @@ describe('renderConfig', () => {
     const html = renderConfig(state());
     expect(html).toContain('kb-header kb-page-header');
   });
+
+  it('shows a "Show assignee on cards" checkbox, checked by default', () => {
+    const html = renderConfig(state());
+    expect(html).toContain('id="kb-show-assignee-toggle"');
+    expect(html).toContain('Show assignee on cards');
+    expect(html).toMatch(/id="kb-show-assignee-toggle"[^>]*checked/);
+  });
+
+  it('unchecks the checkbox when showAssignedTo is false', () => {
+    const html = renderConfig(state({ config: config({ showAssignedTo: false }) }));
+    expect(html).not.toMatch(/id="kb-show-assignee-toggle"[^>]*checked/);
+  });
 });
