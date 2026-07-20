@@ -59,4 +59,14 @@ describe('renderWorkItemCard', () => {
     const html = renderWorkItemCard(workItem(), { ...config, showAssignedTo: false }, 'kb-main-card');
     expect(html).not.toContain('kb-assignee-row');
   });
+
+  it('shows the assignee row before the status row', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }), config, 'kb-main-card');
+
+    const assigneeIndex = html.indexOf('kb-assignee-row');
+    const statusIndex = html.indexOf('kb-status-row');
+
+    expect(assigneeIndex).toBeGreaterThanOrEqual(0);
+    expect(statusIndex).toBeGreaterThan(assigneeIndex);
+  });
 });

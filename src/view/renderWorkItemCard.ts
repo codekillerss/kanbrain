@@ -38,8 +38,8 @@ export function renderWorkItemCard(
         <span class="kb-id">#${workItem.id}</span>
       </div>
       <div class="kb-title">${escapeHtml(workItem.title)}</div>
-      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${assigneeHtml}
+      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${showActionButton ? renderActionButton(workItem, config) : ''}
     </div>
   `;

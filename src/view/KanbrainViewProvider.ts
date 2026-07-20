@@ -592,7 +592,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-field-color { display: flex; gap: 4px; align-items: center; }
       .kb-config-field-color .kb-input { flex: 1; margin-bottom: 0; }
       .kb-color-picker { flex-shrink: 0; width: 28px; height: 26px; padding: 2px; border: 1px solid var(--vscode-panel-border); border-radius: 2px; background: transparent; cursor: pointer; }
-      .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; justify-content: flex-end; }
+      .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
       .kb-result-item-main { display: flex; align-items: center; }
