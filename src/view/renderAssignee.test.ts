@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderAssigneeRow } from './renderAssignee';
+import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 
 describe('renderAssigneeRow', () => {
   it('shows "Unassigned" with a placeholder badge when there is no assignee', () => {
@@ -45,5 +45,28 @@ describe('renderAssigneeRow', () => {
     const html = renderAssigneeRow(null, {}, 'kb-result-item-assignee');
 
     expect(html).toContain('kb-result-item-assignee');
+  });
+});
+
+describe('renderAvatarOrInitial', () => {
+  it('shows the resolved avatar image when a data URI is available', () => {
+    const html = renderAvatarOrInitial('Jane Doe', 'https://example.com/avatar.png', {
+      'https://example.com/avatar.png': 'data:image/png;base64,X',
+    });
+
+    expect(html).toBe('<img class="kb-avatar" src="data:image/png;base64,X" alt="">');
+  });
+
+  it('falls back to an initial badge when no avatar is resolved', () => {
+    const html = renderAvatarOrInitial('Jane Doe', 'https://example.com/avatar.png', {});
+
+    expect(html).toContain('kb-avatar-initial');
+    expect(html).toContain('>J<');
+  });
+
+  it('falls back to an initial badge when imageUrl is null', () => {
+    const html = renderAvatarOrInitial('Bob', null, {});
+
+    expect(html).toContain('>B<');
   });
 });
