@@ -23,7 +23,7 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: 
                   config.showAssignedTo === false ? '' : renderAssigneeRow(item.assignedTo, avatars, 'kb-result-item-assignee');
                 return `
                   <button class="kb-result-item" data-action="pick-work-item" data-id="${item.id}"${borderStyle}>
-                    <div class="kb-result-item-main">${iconHtml}#${item.id} ${escapeHtml(item.title)}</div>
+                    <div class="kb-result-item-main">${iconHtml}<span class="kb-result-item-title">#${item.id} ${escapeHtml(item.title)}</span></div>
                     ${assigneeHtml}
                   </button>
                 `;

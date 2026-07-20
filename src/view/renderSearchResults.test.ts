@@ -170,4 +170,10 @@ describe('renderSearchResults', () => {
     const html = renderSearchResults([workItem()], config({ showAssignedTo: false }), {});
     expect(html).not.toContain('kb-result-item-assignee');
   });
+
+  it('wraps the id+title in a single-line ellipsis span', () => {
+    const html = renderSearchResults([workItem({ id: 482, title: 'A very long title that should be truncated' })], config(), {});
+
+    expect(html).toContain('<span class="kb-result-item-title">#482 A very long title that should be truncated</span>');
+  });
 });
