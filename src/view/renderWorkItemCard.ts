@@ -3,6 +3,7 @@ import { resolveSkill } from '../config/resolveSkill';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
+import { renderAssigneeRow } from './renderAssignee';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
@@ -25,8 +26,10 @@ export function renderWorkItemCard(
   config: KanbrainConfig,
   cssClass: string,
   showActionButton = true,
+  avatars: Record<string, string> = {},
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
+  const assigneeHtml = config.showAssignedTo === false ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
 
   return `
     <div class="${cssClass}"${borderStyle}>
@@ -36,6 +39,7 @@ export function renderWorkItemCard(
       </div>
       <div class="kb-title">${escapeHtml(workItem.title)}</div>
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${assigneeHtml}
       ${showActionButton ? renderActionButton(workItem, config) : ''}
     </div>
   `;

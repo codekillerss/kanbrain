@@ -241,4 +241,23 @@ describe('render', () => {
     const buttonMarkup = html.slice(buttonIndex - 40, buttonIndex + 40);
     expect(buttonMarkup).not.toContain('background:');
   });
+
+  it('passes avatars through to the main card and subtasks', () => {
+    const subtasks = [workItem({ id: 101, assignedTo: { displayName: 'Bob', imageUrl: 'https://example.com/bob.png' } })];
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ assignedTo: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' } }),
+      parent: null,
+      subtasks,
+      screen: 'flow',
+      avatars: {
+        'https://example.com/jane.png': 'data:image/png;base64,JANE',
+        'https://example.com/bob.png': 'data:image/png;base64,BOB',
+      },
+    });
+
+    expect(html).toContain('data:image/png;base64,JANE');
+    expect(html).toContain('data:image/png;base64,BOB');
+  });
 });

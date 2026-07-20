@@ -11,6 +11,7 @@ export interface RenderState {
   subtasks: WorkItem[];
   screen: 'home' | 'flow' | 'config';
   connectionStatus?: 'connected' | 'disconnected';
+  avatars?: Record<string, string>;
 }
 
 export function render(state: RenderState): string {
@@ -49,8 +50,9 @@ export function render(state: RenderState): string {
     `;
   }
 
+  const avatars = state.avatars ?? {};
   const subtasksHtml = state.subtasks.length
-    ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card')).join('')
+    ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars)).join('')
     : '<div class="kb-empty">No child items.</div>';
 
   return `
@@ -67,7 +69,7 @@ export function render(state: RenderState): string {
       </div>
     </div>
     <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card')}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars)}
       <div class="kb-card-actions">
         <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>

@@ -126,4 +126,15 @@ describe('renderHome', () => {
 
     expect(html).not.toContain('data-level="Tasks"');
   });
+
+  it('passes avatars through to the active work item card', () => {
+    const html = renderHome(
+      state({
+        workItem: workItem({ assignedTo: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' } }),
+        avatars: { 'https://example.com/jane.png': 'data:image/png;base64,JANE' },
+      }),
+    );
+
+    expect(html).toContain('data:image/png;base64,JANE');
+  });
 });
