@@ -47,8 +47,12 @@ export function renderConfigEditor(config: KanbrainConfig): string {
         .join('');
       return `
         <div class="kb-config-level">
-          <div class="kb-section-label">${escapeHtml(level)}</div>
-          ${rows}
+          <button type="button" class="kb-config-level-header" data-action="toggle-group">
+            <span class="kb-chevron">▾</span>${escapeHtml(level)}
+          </button>
+          <div class="kb-config-level-body kb-hidden">
+            ${rows}
+          </div>
         </div>
       `;
     })

@@ -97,4 +97,18 @@ describe('renderConfigEditor', () => {
       expect(value).toBe('#000000');
     }
   });
+
+  it('renders each level as a collapsible section with a chevron toggle header', () => {
+    const html = renderConfigEditor(config({ backlogLevels: { Tasks: { 'To Do': null } } }));
+
+    expect(html).toContain('class="kb-config-level-header"');
+    expect(html).toContain('data-action="toggle-group"');
+    expect(html).toContain('kb-chevron');
+  });
+
+  it('starts each level body collapsed (kb-hidden) by default', () => {
+    const html = renderConfigEditor(config({ backlogLevels: { Tasks: { 'To Do': null } } }));
+
+    expect(html).toContain('class="kb-config-level-body kb-hidden"');
+  });
 });
