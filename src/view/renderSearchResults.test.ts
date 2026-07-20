@@ -12,6 +12,7 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
     url: '',
     parentId: null,
     childIds: [],
+    assignedTo: null,
     ...overrides,
   };
 }

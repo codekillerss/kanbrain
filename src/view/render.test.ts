@@ -12,6 +12,7 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
     url: 'https://dev.azure.com/org/proj/_workitems/edit/482',
     parentId: null,
     childIds: [],
+    assignedTo: null,
     ...overrides,
   };
 }

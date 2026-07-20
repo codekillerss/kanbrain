@@ -17,6 +17,7 @@ const workItem: WorkItem = {
   url: 'https://dev.azure.com/org/proj/_workitems/edit/482',
   parentId: null,
   childIds: [],
+  assignedTo: null,
 };
 
 const context: SkillTemplateContext = { workItem, parent: null, subtasks: [], branch: 'feature/90' };

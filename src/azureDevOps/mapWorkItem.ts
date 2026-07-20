@@ -1,4 +1,4 @@
-import type { WorkItem } from '../types';
+import type { WorkItem, AssignedTo } from '../types';
 
 export interface RawRelation {
   rel: string;
@@ -9,6 +9,12 @@ export interface RawWorkItem {
   id: number;
   fields: Record<string, unknown>;
   relations?: RawRelation[];
+}
+
+interface RawIdentityRef {
+  displayName?: string;
+  imageUrl?: string;
+  _links?: { avatar?: { href?: string } };
 }
 
 function stripHtml(html: string): string {
@@ -27,6 +33,15 @@ function extractIdFromUrl(url: string): number {
   return Number(match[1]);
 }
 
+function mapAssignedTo(raw: unknown): AssignedTo | null {
+  const identity = raw as RawIdentityRef | undefined;
+  if (!identity?.displayName) {
+    return null;
+  }
+  const imageUrl = identity.imageUrl ?? identity._links?.avatar?.href ?? null;
+  return { displayName: identity.displayName, imageUrl };
+}
+
 export function mapWorkItem(raw: RawWorkItem, organization: string, project: string): WorkItem {
   const relations = raw.relations ?? [];
   const parentRelation = relations.find(r => r.rel === 'System.LinkTypes.Hierarchy-Reverse');
@@ -41,5 +56,6 @@ export function mapWorkItem(raw: RawWorkItem, organization: string, project: str
     url: `https://dev.azure.com/${organization}/${project}/_workitems/edit/${raw.id}`,
     parentId: parentRelation ? extractIdFromUrl(parentRelation.url) : null,
     childIds: childRelations.map(r => extractIdFromUrl(r.url)),
+    assignedTo: mapAssignedTo(raw.fields['System.AssignedTo']),
   };
 }

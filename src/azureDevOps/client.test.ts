@@ -122,7 +122,7 @@ describe('AzureDevOpsClient', () => {
       }),
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-    const parent = { id: 90, title: 'P', description: '', status: 'Active', type: 'Story', url: '', parentId: null, childIds: [101] };
+    const parent = { id: 90, title: 'P', description: '', status: 'Active', type: 'Story', url: '', parentId: null, childIds: [101], assignedTo: null };
 
     const children = await client.getChildren('my-org', 'MyProject', parent);
 

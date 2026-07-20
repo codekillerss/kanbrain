@@ -70,4 +70,43 @@ describe('mapWorkItem', () => {
     expect(item.status).toBe('');
     expect(item.type).toBe('');
   });
+
+  it('maps System.AssignedTo into assignedTo using the imageUrl field', () => {
+    const item = mapWorkItem(
+      raw({
+        fields: { ...raw().fields, 'System.AssignedTo': { displayName: 'Jane Doe', imageUrl: 'https://dev.azure.com/avatar/jane' } },
+      }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.assignedTo).toEqual({ displayName: 'Jane Doe', imageUrl: 'https://dev.azure.com/avatar/jane' });
+  });
+
+  it('falls back to _links.avatar.href when imageUrl is not present', () => {
+    const item = mapWorkItem(
+      raw({
+        fields: {
+          ...raw().fields,
+          'System.AssignedTo': { displayName: 'Jane Doe', _links: { avatar: { href: 'https://dev.azure.com/avatar/jane-link' } } },
+        },
+      }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.assignedTo).toEqual({ displayName: 'Jane Doe', imageUrl: 'https://dev.azure.com/avatar/jane-link' });
+  });
+
+  it('has a null imageUrl when neither imageUrl nor _links.avatar.href is present', () => {
+    const item = mapWorkItem(
+      raw({ fields: { ...raw().fields, 'System.AssignedTo': { displayName: 'Jane Doe' } } }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.assignedTo).toEqual({ displayName: 'Jane Doe', imageUrl: null });
+  });
+
+  it('has a null assignedTo when System.AssignedTo is missing', () => {
+    const item = mapWorkItem(raw(), 'my-org', 'MyProject');
+    expect(item.assignedTo).toBeNull();
+  });
 });

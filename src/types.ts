@@ -1,3 +1,8 @@
+export interface AssignedTo {
+  displayName: string;
+  imageUrl: string | null;
+}
+
 export interface WorkItem {
   id: number;
   title: string;
@@ -7,6 +12,7 @@ export interface WorkItem {
   url: string;
   parentId: number | null;
   childIds: number[];
+  assignedTo: AssignedTo | null;
 }
 
 export interface SkillEntry {
