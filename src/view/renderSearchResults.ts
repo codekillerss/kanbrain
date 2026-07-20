@@ -22,10 +22,15 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: 
                 const assigneeHtml =
                   config.showAssignedTo === false ? '' : renderAssigneeRow(item.assignedTo, avatars, 'kb-result-item-assignee');
                 return `
-                  <button class="kb-result-item" data-action="pick-work-item" data-id="${item.id}"${borderStyle}>
-                    <div class="kb-result-item-main">${iconHtml}<span class="kb-result-item-title">#${item.id} ${escapeHtml(item.title)}</span></div>
-                    ${assigneeHtml}
-                  </button>
+                  <div class="kb-result-item"${borderStyle}>
+                    <button type="button" class="kb-result-item-main" data-action="pick-work-item" data-id="${item.id}">
+                      ${iconHtml}<span class="kb-result-item-title">#${item.id} ${escapeHtml(item.title)}</span>
+                    </button>
+                    <div class="kb-result-item-footer">
+                      ${assigneeHtml}
+                      <button type="button" class="kb-view-details-link" data-action="open-work-item-detail" data-id="${item.id}">View details</button>
+                    </div>
+                  </div>
                 `;
               })
               .join('')}

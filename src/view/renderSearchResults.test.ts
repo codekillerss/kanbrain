@@ -176,4 +176,19 @@ describe('renderSearchResults', () => {
 
     expect(html).toContain('<span class="kb-result-item-title">#482 A very long title that should be truncated</span>');
   });
+
+  it('shows a View details button for each item, separate from the pick-work-item button', () => {
+    const html = renderSearchResults([workItem({ id: 482 })], config(), {});
+
+    expect(html).toContain('data-action="open-work-item-detail"');
+    expect(html).toContain('kb-view-details-link');
+  });
+
+  it('scopes the View details button to the correct item id', () => {
+    const items = [workItem({ id: 1 }), workItem({ id: 2 })];
+    const html = renderSearchResults(items, config(), {});
+
+    expect(html).toContain('data-action="open-work-item-detail" data-id="1"');
+    expect(html).toContain('data-action="open-work-item-detail" data-id="2"');
+  });
 });
