@@ -27,9 +27,13 @@ export function renderWorkItemCard(
   cssClass: string,
   showActionButton = true,
   avatars: Record<string, string> = {},
+  clickableTitle = false,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = config.showAssignedTo === false ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  const titleAttrs = clickableTitle
+    ? ` class="kb-title kb-title-clickable" data-action="open-work-item-detail" data-id="${workItem.id}"`
+    : ' class="kb-title"';
 
   return `
     <div class="${cssClass}"${borderStyle}>
@@ -37,7 +41,7 @@ export function renderWorkItemCard(
         ${iconHtml}
         <span class="kb-id">#${workItem.id}</span>
       </div>
-      <div class="kb-title">${escapeHtml(workItem.title)}</div>
+      <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       ${assigneeHtml}
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${showActionButton ? renderActionButton(workItem, config) : ''}

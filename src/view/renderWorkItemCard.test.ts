@@ -69,4 +69,17 @@ describe('renderWorkItemCard', () => {
     expect(assigneeIndex).toBeGreaterThanOrEqual(0);
     expect(statusIndex).toBeGreaterThan(assigneeIndex);
   });
+
+  it('does not make the title clickable by default', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('data-action="open-work-item-detail"');
+    expect(html).not.toContain('kb-title-clickable');
+  });
+
+  it('makes the title clickable when clickableTitle is true', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card', true, {}, true);
+    expect(html).toContain('class="kb-title kb-title-clickable"');
+    expect(html).toContain('data-action="open-work-item-detail"');
+    expect(html).toContain('data-id="482"');
+  });
 });
