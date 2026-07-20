@@ -9,6 +9,18 @@ function textResponse(body: string, ok = true, status = 200) {
   return { ok, status, statusText: ok ? 'OK' : 'Error', text: async () => body, json: async () => JSON.parse(body) } as Response;
 }
 
+function binaryResponse(bytes: Uint8Array, contentType: string | null, ok = true, status = 200) {
+  return {
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Error',
+    headers: { get: (name: string) => (name.toLowerCase() === 'content-type' ? contentType : null) },
+    arrayBuffer: async () => bytes.buffer,
+    text: async () => '',
+    json: async () => ({}),
+  } as unknown as Response;
+}
+
 describe('AzureDevOpsClient', () => {
   it('lists organizations for the current user', async () => {
     const fetchImpl = vi
@@ -259,5 +271,40 @@ describe('AzureDevOpsClient', () => {
       'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/boards/b1/columns?api-version=7.1',
       expect.anything(),
     );
+  });
+});
+
+describe('AzureDevOpsClient.getAvatarDataUri', () => {
+  it('fetches the avatar with auth and returns a base64 data URI using the response content-type', async () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const fetchImpl = vi.fn().mockResolvedValueOnce(binaryResponse(bytes, 'image/png'));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const dataUri = await client.getAvatarDataUri('https://dev.azure.com/my-org/_apis/GraphProfile/MemberAvatars/abc');
+
+    expect(dataUri).toBe(`data:image/png;base64,${Buffer.from(bytes).toString('base64')}`);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/GraphProfile/MemberAvatars/abc',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer tok' }) }),
+    );
+  });
+
+  it('defaults to image/png when the response has no content-type header', async () => {
+    const bytes = new Uint8Array([9, 9]);
+    const fetchImpl = vi.fn().mockResolvedValueOnce(binaryResponse(bytes, null));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const dataUri = await client.getAvatarDataUri('https://example.com/avatar');
+
+    expect(dataUri).toBe(`data:image/png;base64,${Buffer.from(bytes).toString('base64')}`);
+  });
+
+  it('returns null when the fetch fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'nope' }, false, 404));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const dataUri = await client.getAvatarDataUri('https://example.com/avatar');
+
+    expect(dataUri).toBeNull();
   });
 });

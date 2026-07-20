@@ -116,6 +116,17 @@ export class AzureDevOpsClient {
     return this.getWorkItems(organization, project, workItem.childIds);
   }
 
+  async getAvatarDataUri(url: string): Promise<string | null> {
+    try {
+      const response = await this.fetchWithAuth(url);
+      const contentType = response.headers.get('content-type') ?? 'image/png';
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return `data:${contentType};base64,${buffer.toString('base64')}`;
+    } catch {
+      return null;
+    }
+  }
+
   async getDefaultTeamName(organization: string, project: string): Promise<string> {
     const data = await this.request<{ defaultTeam?: { name: string } }>(
       `https://dev.azure.com/${organization}/_apis/projects/${project}?api-version=7.1`,
