@@ -308,3 +308,114 @@ describe('AzureDevOpsClient.getAvatarDataUri', () => {
     expect(dataUri).toBeNull();
   });
 });
+
+describe('AzureDevOpsClient.getWorkItemTypeLayout', () => {
+  it('fetches and returns the work item type layout', async () => {
+    const layout = {
+      pages: [{ sections: [{ groups: [{ controls: [{ id: 'System.State', label: 'State', controlType: 'FieldControl' }] }] }] }],
+    };
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse(layout));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const result = await client.getWorkItemTypeLayout('my-org', 'MyProject', 'Bug');
+
+    expect(result).toEqual(layout);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/Bug/layout?api-version=7.1-preview.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'nope' }, false, 404));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const result = await client.getWorkItemTypeLayout('my-org', 'MyProject', 'Bug');
+
+    expect(result).toBeNull();
+  });
+});
+
+describe('AzureDevOpsClient.getWorkItemRawFields', () => {
+  it('fetches and returns the raw fields for a single work item', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 482, fields: { 'System.Title': 'Bug', 'System.Tags': 'a; b' } }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const fields = await client.getWorkItemRawFields('my-org', 'MyProject', 482);
+
+    expect(fields).toEqual({ 'System.Title': 'Bug', 'System.Tags': 'a; b' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/482?api-version=7.1',
+      expect.anything(),
+    );
+  });
+});
+
+describe('AzureDevOpsClient.getComments', () => {
+  it('maps comments from the "comments" response shape', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        comments: [
+          {
+            id: 1,
+            text: '<p>First</p>',
+            createdBy: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' },
+            createdDate: '2026-01-01T00:00:00Z',
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getComments('my-org', 'MyProject', 482);
+
+    expect(comments).toEqual([
+      {
+        id: 1,
+        text: '<p>First</p>',
+        createdBy: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' },
+        createdDate: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workItems/482/comments?api-version=7.1-preview.3',
+      expect.anything(),
+    );
+  });
+
+  it('falls back to the "value" response shape', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ value: [{ id: 2, text: 'Second', createdBy: { displayName: 'Bob' }, createdDate: '2026-01-02T00:00:00Z' }] }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getComments('my-org', 'MyProject', 482);
+
+    expect(comments).toEqual([{ id: 2, text: 'Second', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-02T00:00:00Z' }]);
+  });
+
+  it('sorts comments chronologically by createdDate', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        comments: [
+          { id: 2, text: 'Second', createdBy: { displayName: 'Bob' }, createdDate: '2026-01-02T00:00:00Z' },
+          { id: 1, text: 'First', createdBy: { displayName: 'Jane' }, createdDate: '2026-01-01T00:00:00Z' },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getComments('my-org', 'MyProject', 482);
+
+    expect(comments.map(c => c.id)).toEqual([1, 2]);
+  });
+
+  it('defaults createdBy to Unknown with no imageUrl when missing', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ comments: [{ id: 1, text: '', createdDate: '2026-01-01T00:00:00Z' }] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getComments('my-org', 'MyProject', 482);
+
+    expect(comments[0].createdBy).toEqual({ displayName: 'Unknown', imageUrl: null });
+  });
+});

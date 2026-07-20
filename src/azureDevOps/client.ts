@@ -1,7 +1,8 @@
-import type { WorkItem } from '../types';
+import type { AssignedTo, WorkItem } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
+import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
 
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
@@ -27,6 +28,18 @@ export interface BoardColumn {
   name: string;
   columnType: string;
   stateMappings: Record<string, string>;
+}
+
+interface RawIdentityRef {
+  displayName?: string;
+  imageUrl?: string;
+  _links?: { avatar?: { href?: string } };
+}
+
+function mapIdentityRef(raw: unknown): AssignedTo {
+  const identity = raw as RawIdentityRef | undefined;
+  const imageUrl = identity?.imageUrl ?? identity?._links?.avatar?.href ?? null;
+  return { displayName: identity?.displayName ?? 'Unknown', imageUrl };
 }
 
 export class AzureDevOpsClient {
@@ -125,6 +138,39 @@ export class AzureDevOpsClient {
     } catch {
       return null;
     }
+  }
+
+  async getWorkItemTypeLayout(organization: string, project: string, type: string): Promise<WorkItemTypeLayout | null> {
+    try {
+      return await this.request<WorkItemTypeLayout>(
+        `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}/layout?api-version=7.1-preview.1`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async getWorkItemRawFields(organization: string, project: string, id: number): Promise<Record<string, unknown>> {
+    const data = await this.request<{ fields: Record<string, unknown> }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
+    );
+    return data.fields ?? {};
+  }
+
+  async getComments(organization: string, project: string, id: number): Promise<WorkItemComment[]> {
+    interface RawComment {
+      id: number;
+      text?: string;
+      createdBy?: unknown;
+      createdDate: string;
+    }
+    const data = await this.request<{ comments?: RawComment[]; value?: RawComment[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workItems/${id}/comments?api-version=7.1-preview.3`,
+    );
+    const list = data.comments ?? data.value ?? [];
+    return list
+      .map(c => ({ id: c.id, text: c.text ?? '', createdBy: mapIdentityRef(c.createdBy), createdDate: c.createdDate }))
+      .sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
   }
 
   async getDefaultTeamName(organization: string, project: string): Promise<string> {
