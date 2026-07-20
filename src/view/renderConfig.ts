@@ -13,7 +13,9 @@ export function renderConfig(state: RenderState): string {
       <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
       Show assignee on cards
     </label>
-    <div class="kb-section-label">Skill Configuration</div>
-    ${renderConfigEditor(config)}
+    <div class="kb-config-parent-section">
+      <div class="kb-config-parent-header">Skill Configuration</div>
+      ${renderConfigEditor(config)}
+    </div>
   `;
 }

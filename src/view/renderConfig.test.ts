@@ -55,4 +55,16 @@ describe('renderConfig', () => {
     const html = renderConfig(state({ config: config({ showAssignedTo: false }) }));
     expect(html).not.toMatch(/id="kb-show-assignee-toggle"[^>]*checked/);
   });
+
+  it('wraps Skill Configuration in a parent section container around the config editor', () => {
+    const html = renderConfig(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
+
+    const parentIndex = html.indexOf('kb-config-parent-section');
+    const headerIndex = html.indexOf('Skill Configuration');
+    const levelIndex = html.indexOf('data-level="Tasks"');
+
+    expect(parentIndex).toBeGreaterThanOrEqual(0);
+    expect(headerIndex).toBeGreaterThan(parentIndex);
+    expect(levelIndex).toBeGreaterThan(headerIndex);
+  });
 });
