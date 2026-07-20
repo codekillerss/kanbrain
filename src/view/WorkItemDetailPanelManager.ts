@@ -94,9 +94,11 @@ export class WorkItemDetailPanelManager {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); padding: 16px 24px; max-width: 960px; margin: 0 auto; }
+      body { font-family: var(--vscode-font-family); color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); padding: 16px 24px; }
       .kb-detail-header { border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 12px; margin-bottom: 16px; }
       .kb-detail-header-top { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.75; }
+      .kb-type-icon { display: inline-flex; width: 14px; height: 14px; flex-shrink: 0; }
+      .kb-type-icon svg { width: 100%; height: 100%; }
       .kb-detail-id { font-weight: 600; }
       .kb-detail-title { font-size: 22px; margin: 6px 0; }
       .kb-detail-assignee { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.9; }
