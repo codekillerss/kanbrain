@@ -52,7 +52,7 @@ export function render(state: RenderState): string {
 
   const avatars = state.avatars ?? {};
   const subtasksHtml = state.subtasks.length
-    ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars)).join('')
+    ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true)).join('')
     : '<div class="kb-empty">No child items.</div>';
 
   return `
@@ -69,7 +69,7 @@ export function render(state: RenderState): string {
       </div>
     </div>
     <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars)}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true)}
       <div class="kb-card-actions">
         <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>

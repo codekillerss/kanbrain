@@ -260,4 +260,14 @@ describe('render', () => {
     expect(html).toContain('data:image/png;base64,JANE');
     expect(html).toContain('data:image/png;base64,BOB');
   });
+
+  it('makes the title clickable on the main card and subtasks in the flow screen', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const occurrences = html.split('kb-title-clickable').length - 1;
+    expect(occurrences).toBe(2);
+    expect(html).toContain('data-action="open-work-item-detail" data-id="482"');
+    expect(html).toContain('data-action="open-work-item-detail" data-id="101"');
+  });
 });

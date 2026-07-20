@@ -137,4 +137,9 @@ describe('renderHome', () => {
 
     expect(html).toContain('data:image/png;base64,JANE');
   });
+
+  it('does not make the title clickable on the home screen card', () => {
+    const html = renderHome(state({ workItem: workItem() }));
+    expect(html).not.toContain('kb-title-clickable');
+  });
 });
