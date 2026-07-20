@@ -27,6 +27,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
+  private avatarCache = new Map<string, string | null>();
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -76,6 +77,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         );
       } else if (message.type === 'pick-skill-file') {
         await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
+      } else if (message.type === 'set-show-assigned-to') {
+        this.setShowAssignedTo(Boolean(message.value));
       }
     });
 
@@ -145,7 +148,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-      html = renderSearchResults(filterSearchResults(items, query), config, this.backlogLevelCounts);
+      const filtered = filterSearchResults(items, query);
+      const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(filtered) : {};
+      html = renderSearchResults(filtered, config, this.backlogLevelCounts, avatars);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
@@ -166,6 +171,38 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }),
     );
     return Object.fromEntries(entries);
+  }
+
+  private async resolveAvatars(items: WorkItem[]): Promise<Record<string, string>> {
+    const urls = [...new Set(items.map(i => i.assignedTo?.imageUrl).filter((u): u is string => !!u))];
+    const uncached = urls.filter(u => !this.avatarCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.avatarCache.set(url, this.client ? await this.client.getAvatarDataUri(url) : null);
+      }),
+    );
+    const resolved: Record<string, string> = {};
+    for (const url of urls) {
+      const dataUri = this.avatarCache.get(url);
+      if (dataUri) {
+        resolved[url] = dataUri;
+      }
+    }
+    return resolved;
+  }
+
+  private setShowAssignedTo(value: boolean): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.showAssignedTo = value;
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
   }
 
   private saveSkillEntry(level: string, status: string, filePath: string, label: string, textColor: string, buttonColor: string): void {
@@ -327,12 +364,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    if (!hasStateChanged(this.lastState, config, workItem, subtasks)) {
+    const avatars =
+      config && config.showAssignedTo !== false
+        ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w))
+        : {};
+
+    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars)) {
       return;
     }
-    this.lastState = serializeState(config, workItem, subtasks);
+    this.lastState = serializeState(config, workItem, subtasks, avatars);
     this.view.webview.html = this.wrapHtml(
-      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, screen: this.currentScreen }),
+      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, screen: this.currentScreen, avatars }),
     );
   }
 
@@ -387,6 +429,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         saveSkillRow(row);
       });
     });
+
+    const showAssigneeToggle = document.getElementById('kb-show-assignee-toggle');
+    if (showAssigneeToggle) {
+      showAssigneeToggle.addEventListener('change', () => {
+        vscode.postMessage({ type: 'set-show-assigned-to', value: showAssigneeToggle.checked });
+      });
+    }
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -494,7 +543,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin-top: 12px; font-size: 11px; text-transform: uppercase; opacity: 0.7; }
       .kb-hidden { display: none; }
-      .kb-result-item { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-result-item { display: flex; flex-direction: column; align-items: stretch; width: 100%; text-align: left; padding: 4px 6px; margin: 2px 0; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-result-item:hover { background: var(--vscode-list-hoverBackground); }
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
@@ -535,6 +584,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-field-color { display: flex; gap: 4px; align-items: center; }
       .kb-config-field-color .kb-input { flex: 1; margin-bottom: 0; }
       .kb-color-picker { flex-shrink: 0; width: 28px; height: 26px; padding: 2px; border: 1px solid var(--vscode-panel-border); border-radius: 2px; background: transparent; cursor: pointer; }
+      .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; }
+      .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+      .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
+      .kb-result-item-main { display: flex; align-items: center; }
+      .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; opacity: 0.75; }
+      .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
+      .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
     `;
   }
 }
