@@ -4,14 +4,7 @@ VS Code extension that shows the active Azure DevOps work item and its children 
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Home screen](media/screenshots/home.png) | ![Flow screen with the active work item card and children](media/screenshots/flow.png) |
-| Home | Flow — active item + children |
-| ![Search modal for picking a work item](media/screenshots/search.png) | ![Work item detail tab](media/screenshots/detail-tab.png) |
-| Search | Work item detail tab |
-| ![Configuration screen with collapsible skill sections](media/screenshots/config.png) | |
-| Configuration | |
+![Work item detail tab open next to the Kanbrain flow panel, showing the active item and its children](media/screenshots/overview.png)
 
 ## Setup
 
