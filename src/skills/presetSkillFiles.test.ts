@@ -17,16 +17,17 @@ describe('buildPresetPlan', () => {
     expect(plan.backlogLevels.Stories.Removed).toBeNull();
   });
 
-  it('generates one shared skill file per level+category when generateFiles is true', () => {
+  it('generates one skill file per individual status when generateFiles is true', () => {
     const plan = buildPresetPlan(discovered, true, statusColors);
 
-    expect(plan.backlogLevels.Stories.New?.path).toBe('.kanbrain/skills/stories-proposed.md');
-    expect(plan.backlogLevels.Stories.Approved?.path).toBe('.kanbrain/skills/stories-proposed.md');
-    expect(plan.backlogLevels.Stories.Committed?.path).toBe('.kanbrain/skills/stories-inprogress.md');
+    expect(plan.backlogLevels.Stories.New?.path).toBe('.kanbrain/skills/stories-new.md');
+    expect(plan.backlogLevels.Stories.Approved?.path).toBe('.kanbrain/skills/stories-approved.md');
+    expect(plan.backlogLevels.Stories.Committed?.path).toBe('.kanbrain/skills/stories-committed.md');
     expect(plan.filesToWrite.map(f => f.relativePath)).toEqual([
-      '.kanbrain/skills/stories-proposed.md',
-      '.kanbrain/skills/stories-inprogress.md',
-      '.kanbrain/skills/tasks-proposed.md',
+      '.kanbrain/skills/stories-new.md',
+      '.kanbrain/skills/stories-approved.md',
+      '.kanbrain/skills/stories-committed.md',
+      '.kanbrain/skills/tasks-todo.md',
       '.kanbrain/skills/tasks-inprogress.md',
     ]);
   });
@@ -44,17 +45,23 @@ describe('buildPresetPlan', () => {
     expect(plan.filesToWrite).toEqual([]);
   });
 
-  it('keeps files from different backlog levels separate even for the same category', () => {
-    const plan = buildPresetPlan(discovered, true, statusColors);
+  it('keeps files from different backlog levels separate even for the same status name', () => {
+    const discoveredWithSharedStatusName: DiscoveredBacklogLevels = {
+      Stories: { New: 'Proposed' },
+      Tasks: { New: 'Proposed' },
+    };
 
-    expect(plan.backlogLevels.Stories.New).not.toEqual(plan.backlogLevels.Tasks['To Do']);
+    const plan = buildPresetPlan(discoveredWithSharedStatusName, true, statusColors);
+
+    expect(plan.backlogLevels.Stories.New?.path).toBe('.kanbrain/skills/stories-new.md');
+    expect(plan.backlogLevels.Tasks.New?.path).toBe('.kanbrain/skills/tasks-new.md');
   });
 
-  it('sets a label combining the backlog level and category', () => {
+  it('sets a label in the form "Execute {status} skill"', () => {
     const plan = buildPresetPlan(discovered, true, statusColors);
 
-    expect(plan.backlogLevels.Stories.New?.label).toBe('Stories — Proposed');
-    expect(plan.backlogLevels.Tasks['In Progress']?.label).toBe('Tasks — InProgress');
+    expect(plan.backlogLevels.Stories.New?.label).toBe('Execute New skill');
+    expect(plan.backlogLevels.Tasks['In Progress']?.label).toBe('Execute In Progress skill');
   });
 
   it('sets buttonColor from the status color, without a leading #', () => {

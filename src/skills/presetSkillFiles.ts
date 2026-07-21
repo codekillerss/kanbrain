@@ -14,8 +14,8 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '');
 }
 
-function skillSkeleton(levelName: string, category: string): string {
-  return `# Skill: ${levelName} — ${category}
+function skillSkeleton(levelName: string, statusName: string): string {
+  return `# Skill: ${levelName} — ${statusName}
 
 Work item: {{title}} (#{{id}})
 Status: {{status}}
@@ -31,8 +31,6 @@ Describe here what the agent should do when the work item is in this status.
 
 function buildStatusSkillEntry(
   relativePath: string,
-  levelName: string,
-  category: string,
   statusName: string,
   statusColors: Record<string, string>,
 ): SkillEntry {
@@ -41,7 +39,7 @@ function buildStatusSkillEntry(
   const textColor = pickReadableTextColor(normalizeHex(buttonColor)).replace(/^#/, '');
   return {
     path: relativePath,
-    label: `${levelName} — ${category}`,
+    label: `Execute ${statusName} skill`,
     textColor,
     buttonColor,
   };
@@ -65,14 +63,14 @@ export function buildPresetPlan(
         continue;
       }
 
-      const key = `${levelName}::${category}`;
+      const key = `${levelName}::${statusName}`;
       let relativePath = pathByKey.get(key);
       if (!relativePath) {
-        relativePath = `.kanbrain/skills/${slugify(levelName)}-${slugify(category)}.md`;
+        relativePath = `.kanbrain/skills/${slugify(levelName)}-${slugify(statusName)}.md`;
         pathByKey.set(key, relativePath);
-        filesToWrite.push({ relativePath, content: skillSkeleton(levelName, category) });
+        filesToWrite.push({ relativePath, content: skillSkeleton(levelName, statusName) });
       }
-      statusSkills[statusName] = buildStatusSkillEntry(relativePath, levelName, category, statusName, statusColors);
+      statusSkills[statusName] = buildStatusSkillEntry(relativePath, statusName, statusColors);
     }
 
     backlogLevels[levelName] = statusSkills;
