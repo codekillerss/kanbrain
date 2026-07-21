@@ -2,55 +2,23 @@
 
 VS Code extension that shows the active Azure DevOps work item and its children in a side panel, with per-status "skill" buttons that generate a context file and send a read command to an integrated terminal.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Home screen](media/screenshots/home.png) | ![Flow screen with the active work item card and children](media/screenshots/flow.png) |
+| Home | Flow — active item + children |
+| ![Search modal for picking a work item](media/screenshots/search.png) | ![Work item detail tab](media/screenshots/detail-tab.png) |
+| Search | Work item detail tab |
+| ![Configuration screen with collapsible skill sections](media/screenshots/config.png) | |
+| Configuration | |
+
 ## Setup
 
 1. Open a workspace folder.
 2. Run **Kanbrain: Setup** from the command palette. Sign in with your Microsoft account when prompted, then pick an Azure DevOps organization and project.
 3. Setup reads the project's real backlog levels (Epics/Features/Stories/Tasks, or whatever your process defines) and state categories from Azure DevOps, then asks whether to generate placeholder skill files automatically for each category (Proposed/InProgress/Resolved). This creates `.kanbrain/config.json` (commit it — it's shared team config) and, if you said yes, one skill file per backlog level + category under `.kanbrain/skills/`.
-4. Edit the generated skill files and, if needed, `.kanbrain/config.json`'s `backlogLevels` map (`{ [backlogLevel]: { [status]: skillEntryOrNull } }`) to fine-tune which skill runs for which status:
-
-   ```json
-   {
-     "organization": "my-org",
-     "project": "MyProject",
-     "typeToBacklogLevel": {
-       "Epic": "Epics",
-       "User Story": "Stories",
-       "Bug": "Stories",
-       "Task": "Tasks"
-     },
-     "backlogLevels": {
-       "Stories": {
-         "New": { "path": ".kanbrain/skills/stories-proposed.md" },
-         "Committed": {
-           "path": ".kanbrain/skills/stories-inprogress.md",
-           "label": "Refine",
-           "textColor": "ffffff",
-           "buttonColor": "007acc"
-         },
-         "Done": null
-       },
-       "Tasks": {
-         "To Do": { "path": ".kanbrain/skills/tasks-proposed.md" },
-         "In Progress": { "path": ".kanbrain/skills/tasks-inprogress.md" },
-         "Done": null
-       }
-     },
-     "statusColors": {
-       "New": "b2b2b2",
-       "Committed": "007acc",
-       "Done": "339933"
-     },
-     "typeColors": {
-       "Task": "f2cb1d",
-       "Bug": "cc293d"
-     },
-     "typeIcons": {
-       "Task": "<svg>...</svg>",
-       "Bug": "<svg>...</svg>"
-     }
-   }
-   ```
+4. Edit the generated skill files and, if needed, `.kanbrain/config.json`'s `backlogLevels` map (`{ [backlogLevel]: { [status]: skillEntryOrNull } }`) to fine-tune which skill runs for which status.
 
    Each `backlogLevels[level][status]` entry is either `null` (no action for that status) or an object with a required `path` (relative to the workspace root) and three optional fields: `label` (overrides the button text — defaults to the skill file's name), `textColor` and `buttonColor` (hex, no `#` needed — override the button's text/background color; an invalid or missing value falls back to the VS Code theme's default button colors). `Kanbrain: Setup` generates entries with all four fields already filled in: `label` is `"{backlog level} — {category}"`, `buttonColor` is the status's real Azure DevOps color (a neutral gray if none is known), and `textColor` is computed for readable contrast against it — edit any of them by hand (or via the color pickers on the Config screen) to customize further. `Kanbrain: Sync Board Configuration` only ever adds new entries as `{ "path": ... }` (no auto-filled label/colors), since it's meant to be a light touch that never surprises you with visual changes to entries it didn't create.
 
