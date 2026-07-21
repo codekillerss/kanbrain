@@ -2,7 +2,7 @@
   "name": "kanbrain-vscode",
   "displayName": "Kanbrain — Azure DevOps",
   "description": "Azure DevOps work item flow panel for VS Code",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "CodeKillers",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
