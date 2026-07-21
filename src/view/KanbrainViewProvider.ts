@@ -478,8 +478,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         target.classList.add('kb-hidden');
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
-      } else if (target.dataset && target.dataset.action === 'pick-work-item') {
-        vscode.postMessage({ type: 'pick-work-item', id: target.dataset.id });
+      } else if (target.closest && target.closest('[data-action="pick-work-item"]')) {
+        vscode.postMessage({ type: 'pick-work-item', id: target.closest('[data-action="pick-work-item"]').dataset.id });
       } else if (target.dataset && target.dataset.action === 'open-work-item-detail') {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
