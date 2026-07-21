@@ -1,6 +1,7 @@
 .vscode/**
 .vscode-test/**
 .claude/**
+.kanbrain/**
 src/**
 test/**
 docs/**
