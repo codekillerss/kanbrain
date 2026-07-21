@@ -127,6 +127,13 @@ describe('AzureDevOpsClient', () => {
     await expect(client.listProjects('my-org')).rejects.toThrow(/400.*TF51005/s);
   });
 
+  it('throws an AzureDevOpsHttpError carrying the response status when the response is not ok', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'no access' }, false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await expect(client.listProjects('my-org')).rejects.toMatchObject({ status: 403 });
+  });
+
   it('getChildren fetches work items for a parent childIds', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({

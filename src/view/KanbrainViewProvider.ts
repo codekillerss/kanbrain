@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
-import type { AzureDevOpsClient } from '../azureDevOps/client';
+import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
 import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
@@ -289,7 +289,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     sendReadCommand(relativePath);
   }
 
-  private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected'> {
+  private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected' | 'unknown'> {
     if (!this.client) {
       return 'disconnected';
     }
@@ -297,8 +297,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!hasSession) {
       return 'disconnected';
     }
-    const hasAccess = await validateProjectAccess(this.client, config.organization, config.project);
-    return hasAccess ? 'connected' : 'disconnected';
+    try {
+      const hasAccess = await validateProjectAccess(this.client, config.organization, config.project);
+      return hasAccess ? 'connected' : 'disconnected';
+    } catch {
+      // Transient failure (network, 5xx, timeout) — stay 'unknown' so the next poll retries the check.
+      return 'unknown';
+    }
   }
 
   private renderDisconnected(config: KanbrainConfig): void {
@@ -351,11 +356,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             parent = fetchedParent ?? null;
           }
         }
-      } catch {
-        // A data fetch failed mid-session (e.g. the session expired) — treat it the same as a
-        // failed connection check instead of leaving the panel stuck on a silent rejection.
-        this.connectionStatus = 'disconnected';
-        this.renderDisconnected(config);
+      } catch (error) {
+        if (error instanceof AzureDevOpsHttpError && (error.status === 401 || error.status === 403)) {
+          // The session actually expired/was revoked — show the Connect screen.
+          this.connectionStatus = 'disconnected';
+          this.renderDisconnected(config);
+          return;
+        }
+        // Transient failure (network, 5xx, timeout) — skip this poll, keep the current
+        // connection state, and retry on the next one instead of forcing a reconnect.
         return;
       }
     }

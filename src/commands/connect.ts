@@ -24,7 +24,16 @@ export async function connectToAzureDevOps(
     return;
   }
 
-  const hasAccess = await validateProjectAccess(client, config.organization, config.project);
+  let hasAccess: boolean;
+  try {
+    hasAccess = await validateProjectAccess(client, config.organization, config.project);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(
+      `Connected, but couldn't verify access to ${config.organization}/${config.project} due to a connection error: ${message}. Try Kanbrain: Connect to Azure DevOps again.`,
+    );
+    return;
+  }
   if (!hasAccess) {
     vscode.window.showErrorMessage(
       `Connected, but this account has no access to ${config.organization}/${config.project}. Run Kanbrain: Connect to Azure DevOps again to pick a different account.`,

@@ -9,6 +9,13 @@ export interface AzureDevOpsClientDeps {
   getToken: () => Promise<string>;
 }
 
+export class AzureDevOpsHttpError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = 'AzureDevOpsHttpError';
+  }
+}
+
 export interface AzureDevOpsOrg {
   id: string;
   name: string;
@@ -62,7 +69,10 @@ export class AzureDevOpsClient {
       } catch {
         body = '';
       }
-      throw new Error(`Azure DevOps request failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`);
+      throw new AzureDevOpsHttpError(
+        response.status,
+        `Azure DevOps request failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`,
+      );
     }
     return response;
   }
