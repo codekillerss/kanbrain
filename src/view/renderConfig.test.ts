@@ -67,4 +67,28 @@ describe('renderConfig', () => {
     expect(headerIndex).toBeGreaterThan(parentIndex);
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
+
+  it('does not show a board selector when there are 0 or 1 boards in cardSettingsByBoard', () => {
+    const html = renderConfig(state({ config: config({ cardSettingsByBoard: { Stories: { Task: true } } }) }));
+    expect(html).not.toContain('id="kb-board-select"');
+  });
+
+  it('shows a board selector when there is more than one board in cardSettingsByBoard', () => {
+    const html = renderConfig(
+      state({ config: config({ cardSettingsByBoard: { Stories: { Task: true }, Sprints: { Task: false } } }) }),
+    );
+    expect(html).toContain('id="kb-board-select"');
+    expect(html).toContain('<option value="Stories"');
+    expect(html).toContain('<option value="Sprints"');
+  });
+
+  it('marks the selected board as selected in the dropdown', () => {
+    const html = renderConfig(
+      state({
+        config: config({ cardSettingsByBoard: { Stories: { Task: true }, Sprints: { Task: false } } }),
+        selectedBoard: 'Sprints',
+      }),
+    );
+    expect(html).toMatch(/<option value="Sprints" selected>/);
+  });
 });
