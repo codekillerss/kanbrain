@@ -1,12 +1,14 @@
 import type { AzureDevOpsClient } from './client';
 import type { BacklogLevel, WorkItemTypeState } from './backlogLevels';
 import { sanitizeSvg } from '../view/sanitizeSvg';
+import { discoverCardSettingsByBoard } from './discoverCardSettings';
 
 export interface BoardState {
   levels: BacklogLevel[];
   statesByType: Record<string, WorkItemTypeState[]>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
+  cardSettingsByBoard: Record<string, Record<string, boolean>>;
 }
 
 export async function discoverBoardState(client: AzureDevOpsClient, organization: string, project: string): Promise<BoardState> {
@@ -37,5 +39,7 @@ export async function discoverBoardState(client: AzureDevOpsClient, organization
     }
   }
 
-  return { levels, statesByType, typeColors, typeIcons };
+  const cardSettingsByBoard = await discoverCardSettingsByBoard(client, organization, project, team);
+
+  return { levels, statesByType, typeColors, typeIcons, cardSettingsByBoard };
 }

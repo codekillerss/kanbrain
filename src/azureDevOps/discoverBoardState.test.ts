@@ -7,12 +7,16 @@ function stubClient(overrides: Partial<{
   listBacklogLevels: () => Promise<{ name: string; workItemTypes: string[] }[]>;
   listWorkItemTypeStates: () => Promise<{ name: string; category: string; color: string }[]>;
   getWorkItemTypeIcon: () => Promise<{ color: string; iconSvg: string } | null>;
+  listBoards: () => Promise<{ id: string; name: string }[]>;
+  getCardSettings: () => Promise<Record<string, boolean>>;
 }> = {}): AzureDevOpsClient {
   return {
     getDefaultTeamName: vi.fn().mockResolvedValue('MyProject Team'),
     listBacklogLevels: vi.fn().mockResolvedValue([{ name: 'Tasks', workItemTypes: ['Task'] }]),
     listWorkItemTypeStates: vi.fn().mockResolvedValue([{ name: 'New', category: 'Proposed', color: 'b2b2b2' }]),
     getWorkItemTypeIcon: vi.fn().mockResolvedValue({ color: 'f2cb1d', iconSvg: '<svg></svg>' }),
+    listBoards: vi.fn().mockResolvedValue([{ id: 'b1', name: 'Tasks' }]),
+    getCardSettings: vi.fn().mockResolvedValue({ Task: true }),
     ...overrides,
   } as unknown as AzureDevOpsClient;
 }
@@ -41,5 +45,19 @@ describe('discoverBoardState', () => {
 
     expect(result.typeColors.Task).toBeUndefined();
     expect(result.typeIcons.Task).toBeUndefined();
+  });
+
+  it('fetches card settings per board, keyed by board name', async () => {
+    const client = stubClient();
+    const result = await discoverBoardState(client, 'my-org', 'MyProject');
+
+    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: true } });
+  });
+
+  it('continues with an empty cardSettingsByBoard when fetching it fails for every board', async () => {
+    const client = stubClient({ getCardSettings: vi.fn().mockRejectedValue(new Error('boom')) });
+    const result = await discoverBoardState(client, 'my-org', 'MyProject');
+
+    expect(result.cardSettingsByBoard).toEqual({});
   });
 });
