@@ -1,10 +1,11 @@
-import type { WorkItem, KanbrainConfig } from '../types';
+import type { WorkItem, KanbrainConfig, PullRequestDetails } from '../types';
 import { resolveSkill } from '../config/resolveSkill';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow } from './renderAssignee';
 import { renderParentRow } from './renderParent';
+import { renderDevelopmentSection } from './renderDevelopment';
 import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 
@@ -33,11 +34,13 @@ export function renderWorkItemCard(
   parent: WorkItem | null = null,
   showParent = false,
   selectedBoard: string | undefined = undefined,
+  prDetails: Record<string, PullRequestDetails> = {},
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedBoard);
   const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
   const parentHtml = renderParentRow(parent, showParent, config);
+  const developmentHtml = renderDevelopmentSection(workItem.development, prDetails);
   const titleAttrs = clickableTitle
     ? ` class="kb-title kb-title-clickable" data-action="open-work-item-detail" data-id="${workItem.id}"`
     : ' class="kb-title"';
@@ -52,6 +55,7 @@ export function renderWorkItemCard(
       ${parentHtml}
       ${assigneeHtml}
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${developmentHtml}
       ${showActionButton ? renderActionButton(workItem, config) : ''}
     </div>
   `;

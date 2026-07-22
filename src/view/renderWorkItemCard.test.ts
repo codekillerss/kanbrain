@@ -149,4 +149,25 @@ describe('renderWorkItemCard', () => {
     expect(parentIndex).toBeGreaterThanOrEqual(0);
     expect(assigneeIndex).toBeGreaterThan(parentIndex);
   });
+
+  it('does not show a Development section when the work item has no development links', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('kb-dev-label');
+  });
+
+  it('shows the Development section unconditionally when the work item has development links', () => {
+    const item = workItem({ development: [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'main' }] });
+    const html = renderWorkItemCard(item, config, 'kb-main-card');
+    expect(html).toContain('kb-dev-label');
+    expect(html).toContain('main');
+  });
+
+  it('passes prDetails through to render a resolved pull request', () => {
+    const item = workItem({ development: [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }] });
+    const html = renderWorkItemCard(item, config, 'kb-main-card', true, {}, false, null, false, undefined, {
+      'repo-1:57': { title: 'Fix login bug', status: 'active' },
+    });
+    expect(html).toContain('Fix login bug');
+    expect(html).toContain('(Active)');
+  });
 });
