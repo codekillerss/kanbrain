@@ -82,4 +82,43 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('data-action="open-work-item-detail"');
     expect(html).toContain('data-id="482"');
   });
+
+  it('does not show a parent row by default', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('kb-parent-row');
+  });
+
+  it('shows the parent row when parent is provided and showParent is true', () => {
+    const parentItem = workItem({ id: 900, title: 'Epic parent' });
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card', true, {}, false, parentItem, true);
+    expect(html).toContain('kb-parent-row');
+    expect(html).toContain('data-id="900"');
+    expect(html).toContain('Epic parent');
+  });
+
+  it('hides the parent row when showParent is false even if parent is provided', () => {
+    const parentItem = workItem({ id: 900 });
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card', true, {}, false, parentItem, false);
+    expect(html).not.toContain('kb-parent-row');
+  });
+
+  it('shows the parent row before the assignee row', () => {
+    const parentItem = workItem({ id: 900, title: 'Epic parent' });
+    const html = renderWorkItemCard(
+      workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
+      config,
+      'kb-main-card',
+      true,
+      {},
+      false,
+      parentItem,
+      true,
+    );
+
+    const parentIndex = html.indexOf('kb-parent-row');
+    const assigneeIndex = html.indexOf('kb-assignee-row');
+
+    expect(parentIndex).toBeGreaterThanOrEqual(0);
+    expect(assigneeIndex).toBeGreaterThan(parentIndex);
+  });
 });

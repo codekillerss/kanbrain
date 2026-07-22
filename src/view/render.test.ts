@@ -270,4 +270,48 @@ describe('render', () => {
     expect(html).toContain('data-action="open-work-item-detail" data-id="482"');
     expect(html).toContain('data-action="open-work-item-detail" data-id="101"');
   });
+
+  it('shows the parent row on the main card when cardSettingsByBoard enables Parent for the type', () => {
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: true } } };
+    const html = render({
+      hasWorkspace: true,
+      config: configWithParent,
+      workItem: workItem(),
+      parent: workItem({ id: 900, title: 'Epic parent' }),
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    expect(html).toContain('kb-parent-row');
+    expect(html).toContain('data-id="900"');
+  });
+
+  it('does not show the parent row when the type is not enabled in cardSettingsByBoard', () => {
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: false } } };
+    const html = render({
+      hasWorkspace: true,
+      config: configWithParent,
+      workItem: workItem(),
+      parent: workItem({ id: 900 }),
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    expect(html).not.toContain('kb-parent-row');
+  });
+
+  it('does not show the parent row on subtask cards', () => {
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: true } } };
+    const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
+    const html = render({
+      hasWorkspace: true,
+      config: configWithParent,
+      workItem: workItem(),
+      parent: workItem({ id: 900 }),
+      subtasks,
+      screen: 'flow',
+    });
+
+    expect(html.split('kb-parent-row').length - 1).toBe(1);
+  });
 });

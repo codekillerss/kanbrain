@@ -4,6 +4,7 @@ import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow } from './renderAssignee';
+import { renderParentRow } from './renderParent';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
@@ -28,9 +29,12 @@ export function renderWorkItemCard(
   showActionButton = true,
   avatars: Record<string, string> = {},
   clickableTitle = false,
+  parent: WorkItem | null = null,
+  showParent = false,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = config.showAssignedTo === false ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  const parentHtml = renderParentRow(parent, showParent);
   const titleAttrs = clickableTitle
     ? ` class="kb-title kb-title-clickable" data-action="open-work-item-detail" data-id="${workItem.id}"`
     : ' class="kb-title"';
@@ -42,6 +46,7 @@ export function renderWorkItemCard(
         <span class="kb-id">#${workItem.id}</span>
       </div>
       <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
+      ${parentHtml}
       ${assigneeHtml}
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${showActionButton ? renderActionButton(workItem, config) : ''}

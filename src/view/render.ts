@@ -2,6 +2,7 @@ import type { WorkItem, KanbrainConfig } from '../types';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
+import { resolveShowParent } from '../config/resolveShowParent';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -12,6 +13,7 @@ export interface RenderState {
   screen: 'home' | 'flow' | 'config';
   connectionStatus?: 'connected' | 'disconnected';
   avatars?: Record<string, string>;
+  selectedBoard?: string;
 }
 
 export function render(state: RenderState): string {
@@ -51,6 +53,7 @@ export function render(state: RenderState): string {
   }
 
   const avatars = state.avatars ?? {};
+  const showParent = resolveShowParent(state.config, state.workItem.type, state.selectedBoard);
   const subtasksHtml = state.subtasks.length
     ? state.subtasks.map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true)).join('')
     : '<div class="kb-empty">No child items.</div>';
@@ -69,7 +72,7 @@ export function render(state: RenderState): string {
       </div>
     </div>
     <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true)}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent)}
       <div class="kb-card-actions">
         <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
