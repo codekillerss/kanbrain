@@ -23,6 +23,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private lastState = '';
   private activeWorkItemId: number | undefined;
+  private selectedBoard: string | undefined;
   private backlogLevelCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
@@ -36,6 +37,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
     private readonly openWorkItemDetail: (id: number) => Promise<void>,
+    private readonly persistSelectedBoard: (board: string | undefined) => void,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -80,6 +82,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
+      } else if (message.type === 'set-selected-board') {
+        this.setSelectedBoard(message.board || undefined);
       } else if (message.type === 'open-work-item-detail') {
         await this.openWorkItemDetail(Number(message.id));
       }
@@ -107,6 +111,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.activeWorkItemId = id;
     this.persistActiveWorkItem(id);
     this.currentScreen = id === undefined ? 'home' : 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  setSelectedBoard(board: string | undefined): void {
+    this.selectedBoard = board;
+    this.persistSelectedBoard(board);
     this.lastState = '';
     void this.refresh();
   }
@@ -386,7 +397,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     this.lastState = serializeState(config, workItem, subtasks, avatars);
     this.view.webview.html = this.wrapHtml(
-      render({ hasWorkspace: !!this.workspaceRoot, config, workItem, parent, subtasks, screen: this.currentScreen, avatars }),
+      render({
+        hasWorkspace: !!this.workspaceRoot,
+        config,
+        workItem,
+        parent,
+        subtasks,
+        screen: this.currentScreen,
+        avatars,
+        selectedBoard: this.selectedBoard,
+      }),
     );
   }
 
@@ -446,6 +466,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (showAssigneeToggle) {
       showAssigneeToggle.addEventListener('change', () => {
         vscode.postMessage({ type: 'set-show-assigned-to', value: showAssigneeToggle.checked });
+      });
+    }
+
+    const boardSelect = document.getElementById('kb-board-select');
+    if (boardSelect) {
+      boardSelect.addEventListener('change', () => {
+        vscode.postMessage({ type: 'set-selected-board', board: boardSelect.value });
       });
     }
 
@@ -612,6 +639,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-field-color .kb-input { flex: 1; margin-bottom: 0; }
       .kb-color-picker { flex-shrink: 0; width: 28px; height: 26px; padding: 2px; border: 1px solid var(--vscode-panel-border); border-radius: 2px; background: transparent; cursor: pointer; }
       .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; }
+      .kb-parent-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; cursor: pointer; }
+      .kb-parent-row:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
       .kb-result-item-main { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); min-width: 0; }
@@ -620,6 +649,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
+      .kb-select-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; }
+      .kb-select-row select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; padding: 2px 4px; }
     `;
   }
 }

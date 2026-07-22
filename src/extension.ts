@@ -13,6 +13,7 @@ import { registerConfigureWithAiCommand } from './commands/configureWithAi';
 import { registerConnectCommand } from './commands/connect';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
+const SELECTED_BOARD_KEY = 'kanbrain.selectedBoard';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -37,6 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await detailPanelManager.open(id);
       }
     },
+    board => context.workspaceState.update(SELECTED_BOARD_KEY, board),
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
@@ -57,6 +59,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);
   if (savedWorkItemId) {
     provider.setActiveWorkItem(savedWorkItemId);
+  }
+
+  const savedBoard = context.workspaceState.get<string>(SELECTED_BOARD_KEY);
+  if (savedBoard) {
+    provider.setSelectedBoard(savedBoard);
   }
 }
 
