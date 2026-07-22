@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { discoverBoardState } from './discoverBoardState';
 import type { AzureDevOpsClient } from './client';
+import type { CardFieldSettings } from '../types';
 
 function stubClient(overrides: Partial<{
   getDefaultTeamName: () => Promise<string>;
@@ -8,7 +9,7 @@ function stubClient(overrides: Partial<{
   listWorkItemTypeStates: () => Promise<{ name: string; category: string; color: string }[]>;
   getWorkItemTypeIcon: () => Promise<{ color: string; iconSvg: string } | null>;
   listBoards: () => Promise<{ id: string; name: string }[]>;
-  getCardSettings: () => Promise<Record<string, boolean>>;
+  getCardSettings: () => Promise<Record<string, CardFieldSettings>>;
 }> = {}): AzureDevOpsClient {
   return {
     getDefaultTeamName: vi.fn().mockResolvedValue('MyProject Team'),
@@ -16,7 +17,7 @@ function stubClient(overrides: Partial<{
     listWorkItemTypeStates: vi.fn().mockResolvedValue([{ name: 'New', category: 'Proposed', color: 'b2b2b2' }]),
     getWorkItemTypeIcon: vi.fn().mockResolvedValue({ color: 'f2cb1d', iconSvg: '<svg></svg>' }),
     listBoards: vi.fn().mockResolvedValue([{ id: 'b1', name: 'Tasks' }]),
-    getCardSettings: vi.fn().mockResolvedValue({ Task: true }),
+    getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
     ...overrides,
   } as unknown as AzureDevOpsClient;
 }
@@ -51,7 +52,7 @@ describe('discoverBoardState', () => {
     const client = stubClient();
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
-    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: true } });
+    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: { parent: true, assignedTo: true } } });
   });
 
   it('continues with an empty cardSettingsByBoard when fetching it fails for every board', async () => {

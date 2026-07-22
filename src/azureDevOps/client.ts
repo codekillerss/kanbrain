@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
@@ -50,6 +50,7 @@ function mapIdentityRef(raw: unknown): AssignedTo {
 }
 
 const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);
+const ASSIGNED_TO_FIELD_IDENTIFIERS = new Set(['System.AssignedTo']);
 
 export class AzureDevOpsClient {
   constructor(private readonly deps: AzureDevOpsClientDeps) {}
@@ -236,14 +237,18 @@ export class AzureDevOpsClient {
     return data.value.map(c => ({ name: c.name, columnType: c.columnType, stateMappings: c.stateMappings }));
   }
 
-  async getCardSettings(organization: string, project: string, team: string, boardId: string): Promise<Record<string, boolean>> {
+  async getCardSettings(organization: string, project: string, team: string, boardId: string): Promise<Record<string, CardFieldSettings>> {
     const data = await this.request<{ cards?: Record<string, { fieldIdentifier?: string }[]> }>(
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/cardsettings?api-version=7.1`,
     );
     const cards = data.cards ?? {};
-    const result: Record<string, boolean> = {};
+    const result: Record<string, CardFieldSettings> = {};
     for (const [type, fields] of Object.entries(cards)) {
-      result[type] = (fields ?? []).some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
+      const identifiers = (fields ?? []).map(f => f.fieldIdentifier).filter((id): id is string => !!id);
+      result[type] = {
+        parent: identifiers.some(id => PARENT_FIELD_IDENTIFIERS.has(id)),
+        assignedTo: identifiers.some(id => ASSIGNED_TO_FIELD_IDENTIFIERS.has(id)),
+      };
     }
     return result;
   }

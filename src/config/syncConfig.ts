@@ -1,4 +1,4 @@
-import type { KanbrainConfig, SkillEntry } from '../types';
+import type { KanbrainConfig, SkillEntry, CardFieldSettings } from '../types';
 import type { DiscoveredBacklogLevels } from '../azureDevOps/backlogLevels';
 
 export function syncConfig(
@@ -8,7 +8,7 @@ export function syncConfig(
   freshStatusColors: Record<string, string>,
   freshTypeColors: Record<string, string>,
   freshTypeIcons: Record<string, string>,
-  freshCardSettingsByBoard: Record<string, Record<string, boolean>>,
+  freshCardSettingsByBoard: Record<string, Record<string, CardFieldSettings>>,
 ): KanbrainConfig {
   const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
 

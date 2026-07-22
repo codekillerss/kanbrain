@@ -24,7 +24,7 @@ describe('syncConfig', () => {
       { 'To Do': 'new-color' },
       { Task: 'new-color' },
       { Task: '<svg>new</svg>' },
-      { Tasks: { Task: true } },
+      { Tasks: { Task: { parent: true, assignedTo: true } } },
     );
 
     expect(result.statusColors).toEqual({ 'To Do': 'new-color' });
@@ -119,7 +119,7 @@ describe('syncConfig', () => {
   });
 
   it('replaces cardSettingsByBoard with the fresh value, discarding the previous one', () => {
-    const withOldSettings = config({ cardSettingsByBoard: { OldBoard: { Task: false } } });
+    const withOldSettings = config({ cardSettingsByBoard: { OldBoard: { Task: { parent: false, assignedTo: false } } } });
     const result = syncConfig(
       withOldSettings,
       { Tasks: { 'To Do': 'Proposed' } },
@@ -127,9 +127,9 @@ describe('syncConfig', () => {
       {},
       {},
       {},
-      { Tasks: { Task: true } },
+      { Tasks: { Task: { parent: true, assignedTo: true } } },
     );
 
-    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: true } });
+    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: { parent: true, assignedTo: true } } });
   });
 });

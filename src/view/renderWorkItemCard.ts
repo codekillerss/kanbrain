@@ -5,6 +5,7 @@ import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow } from './renderAssignee';
 import { renderParentRow } from './renderParent';
+import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
@@ -31,10 +32,12 @@ export function renderWorkItemCard(
   clickableTitle = false,
   parent: WorkItem | null = null,
   showParent = false,
+  selectedBoard: string | undefined = undefined,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
-  const assigneeHtml = config.showAssignedTo === false ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
-  const parentHtml = renderParentRow(parent, showParent);
+  const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedBoard);
+  const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
+  const parentHtml = renderParentRow(parent, showParent, config);
   const titleAttrs = clickableTitle
     ? ` class="kb-title kb-title-clickable" data-action="open-work-item-detail" data-id="${workItem.id}"`
     : ' class="kb-title"';

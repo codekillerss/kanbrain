@@ -387,10 +387,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const avatars =
-      config && config.showAssignedTo !== false
-        ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w))
-        : {};
+    // Whether the assignee actually renders is decided per work item type by resolveShowAssignedTo
+    // (mirrored from the real board), so avatars are always resolved here rather than gated by the
+    // (now search-only) manual showAssignedTo toggle.
+    const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
     if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars)) {
       return;
@@ -639,8 +639,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-field-color .kb-input { flex: 1; margin-bottom: 0; }
       .kb-color-picker { flex-shrink: 0; width: 28px; height: 26px; padding: 2px; border: 1px solid var(--vscode-panel-border); border-radius: 2px; background: transparent; cursor: pointer; }
       .kb-assignee-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; }
-      .kb-parent-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; opacity: 0.85; cursor: pointer; }
-      .kb-parent-row:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
+      .kb-field-row { margin-top: 6px; }
+      .kb-field-label { font-size: 11px; opacity: 0.7; }
+      .kb-parent-link { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+      .kb-parent-link .kb-link-text { color: var(--vscode-textLink-foreground); text-decoration: underline; }
+      .kb-parent-link:hover .kb-link-text { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
       .kb-result-item-main { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); min-width: 0; }

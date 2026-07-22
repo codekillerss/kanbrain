@@ -26,7 +26,7 @@ export function renderConfig(state: RenderState): string {
     <div class="kb-section-label">Display</div>
     <label class="kb-checkbox-row">
       <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
-      Show assignee on cards
+      Show assignee in search results
     </label>
     ${boardSelectHtml}
     <div class="kb-config-parent-section">

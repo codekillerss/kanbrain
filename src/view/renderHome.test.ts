@@ -132,6 +132,7 @@ describe('renderHome', () => {
       state({
         workItem: workItem({ assignedTo: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' } }),
         avatars: { 'https://example.com/jane.png': 'data:image/png;base64,JANE' },
+        config: config({ cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: true } } } }),
       }),
     );
 

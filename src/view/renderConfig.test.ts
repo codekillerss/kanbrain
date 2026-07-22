@@ -44,10 +44,10 @@ describe('renderConfig', () => {
     expect(html).toContain('kb-header kb-page-header');
   });
 
-  it('shows a "Show assignee on cards" checkbox, checked by default', () => {
+  it('shows a "Show assignee in search results" checkbox, checked by default', () => {
     const html = renderConfig(state());
     expect(html).toContain('id="kb-show-assignee-toggle"');
-    expect(html).toContain('Show assignee on cards');
+    expect(html).toContain('Show assignee in search results');
     expect(html).toMatch(/id="kb-show-assignee-toggle"[^>]*checked/);
   });
 
@@ -69,13 +69,13 @@ describe('renderConfig', () => {
   });
 
   it('does not show a board selector when there are 0 or 1 boards in cardSettingsByBoard', () => {
-    const html = renderConfig(state({ config: config({ cardSettingsByBoard: { Stories: { Task: true } } }) }));
+    const html = renderConfig(state({ config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } }) }));
     expect(html).not.toContain('id="kb-board-select"');
   });
 
   it('shows a board selector when there is more than one board in cardSettingsByBoard', () => {
     const html = renderConfig(
-      state({ config: config({ cardSettingsByBoard: { Stories: { Task: true }, Sprints: { Task: false } } }) }),
+      state({ config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } }, Sprints: { Task: { parent: false, assignedTo: true } } } }) }),
     );
     expect(html).toContain('id="kb-board-select"');
     expect(html).toContain('<option value="Stories"');
@@ -85,7 +85,7 @@ describe('renderConfig', () => {
   it('marks the selected board as selected in the dropdown', () => {
     const html = renderConfig(
       state({
-        config: config({ cardSettingsByBoard: { Stories: { Task: true }, Sprints: { Task: false } } }),
+        config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } }, Sprints: { Task: { parent: false, assignedTo: true } } } }),
         selectedBoard: 'Sprints',
       }),
     );

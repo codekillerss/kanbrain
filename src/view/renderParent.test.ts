@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderParentRow } from './renderParent';
-import type { WorkItem } from '../types';
+import type { WorkItem, KanbrainConfig } from '../types';
 
 function parent(overrides: Partial<WorkItem> = {}): WorkItem {
   return {
@@ -17,21 +17,38 @@ function parent(overrides: Partial<WorkItem> = {}): WorkItem {
   };
 }
 
+const config: KanbrainConfig = {
+  organization: 'org',
+  project: 'proj',
+  typeToBacklogLevel: {},
+  backlogLevels: {},
+  statusColors: {},
+  typeColors: { Feature: 'f2cb1d' },
+  typeIcons: { Feature: '<svg><path d="M0 0"/></svg>' },
+};
+
 describe('renderParentRow', () => {
   it('returns an empty string when show is false', () => {
-    expect(renderParentRow(parent(), false)).toBe('');
+    expect(renderParentRow(parent(), false, config)).toBe('');
   });
 
   it('returns an empty string when parent is null', () => {
-    expect(renderParentRow(null, true)).toBe('');
+    expect(renderParentRow(null, true, config)).toBe('');
   });
 
-  it('renders the parent id, escaped title, and a clickable data-id when shown', () => {
-    const html = renderParentRow(parent(), true);
-    expect(html).toContain('kb-parent-row');
+  it('renders a "Parent" label above the value', () => {
+    const html = renderParentRow(parent(), true, config);
+    expect(html).toContain('kb-field-label');
+    expect(html).toContain('Parent</div>');
+  });
+
+  it('renders the parent type icon and escaped title as a clickable link, without the #id', () => {
+    const html = renderParentRow(parent(), true, config);
+    expect(html).toContain('kb-parent-link');
     expect(html).toContain('data-action="open-work-item-detail"');
     expect(html).toContain('data-id="55"');
-    expect(html).toContain('#55');
+    expect(html).toContain('<svg><path d="M0 0"/></svg>');
     expect(html).toContain('Parent &lt;title&gt;');
+    expect(html).not.toContain('#55');
   });
 });

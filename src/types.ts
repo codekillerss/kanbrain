@@ -22,6 +22,11 @@ export interface SkillEntry {
   buttonColor?: string;
 }
 
+export interface CardFieldSettings {
+  parent: boolean;
+  assignedTo: boolean;
+}
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
@@ -30,6 +35,6 @@ export interface KanbrainConfig {
   statusColors: Record<string, string>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
-  cardSettingsByBoard?: Record<string, Record<string, boolean>>;
+  cardSettingsByBoard?: Record<string, Record<string, CardFieldSettings>>;
   showAssignedTo?: boolean;
 }

@@ -428,13 +428,17 @@ describe('AzureDevOpsClient.getComments', () => {
 });
 
 describe('AzureDevOpsClient.getCardSettings', () => {
-  it('maps each work item type to whether a Parent field identifier is present', async () => {
+  it('maps each work item type to whether Parent and AssignedTo field identifiers are present', async () => {
     // Real shape (confirmed against the documented card-fields payload): cards[type] is a flat
     // array of field entries, not an object with a `.fields` property.
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         cards: {
-          'User Story': [{ fieldIdentifier: 'System.Title' }, { fieldIdentifier: 'System.Parent' }, { fieldIdentifier: 'System.Tags' }],
+          'User Story': [
+            { fieldIdentifier: 'System.Title' },
+            { fieldIdentifier: 'System.Parent' },
+            { fieldIdentifier: 'System.AssignedTo', displayFormat: 'AvatarOnly', displayType: 'CORE' },
+          ],
           Bug: [{ fieldIdentifier: 'System.Title' }, { fieldIdentifier: 'System.Tags' }, { showEmptyFields: 'false' }],
         },
       }),
@@ -443,7 +447,10 @@ describe('AzureDevOpsClient.getCardSettings', () => {
 
     const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
 
-    expect(settings).toEqual({ 'User Story': true, Bug: false });
+    expect(settings).toEqual({
+      'User Story': { parent: true, assignedTo: true },
+      Bug: { parent: false, assignedTo: false },
+    });
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/boards/b1/cardsettings?api-version=7.1',
       expect.anything(),
@@ -459,13 +466,13 @@ describe('AzureDevOpsClient.getCardSettings', () => {
     expect(settings).toEqual({});
   });
 
-  it('treats a type with an empty fields array as Parent not shown', async () => {
+  it('treats a type with an empty fields array as neither Parent nor AssignedTo shown', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ cards: { Task: [] } }));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
     const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
 
-    expect(settings).toEqual({ Task: false });
+    expect(settings).toEqual({ Task: { parent: false, assignedTo: false } });
   });
 
   it('ignores entries without a fieldIdentifier, like the trailing showEmptyFields entry', async () => {
@@ -476,6 +483,6 @@ describe('AzureDevOpsClient.getCardSettings', () => {
 
     const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
 
-    expect(settings).toEqual({ Task: true });
+    expect(settings).toEqual({ Task: { parent: true, assignedTo: false } });
   });
 });

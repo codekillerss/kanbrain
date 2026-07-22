@@ -1,5 +1,6 @@
 import type { AzureDevOpsClient } from './client';
 import type { BacklogLevel, WorkItemTypeState } from './backlogLevels';
+import type { CardFieldSettings } from '../types';
 import { sanitizeSvg } from '../view/sanitizeSvg';
 import { discoverCardSettingsByBoard } from './discoverCardSettings';
 
@@ -8,7 +9,7 @@ export interface BoardState {
   statesByType: Record<string, WorkItemTypeState[]>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
-  cardSettingsByBoard: Record<string, Record<string, boolean>>;
+  cardSettingsByBoard: Record<string, Record<string, CardFieldSettings>>;
 }
 
 export async function discoverBoardState(client: AzureDevOpsClient, organization: string, project: string): Promise<BoardState> {

@@ -243,10 +243,11 @@ describe('render', () => {
   });
 
   it('passes avatars through to the main card and subtasks', () => {
+    const configWithAssignee: KanbrainConfig = { ...config, cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: true } } } };
     const subtasks = [workItem({ id: 101, assignedTo: { displayName: 'Bob', imageUrl: 'https://example.com/bob.png' } })];
     const html = render({
       hasWorkspace: true,
-      config,
+      config: configWithAssignee,
       workItem: workItem({ assignedTo: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' } }),
       parent: null,
       subtasks,
@@ -272,7 +273,7 @@ describe('render', () => {
   });
 
   it('shows the parent row on the main card when cardSettingsByBoard enables Parent for the type', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: true } } };
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } };
     const html = render({
       hasWorkspace: true,
       config: configWithParent,
@@ -282,12 +283,12 @@ describe('render', () => {
       screen: 'flow',
     });
 
-    expect(html).toContain('kb-parent-row');
+    expect(html).toContain('kb-field-label');
     expect(html).toContain('data-id="900"');
   });
 
   it('does not show the parent row when the type is not enabled in cardSettingsByBoard', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: false } } };
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: false, assignedTo: false } } } };
     const html = render({
       hasWorkspace: true,
       config: configWithParent,
@@ -297,11 +298,11 @@ describe('render', () => {
       screen: 'flow',
     });
 
-    expect(html).not.toContain('kb-parent-row');
+    expect(html).not.toContain('kb-field-label');
   });
 
   it('does not show the parent row on subtask cards', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: true } } };
+    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } };
     const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
     const html = render({
       hasWorkspace: true,
@@ -312,6 +313,6 @@ describe('render', () => {
       screen: 'flow',
     });
 
-    expect(html.split('kb-parent-row').length - 1).toBe(1);
+    expect(html.split('kb-field-label').length - 1).toBe(1);
   });
 });
