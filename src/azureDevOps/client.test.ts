@@ -486,3 +486,27 @@ describe('AzureDevOpsClient.getCardSettings', () => {
     expect(settings).toEqual({ Task: { parent: true, assignedTo: false } });
   });
 });
+
+describe('AzureDevOpsClient.getPullRequest', () => {
+  it('fetches and maps a pull request title and status', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ title: 'Fix login bug', status: 'active' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const pr = await client.getPullRequest('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(pr).toEqual({ title: 'Fix login bug', status: 'active' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/repositories/repo-1/pullrequests/57?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'not found' }, false, 404));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const pr = await client.getPullRequest('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(pr).toBeNull();
+  });
+});

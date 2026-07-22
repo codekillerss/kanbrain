@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem, CardFieldSettings } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
@@ -251,5 +251,16 @@ export class AzureDevOpsClient {
       };
     }
     return result;
+  }
+
+  async getPullRequest(organization: string, project: string, repositoryId: string, pullRequestId: number): Promise<PullRequestDetails | null> {
+    try {
+      const data = await this.request<{ title: string; status: string }>(
+        `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repositoryId}/pullrequests/${pullRequestId}?api-version=7.1`,
+      );
+      return { title: data.title, status: data.status };
+    } catch {
+      return null;
+    }
   }
 }
