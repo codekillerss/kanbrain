@@ -13,6 +13,7 @@ function parent(overrides: Partial<WorkItem> = {}): WorkItem {
     parentId: null,
     childIds: [],
     assignedTo: null,
+    development: [],
     ...overrides,
   };
 }

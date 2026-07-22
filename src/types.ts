@@ -13,6 +13,16 @@ export interface WorkItem {
   parentId: number | null;
   childIds: number[];
   assignedTo: AssignedTo | null;
+  development: DevelopmentLink[];
+}
+
+export type DevelopmentLink =
+  | { kind: 'branch'; repositoryId: string; branchName: string }
+  | { kind: 'pullRequest'; repositoryId: string; pullRequestId: number };
+
+export interface PullRequestDetails {
+  title: string;
+  status: string;
 }
 
 export interface SkillEntry {

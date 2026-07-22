@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapWorkItem, type RawWorkItem } from './mapWorkItem';
+import { mapWorkItem, parseDevelopmentLink, type RawWorkItem } from './mapWorkItem';
 
 function raw(overrides: Partial<RawWorkItem> = {}): RawWorkItem {
   return {
@@ -108,5 +108,66 @@ describe('mapWorkItem', () => {
   it('has a null assignedTo when System.AssignedTo is missing', () => {
     const item = mapWorkItem(raw(), 'my-org', 'MyProject');
     expect(item.assignedTo).toBeNull();
+  });
+});
+
+describe('parseDevelopmentLink', () => {
+  it('parses a pull request ArtifactLink', () => {
+    const link = parseDevelopmentLink({
+      rel: 'ArtifactLink',
+      url: 'vstfs:///Git/PullRequestId/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/57',
+      attributes: { name: 'Pull Request' },
+    });
+    expect(link).toEqual({ kind: 'pullRequest', repositoryId: '22222222-2222-2222-2222-222222222222', pullRequestId: 57 });
+  });
+
+  it('parses a branch ArtifactLink, decoding a slash in the branch name', () => {
+    const link = parseDevelopmentLink({
+      rel: 'ArtifactLink',
+      url: 'vstfs:///Git/Ref/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/GBfeature%2Ffoo',
+      attributes: { name: 'Branch' },
+    });
+    expect(link).toEqual({ kind: 'branch', repositoryId: '22222222-2222-2222-2222-222222222222', branchName: 'feature/foo' });
+  });
+
+  it('returns null for an ArtifactLink that is neither a branch nor a pull request', () => {
+    const link = parseDevelopmentLink({
+      rel: 'ArtifactLink',
+      url: 'vstfs:///Git/Commit/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/abc123',
+      attributes: { name: 'Fixed in Commit' },
+    });
+    expect(link).toBeNull();
+  });
+
+  it('returns null for a malformed url that does not match either pattern', () => {
+    const link = parseDevelopmentLink({ rel: 'ArtifactLink', url: 'not-a-vstfs-url' });
+    expect(link).toBeNull();
+  });
+});
+
+describe("mapWorkItem's development field", () => {
+  it('populates development from ArtifactLink relations, ignoring Hierarchy relations', () => {
+    const item = mapWorkItem(
+      raw({
+        relations: [
+          { rel: 'System.LinkTypes.Hierarchy-Forward', url: 'https://dev.azure.com/my-org/_apis/wit/workItems/101' },
+          {
+            rel: 'ArtifactLink',
+            url: 'vstfs:///Git/PullRequestId/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/57',
+            attributes: { name: 'Pull Request' },
+          },
+        ],
+      }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.development).toEqual([
+      { kind: 'pullRequest', repositoryId: '22222222-2222-2222-2222-222222222222', pullRequestId: 57 },
+    ]);
+  });
+
+  it('defaults to an empty array when there are no ArtifactLink relations', () => {
+    const item = mapWorkItem(raw(), 'my-org', 'MyProject');
+    expect(item.development).toEqual([]);
   });
 });

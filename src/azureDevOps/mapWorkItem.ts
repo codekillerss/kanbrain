@@ -1,8 +1,9 @@
-import type { WorkItem, AssignedTo } from '../types';
+import type { WorkItem, AssignedTo, DevelopmentLink } from '../types';
 
 export interface RawRelation {
   rel: string;
   url: string;
+  attributes?: { name?: string };
 }
 
 export interface RawWorkItem {
@@ -15,6 +16,21 @@ interface RawIdentityRef {
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
+}
+
+const PULL_REQUEST_URL = /^vstfs:\/\/\/Git\/PullRequestId\/[^/]+\/([^/]+)\/(\d+)$/;
+const BRANCH_URL = /^vstfs:\/\/\/Git\/Ref\/[^/]+\/([^/]+)\/GB(.+)$/;
+
+export function parseDevelopmentLink(relation: RawRelation): DevelopmentLink | null {
+  const prMatch = relation.url.match(PULL_REQUEST_URL);
+  if (prMatch) {
+    return { kind: 'pullRequest', repositoryId: prMatch[1], pullRequestId: Number(prMatch[2]) };
+  }
+  const branchMatch = relation.url.match(BRANCH_URL);
+  if (branchMatch) {
+    return { kind: 'branch', repositoryId: branchMatch[1], branchName: decodeURIComponent(branchMatch[2]) };
+  }
+  return null;
 }
 
 function stripHtml(html: string): string {
@@ -46,6 +62,10 @@ export function mapWorkItem(raw: RawWorkItem, organization: string, project: str
   const relations = raw.relations ?? [];
   const parentRelation = relations.find(r => r.rel === 'System.LinkTypes.Hierarchy-Reverse');
   const childRelations = relations.filter(r => r.rel === 'System.LinkTypes.Hierarchy-Forward');
+  const development = relations
+    .filter(r => r.rel === 'ArtifactLink')
+    .map(parseDevelopmentLink)
+    .filter((link): link is DevelopmentLink => link !== null);
 
   return {
     id: raw.id,
@@ -57,5 +77,6 @@ export function mapWorkItem(raw: RawWorkItem, organization: string, project: str
     parentId: parentRelation ? extractIdFromUrl(parentRelation.url) : null,
     childIds: childRelations.map(r => extractIdFromUrl(r.url)),
     assignedTo: mapAssignedTo(raw.fields['System.AssignedTo']),
+    development,
   };
 }

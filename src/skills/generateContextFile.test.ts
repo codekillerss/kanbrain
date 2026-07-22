@@ -18,6 +18,7 @@ const workItem: WorkItem = {
   parentId: null,
   childIds: [],
   assignedTo: null,
+  development: [],
 };
 
 const context: SkillTemplateContext = { workItem, parent: null, subtasks: [], branch: 'feature/90' };
