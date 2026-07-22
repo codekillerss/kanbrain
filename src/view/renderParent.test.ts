@@ -42,13 +42,12 @@ describe('renderParentRow', () => {
     expect(html).toContain('Parent</div>');
   });
 
-  it('renders the parent type icon and escaped title as a clickable link, without the #id', () => {
+  it('renders the parent type icon and "#id: escaped title" as a clickable link', () => {
     const html = renderParentRow(parent(), true, config);
     expect(html).toContain('kb-parent-link');
     expect(html).toContain('data-action="open-work-item-detail"');
     expect(html).toContain('data-id="55"');
     expect(html).toContain('<svg><path d="M0 0"/></svg>');
-    expect(html).toContain('Parent &lt;title&gt;');
-    expect(html).not.toContain('#55');
+    expect(html).toContain('#55: Parent &lt;title&gt;');
   });
 });

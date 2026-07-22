@@ -10,7 +10,7 @@ export function renderParentRow(parent: WorkItem | null, show: boolean, config: 
   return `
     <div class="kb-field-row">
       <div class="kb-field-label">Parent</div>
-      <div class="kb-parent-link" data-action="open-work-item-detail" data-id="${parent.id}">${iconHtml}<span class="kb-link-text">${escapeHtml(parent.title)}</span></div>
+      <div class="kb-parent-link" data-action="open-work-item-detail" data-id="${parent.id}">${iconHtml}<span class="kb-link-text">#${parent.id}: ${escapeHtml(parent.title)}</span></div>
     </div>
   `;
 }
