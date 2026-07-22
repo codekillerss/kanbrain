@@ -24,7 +24,7 @@ Diferente do `showAssignedTo` (toggle local, independente, só editado manualmen
 - Edição manual de `cardSettingsByBoard` na tela Config — só a *seleção* de board (desempate) é editável pelo usuário; o dado em si só muda via Setup/Sync, igual `typeColors`.
 - Qualquer escrita no board real do Azure DevOps — Kanbrain continua somente leitura.
 
-**Risco técnico a declarar:** a documentação pública da API `GET .../boards/{board}/cardsettings` é praticamente opaca (`cards: object`, sem schema detalhado — só sabemos, por outras fontes, que cada tipo tem uma lista de até 10 `fieldIdentifier`s configuráveis). Não há como confirmar aqui, sem uma chamada real, qual identificador exato representa "Parent habilitado" nessa resposta. O parser é escrito de forma defensiva (ver seção 2) com uma lista pequena de identificadores candidatos, e cai em `false` (comportamento igual ao atual, sem exibir nada) sempre que não conseguir reconhecer o dado — mas **é necessário validar contra um projeto Azure DevOps real durante a implementação**, ajustando a lista de identificadores se preciso, antes de considerar essa feature pronta (mesma recomendação já feita na spec da aba de detalhes).
+**Risco técnico — resolvido após validação real:** a primeira versão implementada assumiu, sem confirmação, que `cards[tipo]` era um objeto `{ fields: [...] }`. Um teste manual contra um projeto Azure DevOps real (via `Kanbrain: Setup`) mostrou `cardSettingsByBoard` populado com todos os tipos como `false`, mesmo com "Parent" configurado como additional field em pelo menos um tipo real — sinal de que o parser nunca encontrava nada. Comparando com o payload documentado da API equivalente (`card-fields`, TFS 2017, mesmo formato hoje), `cards[tipo]` é na verdade um **array direto** de entradas `{ fieldIdentifier, ... }` (algumas sem `fieldIdentifier`, como a entrada final `{ showEmptyFields: ... }`) — não um objeto com propriedade `.fields`. O parser foi corrigido para ler o array diretamente (`getCardSettings`, seção 2). `System.Parent` como identificador de campo foi confirmado como um field reference name real do Azure DevOps (usado também em colunas de query e em Delivery Plans), então a lista de identificadores candidatos se mantém.
 
 ## Design
 
@@ -43,20 +43,19 @@ export interface KanbrainConfig {
 const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);
 
 async getCardSettings(organization: string, project: string, team: string, boardId: string): Promise<Record<string, boolean>> {
-  const data = await this.request<{ cards?: Record<string, { fields?: { fieldIdentifier?: string }[] }> }>(
+  const data = await this.request<{ cards?: Record<string, { fieldIdentifier?: string }[]> }>(
     `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/cardsettings?api-version=7.1`,
   );
   const cards = data.cards ?? {};
   const result: Record<string, boolean> = {};
-  for (const [type, settings] of Object.entries(cards)) {
-    const fields = settings?.fields ?? [];
-    result[type] = fields.some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
+  for (const [type, fields] of Object.entries(cards)) {
+    result[type] = (fields ?? []).some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
   }
   return result;
 }
 ```
 
-`PARENT_FIELD_IDENTIFIERS` é a lista candidata citada no risco técnico acima — primeiro alvo a revisar contra uma resposta real.
+`cards[tipo]` é o array de campos em si (confirmado contra um projeto real, ver risco técnico acima) — cada entrada tem `fieldIdentifier` exceto a última, que carrega só `showEmptyFields`; o filtro `!!f.fieldIdentifier` já ignora essa entrada.
 
 ### 3. Descoberta por board (`src/azureDevOps/discoverCardSettings.ts`, novo arquivo)
 
