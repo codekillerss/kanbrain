@@ -8,6 +8,7 @@ export function syncConfig(
   freshStatusColors: Record<string, string>,
   freshTypeColors: Record<string, string>,
   freshTypeIcons: Record<string, string>,
+  freshCardSettingsByBoard: Record<string, Record<string, boolean>>,
 ): KanbrainConfig {
   const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
 
@@ -40,6 +41,7 @@ export function syncConfig(
     statusColors: freshStatusColors,
     typeColors: freshTypeColors,
     typeIcons: freshTypeIcons,
+    cardSettingsByBoard: freshCardSettingsByBoard,
     showAssignedTo: config.showAssignedTo,
   };
 }

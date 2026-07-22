@@ -102,6 +102,7 @@ export function registerSetupCommand(
       statusColors,
       typeColors,
       typeIcons,
+      cardSettingsByBoard: boardState.cardSettingsByBoard,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

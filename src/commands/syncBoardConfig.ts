@@ -39,6 +39,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       freshStatusColors,
       boardState.typeColors,
       boardState.typeIcons,
+      boardState.cardSettingsByBoard,
     );
     writeConfig(workspaceRoot, updated);
 

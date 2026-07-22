@@ -24,6 +24,7 @@ describe('syncConfig', () => {
       { 'To Do': 'new-color' },
       { Task: 'new-color' },
       { Task: '<svg>new</svg>' },
+      { Tasks: { Task: true } },
     );
 
     expect(result.statusColors).toEqual({ 'To Do': 'new-color' });
@@ -33,13 +34,13 @@ describe('syncConfig', () => {
   });
 
   it('keeps organization and project unchanged', () => {
-    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
     expect(result.organization).toBe('org');
     expect(result.project).toBe('proj');
   });
 
   it('preserves an existing skill mapping for a status that still exists on the board', () => {
-    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed', Done: 'Completed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed', Done: 'Completed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
     expect(result.backlogLevels.Tasks['To Do']).toEqual({ path: '.kanbrain/skills/tasks-todo.md' });
     expect(result.backlogLevels.Tasks.Done).toBeNull();
   });
@@ -49,6 +50,7 @@ describe('syncConfig', () => {
       config(),
       { Tasks: { 'To Do': 'Proposed', Done: 'Completed', Cancelled: 'Removed' } },
       { Task: 'Tasks' },
+      {},
       {},
       {},
       {},
@@ -62,7 +64,7 @@ describe('syncConfig', () => {
         Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md' }, Legacy: { path: '.kanbrain/skills/legacy.md' } },
       },
     });
-    const result = syncConfig(withOrphan, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(withOrphan, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
 
     expect(result.backlogLevels.Tasks.Legacy).toEqual({ path: '.kanbrain/skills/legacy.md' });
     expect(result.backlogLevels.Tasks['To Do']).toEqual({ path: '.kanbrain/skills/tasks-todo.md' });
@@ -72,7 +74,7 @@ describe('syncConfig', () => {
     const withOrphanLevel = config({
       backlogLevels: { Tasks: { 'To Do': null }, Stories: { New: { path: '.kanbrain/skills/stories-new.md' } } },
     });
-    const result = syncConfig(withOrphanLevel, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(withOrphanLevel, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
 
     expect(result.backlogLevels.Stories).toEqual({ New: { path: '.kanbrain/skills/stories-new.md' } });
   });
@@ -82,6 +84,7 @@ describe('syncConfig', () => {
       config(),
       { Tasks: { 'To Do': 'Proposed' }, Stories: { New: 'Proposed' } },
       { Task: 'Tasks' },
+      {},
       {},
       {},
       {},
@@ -95,7 +98,7 @@ describe('syncConfig', () => {
         Tasks: { 'To Do': { path: '.kanbrain/skills/tasks-todo.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' } },
       },
     });
-    const result = syncConfig(withCustomization, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(withCustomization, { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
 
     expect(result.backlogLevels.Tasks['To Do']).toEqual({
       path: '.kanbrain/skills/tasks-todo.md',
@@ -106,12 +109,27 @@ describe('syncConfig', () => {
   });
 
   it('preserves showAssignedTo across a sync', () => {
-    const result = syncConfig(config({ showAssignedTo: false }), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(config({ showAssignedTo: false }), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
     expect(result.showAssignedTo).toBe(false);
   });
 
   it('leaves showAssignedTo undefined when it was never set', () => {
-    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {});
+    const result = syncConfig(config(), { Tasks: { 'To Do': 'Proposed' } }, { Task: 'Tasks' }, {}, {}, {}, {});
     expect(result.showAssignedTo).toBeUndefined();
+  });
+
+  it('replaces cardSettingsByBoard with the fresh value, discarding the previous one', () => {
+    const withOldSettings = config({ cardSettingsByBoard: { OldBoard: { Task: false } } });
+    const result = syncConfig(
+      withOldSettings,
+      { Tasks: { 'To Do': 'Proposed' } },
+      { Task: 'Tasks' },
+      {},
+      {},
+      {},
+      { Tasks: { Task: true } },
+    );
+
+    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: true } });
   });
 });
