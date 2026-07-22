@@ -237,14 +237,13 @@ export class AzureDevOpsClient {
   }
 
   async getCardSettings(organization: string, project: string, team: string, boardId: string): Promise<Record<string, boolean>> {
-    const data = await this.request<{ cards?: Record<string, { fields?: { fieldIdentifier?: string }[] }> }>(
+    const data = await this.request<{ cards?: Record<string, { fieldIdentifier?: string }[]> }>(
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/cardsettings?api-version=7.1`,
     );
     const cards = data.cards ?? {};
     const result: Record<string, boolean> = {};
-    for (const [type, settings] of Object.entries(cards)) {
-      const fields = settings?.fields ?? [];
-      result[type] = fields.some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
+    for (const [type, fields] of Object.entries(cards)) {
+      result[type] = (fields ?? []).some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
     }
     return result;
   }

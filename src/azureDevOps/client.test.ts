@@ -429,11 +429,13 @@ describe('AzureDevOpsClient.getComments', () => {
 
 describe('AzureDevOpsClient.getCardSettings', () => {
   it('maps each work item type to whether a Parent field identifier is present', async () => {
+    // Real shape (confirmed against the documented card-fields payload): cards[type] is a flat
+    // array of field entries, not an object with a `.fields` property.
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         cards: {
-          'User Story': { fields: [{ fieldIdentifier: 'System.Parent' }, { fieldIdentifier: 'System.Tags' }] },
-          Bug: { fields: [{ fieldIdentifier: 'System.Tags' }] },
+          'User Story': [{ fieldIdentifier: 'System.Title' }, { fieldIdentifier: 'System.Parent' }, { fieldIdentifier: 'System.Tags' }],
+          Bug: [{ fieldIdentifier: 'System.Title' }, { fieldIdentifier: 'System.Tags' }, { showEmptyFields: 'false' }],
         },
       }),
     );
@@ -457,12 +459,23 @@ describe('AzureDevOpsClient.getCardSettings', () => {
     expect(settings).toEqual({});
   });
 
-  it('treats a type with no fields array as Parent not shown', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ cards: { Task: {} } }));
+  it('treats a type with an empty fields array as Parent not shown', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ cards: { Task: [] } }));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
     const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
 
     expect(settings).toEqual({ Task: false });
+  });
+
+  it('ignores entries without a fieldIdentifier, like the trailing showEmptyFields entry', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ cards: { Task: [{ fieldIdentifier: 'System.Parent' }, { showEmptyFields: 'true' }] } }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
+
+    expect(settings).toEqual({ Task: true });
   });
 });
