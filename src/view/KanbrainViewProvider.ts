@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
+import type { WorkItem, KanbrainConfig, SkillEntry, DevelopmentLink, PullRequestDetails } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
 import { render } from './render';
@@ -29,6 +29,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
+  private prCache = new Map<string, PullRequestDetails | null>();
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -200,6 +201,38 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const dataUri = this.avatarCache.get(url);
       if (dataUri) {
         resolved[url] = dataUri;
+      }
+    }
+    return resolved;
+  }
+
+  private async resolvePullRequestDetails(items: WorkItem[]): Promise<Record<string, PullRequestDetails>> {
+    if (!this.client || !this.workspaceRoot) {
+      return {};
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return {};
+    }
+
+    const prLinks = items.flatMap(i =>
+      i.development.filter((d): d is Extract<DevelopmentLink, { kind: 'pullRequest' }> => d.kind === 'pullRequest'),
+    );
+    const uncached = prLinks.filter(link => !this.prCache.has(`${link.repositoryId}:${link.pullRequestId}`));
+
+    await Promise.all(
+      uncached.map(async link => {
+        const key = `${link.repositoryId}:${link.pullRequestId}`;
+        this.prCache.set(key, await this.client!.getPullRequest(config.organization, config.project, link.repositoryId, link.pullRequestId));
+      }),
+    );
+
+    const resolved: Record<string, PullRequestDetails> = {};
+    for (const link of prLinks) {
+      const key = `${link.repositoryId}:${link.pullRequestId}`;
+      const details = this.prCache.get(key);
+      if (details) {
+        resolved[key] = details;
       }
     }
     return resolved;
@@ -391,6 +424,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     // (mirrored from the real board), so avatars are always resolved here rather than gated by the
     // (now search-only) manual showAssignedTo toggle.
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
+    const prDetails = config ? await this.resolvePullRequestDetails([workItem, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
     if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars)) {
       return;
@@ -406,6 +440,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         screen: this.currentScreen,
         avatars,
         selectedBoard: this.selectedBoard,
+        prDetails,
       }),
     );
   }
@@ -654,6 +689,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-select-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; }
       .kb-select-row select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; padding: 2px 4px; }
+      .kb-dev-label { display: flex; align-items: center; gap: 4px; }
+      .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
     `;
   }
 }
