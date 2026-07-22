@@ -316,4 +316,24 @@ describe('render', () => {
 
     expect(html.split('kb-field-label').length - 1).toBe(1);
   });
+
+  it('passes prDetails through to the main card and subtasks', () => {
+    const withDevelopment = workItem({ development: [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }] });
+    const subtaskWithDevelopment = workItem({ id: 101, development: [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 58 }] });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: withDevelopment,
+      parent: null,
+      subtasks: [subtaskWithDevelopment],
+      screen: 'flow',
+      prDetails: {
+        'repo-1:57': { title: 'Main PR', status: 'active' },
+        'repo-1:58': { title: 'Sub PR', status: 'completed' },
+      },
+    });
+
+    expect(html).toContain('Main PR');
+    expect(html).toContain('Sub PR');
+  });
 });

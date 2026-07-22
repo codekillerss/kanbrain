@@ -1,4 +1,4 @@
-import type { WorkItem, KanbrainConfig } from '../types';
+import type { WorkItem, KanbrainConfig, PullRequestDetails } from '../types';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
@@ -14,6 +14,7 @@ export interface RenderState {
   connectionStatus?: 'connected' | 'disconnected';
   avatars?: Record<string, string>;
   selectedBoard?: string;
+  prDetails?: Record<string, PullRequestDetails>;
 }
 
 export function render(state: RenderState): string {
@@ -54,9 +55,10 @@ export function render(state: RenderState): string {
 
   const avatars = state.avatars ?? {};
   const showParent = resolveShowParent(state.config, state.workItem.type, state.selectedBoard);
+  const prDetails = state.prDetails ?? {};
   const subtasksHtml = state.subtasks.length
     ? state.subtasks
-        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedBoard))
+        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedBoard, prDetails))
         .join('')
     : '<div class="kb-empty">No child items.</div>';
 
@@ -74,7 +76,7 @@ export function render(state: RenderState): string {
       </div>
     </div>
     <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedBoard)}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedBoard, prDetails)}
       <div class="kb-card-actions">
         <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
