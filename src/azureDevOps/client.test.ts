@@ -426,3 +426,43 @@ describe('AzureDevOpsClient.getComments', () => {
     expect(comments[0].createdBy).toEqual({ displayName: 'Unknown', imageUrl: null });
   });
 });
+
+describe('AzureDevOpsClient.getCardSettings', () => {
+  it('maps each work item type to whether a Parent field identifier is present', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        cards: {
+          'User Story': { fields: [{ fieldIdentifier: 'System.Parent' }, { fieldIdentifier: 'System.Tags' }] },
+          Bug: { fields: [{ fieldIdentifier: 'System.Tags' }] },
+        },
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
+
+    expect(settings).toEqual({ 'User Story': true, Bug: false });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/boards/b1/cardsettings?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns an empty object when the response has no cards', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
+
+    expect(settings).toEqual({});
+  });
+
+  it('treats a type with no fields array as Parent not shown', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ cards: { Task: {} } }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const settings = await client.getCardSettings('my-org', 'MyProject', 'MyProject Team', 'b1');
+
+    expect(settings).toEqual({ Task: false });
+  });
+});

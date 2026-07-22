@@ -49,6 +49,8 @@ function mapIdentityRef(raw: unknown): AssignedTo {
   return { displayName: identity?.displayName ?? 'Unknown', imageUrl };
 }
 
+const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);
+
 export class AzureDevOpsClient {
   constructor(private readonly deps: AzureDevOpsClientDeps) {}
 
@@ -232,5 +234,18 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/columns?api-version=7.1`,
     );
     return data.value.map(c => ({ name: c.name, columnType: c.columnType, stateMappings: c.stateMappings }));
+  }
+
+  async getCardSettings(organization: string, project: string, team: string, boardId: string): Promise<Record<string, boolean>> {
+    const data = await this.request<{ cards?: Record<string, { fields?: { fieldIdentifier?: string }[] }> }>(
+      `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards/${encodeURIComponent(boardId)}/cardsettings?api-version=7.1`,
+    );
+    const cards = data.cards ?? {};
+    const result: Record<string, boolean> = {};
+    for (const [type, settings] of Object.entries(cards)) {
+      const fields = settings?.fields ?? [];
+      result[type] = fields.some(f => !!f.fieldIdentifier && PARENT_FIELD_IDENTIFIERS.has(f.fieldIdentifier));
+    }
+    return result;
   }
 }
