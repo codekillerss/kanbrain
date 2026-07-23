@@ -108,6 +108,19 @@ describe('render', () => {
     expect(html).toContain('id="kb-clear-btn"');
   });
 
+  it('wraps the current work item in a section card with Switch/Clear in the header', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    const labelStart = html.indexOf('Current Work Item');
+    expect(labelStart).toBeGreaterThan(-1);
+    const cardStart = html.lastIndexOf('kb-section-card', labelStart);
+    expect(cardStart).toBeGreaterThan(-1);
+    const labelEnd = html.indexOf('</div>', html.indexOf('kb-section-actions', labelStart));
+    const label = html.slice(labelStart, labelEnd);
+    expect(label).toContain('id="kb-toggle-search-btn"');
+    expect(label).toContain('id="kb-clear-btn"');
+    expect(html).not.toContain('kb-card-actions');
+  });
+
   it('only shows the Home button in the header, not Switch/Clear', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     const headerStart = html.indexOf('kb-page-header');

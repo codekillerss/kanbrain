@@ -84,11 +84,16 @@ export function render(state: RenderState): string {
       </div>
     </div>
     ${parentSectionHtml}
-    <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
-      <div class="kb-card-actions">
-        <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
-        <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
+    <div class="kb-section-card">
+      <div class="kb-section-label">
+        <span>Current Work Item</span>
+        <div class="kb-section-actions">
+          <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
+          <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
+        </div>
+      </div>
+      <div class="kb-card-wrapper">
+        ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
       </div>
     </div>
     <div class="kb-section-card">

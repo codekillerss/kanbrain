@@ -605,7 +605,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
-      .kb-section-label { margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
+      .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
+      .kb-section-actions { display: flex; gap: 2px; }
       .kb-hidden { display: none; }
       .kb-result-item { width: 100%; margin: 2px 0; }
       .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
