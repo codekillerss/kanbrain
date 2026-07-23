@@ -66,7 +66,7 @@ export function render(state: RenderState): string {
     : '';
   const subtasksHtml = state.subtasks.length
     ? state.subtasks
-        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam))
+        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true))
         .join('')
     : '<div class="kb-empty">No child items.</div>';
 

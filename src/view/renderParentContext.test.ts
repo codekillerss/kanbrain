@@ -44,6 +44,15 @@ describe('renderParentBanner', () => {
     expect(html).toContain('data-action="open-work-item-detail"');
     expect(html).toContain('data-id="900"');
   });
+
+  it('includes a pick button targeting the parent id', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent', type: 'Epic' });
+    const html = renderParentBanner(parent, config);
+
+    expect(html).toContain('kb-pick-btn');
+    expect(html).toContain('data-action="pick-work-item"');
+    expect(html).toContain('data-id="900"');
+  });
 });
 
 describe('renderSiblingNavigator', () => {

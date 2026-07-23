@@ -12,6 +12,7 @@ export function renderParentBanner(parent: WorkItem | null, config: KanbrainConf
   return `
     <div class="kb-parent-banner" data-action="open-work-item-detail" data-id="${parent.id}">
       ${iconHtml}<span class="kb-link-text">#${parent.id}: ${escapeHtml(parent.title)}</span>
+      <button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${parent.id}" title="Set as current work item">⇄</button>
     </div>
   `;
 }

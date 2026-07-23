@@ -9,6 +9,10 @@ import { renderDevelopmentBadge } from './renderDevelopment';
 import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 
+function renderPickButton(id: number): string {
+  return `<button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${id}" title="Set as current work item">⇄</button>`;
+}
+
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skill = resolveSkill(config, workItem);
   if (!skill) {
@@ -34,6 +38,7 @@ export function renderWorkItemCard(
   parent: WorkItem | null = null,
   showParent = false,
   selectedTeam: string | undefined = undefined,
+  showPickButton = false,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
@@ -46,6 +51,7 @@ export function renderWorkItemCard(
 
   return `
     <div class="${cssClass}"${borderStyle}>
+      ${showPickButton ? renderPickButton(workItem.id) : ''}
       <div class="kb-card-header">
         ${iconHtml}
         <span class="kb-id">#${workItem.id}</span>

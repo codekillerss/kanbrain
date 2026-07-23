@@ -164,6 +164,18 @@ describe('render', () => {
     expect(html).toContain('Children (1)');
   });
 
+  it('shows a pick button on children cards but not on the main card', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem({ id: 482 }), parent: null, subtasks, screen: 'flow' });
+    expect(html).toContain('data-action="pick-work-item"');
+    expect(html).toContain('data-id="101"');
+
+    const mainCardStart = html.indexOf('kb-main-card');
+    const childrenStart = html.indexOf('kb-subtask-card');
+    const mainCardHtml = html.slice(mainCardStart, childrenStart);
+    expect(mainCardHtml).not.toContain('kb-pick-btn');
+  });
+
   it('shows an empty message when there are no children', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('No child items');

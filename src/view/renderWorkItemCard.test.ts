@@ -40,6 +40,18 @@ describe('renderWorkItemCard', () => {
     expect(html).not.toContain('data-action="run-skill"');
   });
 
+  it('hides the pick button by default', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('kb-pick-btn');
+  });
+
+  it('shows a pick button targeting the item id when showPickButton is true', () => {
+    const html = renderWorkItemCard(workItem({ id: 482 }), config, 'kb-subtask-card', true, {}, false, null, false, undefined, true);
+    expect(html).toContain('kb-pick-btn');
+    expect(html).toContain('data-action="pick-work-item"');
+    expect(html).toContain('data-id="482"');
+  });
+
   it('shows "Unassigned" when the work item has no assignee and the type has AssignedTo enabled', () => {
     const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card');
     expect(html).toContain('kb-assignee-row');

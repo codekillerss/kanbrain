@@ -592,7 +592,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px; }
-      .kb-main-card, .kb-subtask-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
+      .kb-parent-banner .kb-pick-btn { position: static; margin-left: auto; }
       .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
       .kb-card-header { display: flex; align-items: center; }
