@@ -39,11 +39,17 @@ describe('renderDevelopmentSection', () => {
     expect(JSON.parse(decodeURIComponent(encodedArgs))).toEqual(['repo-1', 'feature/x']);
   });
 
-  it('does not link a pull request item to a command URI', () => {
+  it('links a pull request item to an openPullRequestDetail command URI with repositoryId and pullRequestId', () => {
     const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
     const html = renderDevelopmentSection(links, {});
 
-    expect(html).not.toContain('command:');
+    const hrefMatch = html.match(/href="(command:kanbrain\.openPullRequestDetail\?[^"]+)"/);
+    expect(hrefMatch).not.toBeNull();
+
+    const [, href] = hrefMatch!;
+    const [command, encodedArgs] = href.split('?');
+    expect(command).toBe('command:kanbrain.openPullRequestDetail');
+    expect(JSON.parse(decodeURIComponent(encodedArgs))).toEqual(['repo-1', 57]);
   });
 
   it('renders a pull request with its resolved title and capitalized status', () => {

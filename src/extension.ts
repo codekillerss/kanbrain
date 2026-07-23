@@ -4,6 +4,7 @@ import { getVscodeMicrosoftSession } from './auth/vscodeSession';
 import { AzureDevOpsClient } from './azureDevOps/client';
 import { KanbrainViewProvider } from './view/KanbrainViewProvider';
 import { WorkItemDetailPanelManager } from './view/WorkItemDetailPanelManager';
+import { PullRequestDetailPanelManager } from './view/PullRequestDetailPanelManager';
 import { getCurrentBranch } from './git/getCurrentBranch';
 import { registerSetupCommand } from './commands/setup';
 import { registerSelectWorkItemCommand } from './commands/selectWorkItem';
@@ -13,6 +14,7 @@ import { registerConfigureWithAiCommand } from './commands/configureWithAi';
 import { registerConnectCommand } from './commands/connect';
 import { registerOpenWorkItemDetailCommand } from './commands/openWorkItemDetail';
 import { registerCheckoutBranchCommand } from './commands/checkoutBranch';
+import { registerOpenPullRequestDetailCommand } from './commands/openPullRequestDetail';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
@@ -29,6 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
     : undefined;
 
   const detailPanelManager = workspaceRoot && client ? new WorkItemDetailPanelManager(workspaceRoot, client) : undefined;
+  const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client) : undefined;
 
   const provider = new KanbrainViewProvider(
     workspaceRoot,
@@ -46,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
 
-  if (!workspaceRoot || !client || !detailPanelManager) {
+  if (!workspaceRoot || !client || !detailPanelManager || !prDetailPanelManager) {
     return;
   }
 
@@ -59,6 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
     registerOpenWorkItemDetailCommand(detailPanelManager),
     registerCheckoutBranchCommand(client, workspaceRoot),
+    registerOpenPullRequestDetailCommand(prDetailPanelManager),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

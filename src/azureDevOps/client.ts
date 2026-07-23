@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
@@ -269,6 +269,51 @@ export class AzureDevOpsClient {
         `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repositoryId}/pullrequests/${pullRequestId}?api-version=7.1`,
       );
       return { title: data.title, status: data.status };
+    } catch {
+      return null;
+    }
+  }
+
+  async getPullRequestDetail(
+    organization: string,
+    project: string,
+    repositoryId: string,
+    pullRequestId: number,
+  ): Promise<PullRequestDetail | null> {
+    try {
+      const data = await this.request<{
+        pullRequestId: number;
+        title: string;
+        description?: string;
+        status: string;
+        isDraft: boolean;
+        sourceRefName: string;
+        targetRefName: string;
+        createdBy: { displayName: string; imageUrl?: string };
+        reviewers?: { displayName: string; imageUrl?: string; vote: number; isRequired?: boolean }[];
+        workItemRefs?: { id: string }[];
+        repository: { webUrl: string };
+      }>(
+        `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repositoryId}/pullrequests/${pullRequestId}?includeWorkItemRefs=true&api-version=7.1`,
+      );
+      return {
+        id: data.pullRequestId,
+        title: data.title,
+        description: data.description ?? '',
+        status: data.status,
+        isDraft: data.isDraft,
+        sourceBranch: data.sourceRefName.replace(/^refs\/heads\//, ''),
+        targetBranch: data.targetRefName.replace(/^refs\/heads\//, ''),
+        createdBy: { displayName: data.createdBy.displayName, imageUrl: data.createdBy.imageUrl ?? null },
+        reviewers: (data.reviewers ?? []).map(r => ({
+          displayName: r.displayName,
+          imageUrl: r.imageUrl ?? null,
+          vote: r.vote,
+          isRequired: r.isRequired ?? false,
+        })),
+        workItemIds: (data.workItemRefs ?? []).map(w => Number(w.id)),
+        webUrl: `${data.repository.webUrl}/pullrequest/${data.pullRequestId}`,
+      };
     } catch {
       return null;
     }

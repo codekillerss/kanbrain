@@ -496,6 +496,79 @@ describe('AzureDevOpsClient.getRepository', () => {
   });
 });
 
+describe('AzureDevOpsClient.getPullRequestDetail', () => {
+  it('maps the full pull request payload', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        pullRequestId: 57,
+        title: 'Fix login bug',
+        description: 'Fixes the thing.\nSecond line.',
+        status: 'active',
+        isDraft: false,
+        sourceRefName: 'refs/heads/feature/login-fix',
+        targetRefName: 'refs/heads/main',
+        createdBy: { displayName: 'Jane Doe', imageUrl: 'https://example.com/jane.png' },
+        reviewers: [{ displayName: 'Bob', imageUrl: 'https://example.com/bob.png', vote: 10, isRequired: true }],
+        workItemRefs: [{ id: '482' }, { id: '900' }],
+        repository: { webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain' },
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const pr = await client.getPullRequestDetail('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(pr).toEqual({
+      id: 57,
+      title: 'Fix login bug',
+      description: 'Fixes the thing.\nSecond line.',
+      status: 'active',
+      isDraft: false,
+      sourceBranch: 'feature/login-fix',
+      targetBranch: 'main',
+      createdBy: { displayName: 'Jane Doe', imageUrl: 'https://example.com/jane.png' },
+      reviewers: [{ displayName: 'Bob', imageUrl: 'https://example.com/bob.png', vote: 10, isRequired: true }],
+      workItemIds: [482, 900],
+      webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain/pullrequest/57',
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/repositories/repo-1/pullrequests/57?includeWorkItemRefs=true&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('defaults missing description, reviewers, and workItemRefs to empty values', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        pullRequestId: 57,
+        title: 'Fix login bug',
+        status: 'active',
+        isDraft: false,
+        sourceRefName: 'refs/heads/feature/x',
+        targetRefName: 'refs/heads/main',
+        createdBy: { displayName: 'Jane Doe' },
+        repository: { webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain' },
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const pr = await client.getPullRequestDetail('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(pr?.description).toBe('');
+    expect(pr?.reviewers).toEqual([]);
+    expect(pr?.workItemIds).toEqual([]);
+    expect(pr?.createdBy).toEqual({ displayName: 'Jane Doe', imageUrl: null });
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'not found' }, false, 404));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const pr = await client.getPullRequestDetail('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(pr).toBeNull();
+  });
+});
+
 describe('AzureDevOpsClient.listWorkItemTypes', () => {
   it('maps name/color/icon.url, skipping disabled types and types without an icon', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(

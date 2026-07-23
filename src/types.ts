@@ -25,6 +25,27 @@ export interface PullRequestDetails {
   status: string;
 }
 
+export interface PullRequestReviewer {
+  displayName: string;
+  imageUrl: string | null;
+  vote: number;
+  isRequired: boolean;
+}
+
+export interface PullRequestDetail {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  isDraft: boolean;
+  sourceBranch: string;
+  targetBranch: string;
+  createdBy: AssignedTo;
+  reviewers: PullRequestReviewer[];
+  workItemIds: number[];
+  webUrl: string;
+}
+
 export interface SkillEntry {
   path: string;
   label?: string;

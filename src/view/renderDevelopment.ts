@@ -18,7 +18,7 @@ const BADGE_ICON_COLOR = '#EAA300';
 const INITIAL_VISIBLE = 3;
 const BATCH_SIZE = 5;
 
-function capitalize(text: string): string {
+export function capitalize(text: string): string {
   return text.length ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }
 
@@ -32,7 +32,8 @@ function renderDevelopmentItem(link: DevelopmentLink, prDetails: Record<string, 
   const label = details
     ? `#${link.pullRequestId} ${escapeHtml(details.title)} (${escapeHtml(capitalize(details.status))})`
     : `#${link.pullRequestId}`;
-  return `<div class="kb-dev-item" title="${label}">${PULL_REQUEST_ICON}<span class="kb-dev-item-text">${label}</span></div>`;
+  const commandArgs = encodeURIComponent(JSON.stringify([link.repositoryId, link.pullRequestId]));
+  return `<a class="kb-dev-item" href="command:kanbrain.openPullRequestDetail?${commandArgs}" title="${label}">${PULL_REQUEST_ICON}<span class="kb-dev-item-text">${label}</span></a>`;
 }
 
 function renderMoreBatches(development: DevelopmentLink[], prDetails: Record<string, PullRequestDetails>, startIndex: number): string {

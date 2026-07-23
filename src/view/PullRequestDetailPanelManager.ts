@@ -1,0 +1,100 @@
+import * as vscode from 'vscode';
+import type { AzureDevOpsClient } from '../azureDevOps/client';
+import { readConfig } from '../config/config';
+import { renderPullRequestDetail } from './renderPullRequestDetail';
+import { detailPanelCss } from './detailPanelCss';
+
+const POLL_INTERVAL_MS = 5000;
+
+export class PullRequestDetailPanelManager {
+  private panels = new Map<string, vscode.WebviewPanel>();
+  private lastStateByPanel = new Map<string, string>();
+  private pollHandle: ReturnType<typeof setInterval> | undefined;
+
+  constructor(
+    private readonly workspaceRoot: string,
+    private readonly client: AzureDevOpsClient,
+  ) {}
+
+  async open(repositoryId: string, pullRequestId: number): Promise<void> {
+    const key = `${repositoryId}:${pullRequestId}`;
+    const existing = this.panels.get(key);
+    if (existing) {
+      existing.reveal();
+      return;
+    }
+
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel('kanbrain.pullRequestDetail', `PR #${pullRequestId}`, vscode.ViewColumn.Active, {
+      enableScripts: false,
+      enableCommandUris: ['kanbrain.openWorkItemDetail', 'kanbrain.openPullRequestDetail'],
+    });
+    this.panels.set(key, panel);
+
+    panel.onDidDispose(() => {
+      this.panels.delete(key);
+      this.lastStateByPanel.delete(key);
+      if (this.panels.size === 0 && this.pollHandle) {
+        clearInterval(this.pollHandle);
+        this.pollHandle = undefined;
+      }
+    });
+
+    if (!this.pollHandle) {
+      this.pollHandle = setInterval(() => void this.pollAll(), POLL_INTERVAL_MS);
+    }
+
+    await this.loadAndRender(repositoryId, pullRequestId, panel);
+  }
+
+  private async pollAll(): Promise<void> {
+    await Promise.all(
+      [...this.panels.keys()].map(key => {
+        const [repositoryId, pullRequestId] = key.split(':');
+        const panel = this.panels.get(key)!;
+        return this.loadAndRender(repositoryId, Number(pullRequestId), panel);
+      }),
+    );
+  }
+
+  private async loadAndRender(repositoryId: string, pullRequestId: number, panel: vscode.WebviewPanel): Promise<void> {
+    const key = `${repositoryId}:${pullRequestId}`;
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+
+    const pr = await this.client.getPullRequestDetail(config.organization, config.project, repositoryId, pullRequestId);
+    if (!pr) {
+      return; // Transient failure or PR not found — skip this refresh, retry next poll.
+    }
+
+    const workItems = pr.workItemIds.length ? await this.client.getWorkItems(config.organization, config.project, pr.workItemIds) : [];
+
+    const stateKey = JSON.stringify({ pr, workItems });
+    if (this.lastStateByPanel.get(key) === stateKey) {
+      return;
+    }
+    this.lastStateByPanel.set(key, stateKey);
+
+    panel.title = `PR #${pr.id} ${pr.title}`;
+    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config }));
+  }
+
+  private wrapHtml(body: string): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: https:;">
+  <style>${detailPanelCss()}</style>
+</head>
+<body>
+  ${body}
+</body>
+</html>`;
+  }
+}
