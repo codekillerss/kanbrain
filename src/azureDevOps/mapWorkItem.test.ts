@@ -130,6 +130,24 @@ describe('parseDevelopmentLink', () => {
     expect(link).toEqual({ kind: 'branch', repositoryId: '22222222-2222-2222-2222-222222222222', branchName: 'feature/foo' });
   });
 
+  it('parses a pull request ArtifactLink using the real %2F-encoded separator format', () => {
+    const link = parseDevelopmentLink({
+      rel: 'ArtifactLink',
+      url: 'vstfs:///Git/PullRequestId/11111111-1111-1111-1111-111111111111%2f22222222-2222-2222-2222-222222222222%2f57',
+      attributes: { name: 'Pull Request' },
+    });
+    expect(link).toEqual({ kind: 'pullRequest', repositoryId: '22222222-2222-2222-2222-222222222222', pullRequestId: 57 });
+  });
+
+  it('parses a branch ArtifactLink using the real %2F-encoded separator format', () => {
+    const link = parseDevelopmentLink({
+      rel: 'ArtifactLink',
+      url: 'vstfs:///Git/Ref/11111111-1111-1111-1111-111111111111%2F22222222-2222-2222-2222-222222222222%2FGBfeature%2Ffoo',
+      attributes: { name: 'Branch' },
+    });
+    expect(link).toEqual({ kind: 'branch', repositoryId: '22222222-2222-2222-2222-222222222222', branchName: 'feature/foo' });
+  });
+
   it('returns null for an ArtifactLink that is neither a branch nor a pull request', () => {
     const link = parseDevelopmentLink({
       rel: 'ArtifactLink',

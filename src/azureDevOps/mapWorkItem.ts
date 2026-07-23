@@ -18,8 +18,11 @@ interface RawIdentityRef {
   _links?: { avatar?: { href?: string } };
 }
 
-const PULL_REQUEST_URL = /^vstfs:\/\/\/Git\/PullRequestId\/[^/]+\/([^/]+)\/(\d+)$/;
-const BRANCH_URL = /^vstfs:\/\/\/Git\/Ref\/[^/]+\/([^/]+)\/GB(.+)$/;
+// Azure DevOps encodes the artifact ID (projectId/repositoryId/PR-or-ref) as a single opaque
+// segment, joined with %2F rather than literal slashes — support both forms defensively.
+const SEP = '(?:/|%2[Ff])';
+const PULL_REQUEST_URL = new RegExp(`^vstfs:///Git/PullRequestId/[^/%]+${SEP}([^/%]+)${SEP}(\\d+)$`);
+const BRANCH_URL = new RegExp(`^vstfs:///Git/Ref/[^/%]+${SEP}([^/%]+)${SEP}GB(.+)$`);
 
 export function parseDevelopmentLink(relation: RawRelation): DevelopmentLink | null {
   const prMatch = relation.url.match(PULL_REQUEST_URL);
