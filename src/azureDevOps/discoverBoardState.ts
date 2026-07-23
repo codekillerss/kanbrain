@@ -11,18 +11,6 @@ export interface BoardState {
   cardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>;
 }
 
-function collectTypesOnAnyBoard(cardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>): Set<string> {
-  const types = new Set<string>();
-  for (const boards of Object.values(cardSettingsByTeam)) {
-    for (const typesOnBoard of Object.values(boards)) {
-      for (const type of Object.keys(typesOnBoard)) {
-        types.add(type);
-      }
-    }
-  }
-  return types;
-}
-
 function filterToTypes<T>(record: Record<string, T>, allowedTypes: Set<string>): Record<string, T> {
   const filtered: Record<string, T> = {};
   for (const [type, value] of Object.entries(record)) {
@@ -47,14 +35,23 @@ export async function discoverBoardState(client: AzureDevOpsClient, organization
 
   const cardSettingsByTeam = await discoverCardSettingsByTeam(client, organization, project);
 
-  // Not every process-defined work item type is actually used by this project — only keep the ones
-  // that show up on at least one team's real board (e.g. drop unused defaults like Impediment/Risk).
-  const typesOnAnyBoard = collectTypesOnAnyBoard(cardSettingsByTeam);
+  // Not every process-defined work item type is actually used by this project — many teams never
+  // touch defaults like Impediment/Risk/Test Case. Only keep types that have at least one real
+  // work item, rather than every type the process happens to define.
+  const typesWithItems = new Set<string>();
+  await Promise.all(
+    Object.keys(discoveredStatusesByType).map(async type => {
+      const count = await client.countWorkItemsByType(organization, project, [type]);
+      if (count > 0) {
+        typesWithItems.add(type);
+      }
+    }),
+  );
 
   return {
-    discoveredStatusesByType: filterToTypes(discoveredStatusesByType, typesOnAnyBoard),
-    typeColors: filterToTypes(typeColors, typesOnAnyBoard),
-    typeIcons: filterToTypes(typeIcons, typesOnAnyBoard),
+    discoveredStatusesByType: filterToTypes(discoveredStatusesByType, typesWithItems),
+    typeColors: filterToTypes(typeColors, typesWithItems),
+    typeIcons: filterToTypes(typeIcons, typesWithItems),
     defaultTeam,
     cardSettingsByTeam,
   };

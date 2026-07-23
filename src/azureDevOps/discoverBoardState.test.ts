@@ -11,6 +11,7 @@ function stubClient(overrides: Partial<{
   listTeams: () => Promise<{ id: string; name: string }[]>;
   listBoards: () => Promise<{ id: string; name: string }[]>;
   getCardSettings: () => Promise<Record<string, CardFieldSettings>>;
+  countWorkItemsByType: (organization: string, project: string, types: string[]) => Promise<number>;
 }> = {}): AzureDevOpsClient {
   return {
     getDefaultTeamName: vi.fn().mockResolvedValue('MyProject Team'),
@@ -20,6 +21,7 @@ function stubClient(overrides: Partial<{
     listTeams: vi.fn().mockResolvedValue([{ id: 't1', name: 'MyProject Team' }]),
     listBoards: vi.fn().mockResolvedValue([{ id: 'b1', name: 'Tasks' }]),
     getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
+    countWorkItemsByType: vi.fn().mockResolvedValue(1),
     ...overrides,
   } as unknown as AzureDevOpsClient;
 }
@@ -57,7 +59,7 @@ describe('discoverBoardState', () => {
     expect(result.cardSettingsByTeam).toEqual({});
   });
 
-  it('excludes work item types that are not on any team board from discoveredStatusesByType, typeColors, and typeIcons', async () => {
+  it('excludes work item types with zero real work items in the project from discoveredStatusesByType, typeColors, and typeIcons', async () => {
     const client = stubClient({
       listWorkItemTypes: vi.fn().mockResolvedValue([
         { name: 'Task', color: 'f2cb1d', iconUrl: 'https://example.com/task-icon' },
@@ -68,8 +70,10 @@ describe('discoverBoardState', () => {
         .mockImplementation(async (_org: string, _proj: string, type: string) =>
           type === 'Task' ? [{ name: 'New', category: 'Proposed', color: 'b2b2b2' }] : [{ name: 'Open', category: 'Proposed', color: 'b2b2b2' }],
         ),
-      // getCardSettings only ever reports "Task" as a field on the one real board, never "Impediment".
-      getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
+      // Both types are on the team's board (so a board-presence filter alone wouldn't distinguish them) —
+      // only Task actually has real work items in the project.
+      getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true }, Impediment: { parent: false, assignedTo: true } }),
+      countWorkItemsByType: vi.fn().mockImplementation(async (_org: string, _proj: string, types: string[]) => (types[0] === 'Task' ? 3 : 0)),
     });
 
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
