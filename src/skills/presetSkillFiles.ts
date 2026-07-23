@@ -1,9 +1,8 @@
-import type { DiscoveredBacklogLevels } from '../azureDevOps/backlogLevels';
 import type { SkillEntry } from '../types';
 import { isValidHexColor, normalizeHex, pickReadableTextColor } from '../view/badgeColor';
 
 export interface PresetPlan {
-  backlogLevels: Record<string, Record<string, SkillEntry | null>>;
+  skills: Record<string, Record<string, SkillEntry | null>>;
   filesToWrite: { relativePath: string; content: string }[];
 }
 
@@ -14,8 +13,8 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '');
 }
 
-function skillSkeleton(levelName: string, statusName: string): string {
-  return `# Skill: ${levelName} — ${statusName}
+function skillSkeleton(typeName: string, statusName: string): string {
+  return `# Skill: ${typeName} — ${statusName}
 
 Work item: {{title}} (#{{id}})
 Status: {{status}}
@@ -46,15 +45,15 @@ function buildStatusSkillEntry(
 }
 
 export function buildPresetPlan(
-  discovered: DiscoveredBacklogLevels,
+  discovered: Record<string, Record<string, string>>,
   generateFiles: boolean,
   statusColors: Record<string, string>,
 ): PresetPlan {
-  const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
+  const skills: Record<string, Record<string, SkillEntry | null>> = {};
   const filesToWrite: { relativePath: string; content: string }[] = [];
   const pathByKey = new Map<string, string>();
 
-  for (const [levelName, statuses] of Object.entries(discovered)) {
+  for (const [typeName, statuses] of Object.entries(discovered)) {
     const statusSkills: Record<string, SkillEntry | null> = {};
 
     for (const [statusName, category] of Object.entries(statuses)) {
@@ -63,18 +62,18 @@ export function buildPresetPlan(
         continue;
       }
 
-      const key = `${levelName}::${statusName}`;
+      const key = `${typeName}::${statusName}`;
       let relativePath = pathByKey.get(key);
       if (!relativePath) {
-        relativePath = `.kanbrain/skills/${slugify(levelName)}-${slugify(statusName)}.md`;
+        relativePath = `.kanbrain/skills/${slugify(typeName)}-${slugify(statusName)}.md`;
         pathByKey.set(key, relativePath);
-        filesToWrite.push({ relativePath, content: skillSkeleton(levelName, statusName) });
+        filesToWrite.push({ relativePath, content: skillSkeleton(typeName, statusName) });
       }
       statusSkills[statusName] = buildStatusSkillEntry(relativePath, statusName, statusColors);
     }
 
-    backlogLevels[levelName] = statusSkills;
+    skills[typeName] = statusSkills;
   }
 
-  return { backlogLevels, filesToWrite };
+  return { skills, filesToWrite };
 }
