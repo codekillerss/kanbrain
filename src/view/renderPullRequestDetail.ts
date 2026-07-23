@@ -17,18 +17,40 @@ function renderVoteLabel(vote: number): string {
   return VOTE_LABELS[vote] ?? 'No vote';
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  active: 'var(--vscode-charts-blue)',
+  completed: 'var(--vscode-charts-green)',
+  abandoned: 'var(--vscode-charts-red)',
+};
+
+function renderStatusDot(status: string, isDraft: boolean): string {
+  const color = isDraft ? 'var(--vscode-charts-yellow)' : (STATUS_COLORS[status] ?? 'var(--vscode-charts-blue)');
+  return `<span class="kb-status-dot" style="background-color: ${color}"></span>`;
+}
+
 function renderReviewer(reviewer: PullRequestReviewer): string {
-  const requiredTag = reviewer.isRequired ? ' <span class="kb-pr-required-tag">Required</span>' : '';
-  return `<div class="kb-pr-reviewer"><span>${escapeHtml(reviewer.displayName)}</span><span class="kb-pr-vote">${renderVoteLabel(reviewer.vote)}</span>${requiredTag}</div>`;
+  const requirementTag = reviewer.isRequired
+    ? '<span class="kb-pr-required-tag">Required</span>'
+    : '<span class="kb-pr-optional-tag">Optional</span>';
+  return `<div class="kb-pr-reviewer"><span>${escapeHtml(reviewer.displayName)}</span><span class="kb-pr-vote">${renderVoteLabel(reviewer.vote)}</span>${requirementTag}</div>`;
+}
+
+function renderBranchLink(repositoryId: string, branchName: string): string {
+  const commandArgs = encodeURIComponent(JSON.stringify([repositoryId, branchName]));
+  return `<a class="kb-pr-branch-link" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${escapeHtml(branchName)}">${escapeHtml(branchName)}</a>`;
 }
 
 function renderLinkedWorkItem(item: WorkItem, config: KanbrainConfig): string {
   const { iconHtml } = renderTypeAccent(item.type, config);
-  const commandArgs = encodeURIComponent(JSON.stringify([item.id]));
+  const detailCommandArgs = encodeURIComponent(JSON.stringify([item.id]));
+  const pickCommandArgs = encodeURIComponent(JSON.stringify([item.id]));
   return `
-    <a class="kb-related-item" href="command:kanbrain.openWorkItemDetail?${commandArgs}">
-      ${iconHtml}<span class="kb-related-id">#${item.id}</span> ${escapeHtml(item.title)}
-    </a>
+    <div class="kb-related-item-row">
+      <a class="kb-related-item" href="command:kanbrain.openWorkItemDetail?${detailCommandArgs}">
+        ${iconHtml}<span class="kb-related-id">#${item.id}</span> ${escapeHtml(item.title)}
+      </a>
+      <a class="kb-pick-link" href="command:kanbrain.pickWorkItem?${pickCommandArgs}" title="Set as current work item">&#8644;</a>
+    </div>
   `;
 }
 
@@ -55,8 +77,8 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
       <div class="kb-detail-title-row">
         <h1 class="kb-detail-title">${escapeHtml(pr.title)}</h1>
       </div>
-      <div class="kb-detail-status-row">${escapeHtml(statusLabel)}</div>
-      <div class="kb-pr-branches">${escapeHtml(pr.sourceBranch)} &rarr; ${escapeHtml(pr.targetBranch)}</div>
+      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}</div>
+      <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch)}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
     </div>
     <div class="kb-detail-body">

@@ -33,7 +33,7 @@ export class PullRequestDetailPanelManager {
 
     const panel = vscode.window.createWebviewPanel('kanbrain.pullRequestDetail', `PR #${pullRequestId}`, vscode.ViewColumn.Active, {
       enableScripts: false,
-      enableCommandUris: ['kanbrain.openWorkItemDetail', 'kanbrain.openPullRequestDetail'],
+      enableCommandUris: ['kanbrain.openWorkItemDetail', 'kanbrain.openPullRequestDetail', 'kanbrain.pickWorkItem', 'kanbrain.checkoutBranch'],
     });
     this.panels.set(key, panel);
 
@@ -75,7 +75,11 @@ export class PullRequestDetailPanelManager {
       return; // Transient failure or PR not found — skip this refresh, retry next poll.
     }
 
-    const workItems = pr.workItemIds.length ? await this.client.getWorkItems(config.organization, config.project, pr.workItemIds) : [];
+    // A linked work item may live in a different project than the one configured here (or have
+    // become inaccessible) — don't let that take down the whole PR panel, just show none.
+    const workItems = pr.workItemIds.length
+      ? await this.client.getWorkItems(config.organization, config.project, pr.workItemIds).catch(() => [])
+      : [];
     const comments = await this.client
       .getPullRequestThreadComments(config.organization, config.project, repositoryId, pullRequestId)
       .catch(() => []);

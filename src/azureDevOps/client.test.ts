@@ -598,6 +598,7 @@ describe('AzureDevOpsClient.getPullRequestDetail', () => {
 
     expect(pr).toEqual({
       id: 57,
+      repositoryId: 'repo-1',
       title: 'Fix login bug',
       description: 'Fixes the thing.\nSecond line.',
       status: 'active',

@@ -22,6 +22,7 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 function pullRequest(overrides: Partial<PullRequestDetail> = {}): PullRequestDetail {
   return {
     id: 57,
+    repositoryId: 'repo-1',
     title: 'Fix <login> bug',
     description: 'Fixes the thing.',
     status: 'active',
@@ -72,6 +73,33 @@ describe('renderPullRequestDetail', () => {
     expect(html).toContain('Draft');
   });
 
+  it.each([
+    ['active', 'var(--vscode-charts-blue)'],
+    ['completed', 'var(--vscode-charts-green)'],
+    ['abandoned', 'var(--vscode-charts-red)'],
+  ])('colors the status dot for status %s', (status, color) => {
+    const html = renderPullRequestDetail(input({ pr: pullRequest({ status, isDraft: false }) }));
+    expect(html).toContain(`background-color: ${color}`);
+  });
+
+  it('colors the status dot yellow for a draft PR regardless of status', () => {
+    const html = renderPullRequestDetail(input({ pr: pullRequest({ status: 'active', isDraft: true }) }));
+    expect(html).toContain('background-color: var(--vscode-charts-yellow)');
+  });
+
+  it('links both branches to a checkoutBranch command URI', () => {
+    const html = renderPullRequestDetail(input());
+
+    const matches = [...html.matchAll(/href="(command:kanbrain\.checkoutBranch\?[^"]+)"/g)];
+    expect(matches).toHaveLength(2);
+
+    const decoded = matches.map(m => JSON.parse(decodeURIComponent(m[1].split('?')[1])));
+    expect(decoded).toEqual([
+      ['repo-1', 'feature/login-fix'],
+      ['repo-1', 'main'],
+    ]);
+  });
+
   it('shows the description, escaped', () => {
     const html = renderPullRequestDetail(input({ pr: pullRequest({ description: '<script>alert(1)</script>' }) }));
     expect(html).not.toContain('<script>');
@@ -101,18 +129,30 @@ describe('renderPullRequestDetail', () => {
     expect(html).toContain('Required');
   });
 
+  it('shows an explicit Optional tag for non-required reviewers', () => {
+    const html = renderPullRequestDetail(
+      input({ pr: pullRequest({ reviewers: [{ displayName: 'Bob', imageUrl: null, vote: 0, isRequired: false }] }) }),
+    );
+    expect(html).toContain('Optional');
+  });
+
   it('shows a message when there are no reviewers', () => {
     const html = renderPullRequestDetail(input({ pr: pullRequest({ reviewers: [] }) }));
     expect(html).toContain('No reviewers.');
   });
 
-  it('shows linked work items with a link to their own detail panel', () => {
+  it('shows linked work items with a link to their own detail panel and a pick-work-item link', () => {
     const html = renderPullRequestDetail(input({ workItems: [workItem({ id: 482, title: 'Linked item' })] }));
 
     expect(html).toContain('Linked Work Items');
     expect(html).toContain('#482');
     expect(html).toContain('Linked item');
     expect(html).toContain('command:kanbrain.openWorkItemDetail?');
+
+    const pickMatch = html.match(/href="(command:kanbrain\.pickWorkItem\?[^"]+)"/);
+    expect(pickMatch).not.toBeNull();
+    const [, href] = pickMatch!;
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual([482]);
   });
 
   it('omits the Linked Work Items group when there are none', () => {

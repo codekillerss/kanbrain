@@ -34,6 +34,7 @@ export interface PullRequestReviewer {
 
 export interface PullRequestDetail {
   id: number;
+  repositoryId: string;
   title: string;
   description: string;
   status: string;

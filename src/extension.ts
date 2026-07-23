@@ -15,6 +15,7 @@ import { registerConnectCommand } from './commands/connect';
 import { registerOpenWorkItemDetailCommand } from './commands/openWorkItemDetail';
 import { registerCheckoutBranchCommand } from './commands/checkoutBranch';
 import { registerOpenPullRequestDetailCommand } from './commands/openPullRequestDetail';
+import { registerPickWorkItemCommand } from './commands/pickWorkItem';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
@@ -63,6 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerOpenWorkItemDetailCommand(detailPanelManager),
     registerCheckoutBranchCommand(client, workspaceRoot),
     registerOpenPullRequestDetailCommand(prDetailPanelManager),
+    registerPickWorkItemCommand(provider),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

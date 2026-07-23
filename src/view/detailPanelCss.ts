@@ -28,6 +28,10 @@ export function detailPanelCss(): string {
     .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; color: inherit; text-decoration: none; cursor: pointer; }
     .kb-related-item:hover { color: var(--vscode-textLink-foreground); }
     .kb-related-id { font-weight: 600; flex-shrink: 0; }
+    .kb-related-item-row { display: flex; align-items: center; gap: 4px; }
+    .kb-related-item-row .kb-related-item { flex: 1; min-width: 0; margin-bottom: 0; }
+    .kb-pick-link { flex-shrink: 0; text-decoration: none; color: inherit; opacity: 0.75; cursor: pointer; margin-bottom: 4px; }
+    .kb-pick-link:hover { opacity: 1; color: var(--vscode-textLink-foreground); }
     .kb-detail-tag { display: inline-block; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; font-size: 11px; }
     .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
     .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
@@ -51,11 +55,13 @@ export function detailPanelCss(): string {
     .kb-dev-more-btn { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--vscode-textLink-foreground); cursor: pointer; }
     .kb-dev-more-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
     .kb-pr-branches { font-size: 12px; opacity: 0.75; margin-top: 6px; }
+    .kb-pr-branch-link { color: var(--vscode-textLink-foreground); text-decoration: none; cursor: pointer; }
+    .kb-pr-branch-link:hover { text-decoration: underline; }
     .kb-pr-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
     .kb-pr-description { white-space: pre-wrap; }
     .kb-pr-reviewer { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
     .kb-pr-vote { opacity: 0.75; font-size: 12px; }
-    .kb-pr-required-tag { font-size: 10px; text-transform: uppercase; opacity: 0.6; }
+    .kb-pr-required-tag, .kb-pr-optional-tag { font-size: 10px; text-transform: uppercase; opacity: 0.6; }
     .kb-pr-comments .kb-comment-body { white-space: pre-wrap; }
   `;
 }

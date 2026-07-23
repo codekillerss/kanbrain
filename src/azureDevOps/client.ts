@@ -326,6 +326,7 @@ export class AzureDevOpsClient {
       );
       return {
         id: data.pullRequestId,
+        repositoryId,
         title: data.title,
         description: data.description ?? '',
         status: data.status,
