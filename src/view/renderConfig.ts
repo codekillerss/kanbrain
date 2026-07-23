@@ -7,7 +7,7 @@ export function renderConfig(state: RenderState): string {
   const teamNames = Object.keys(config.cardSettingsByTeam ?? {});
   const selected = state.selectedTeam ?? config.defaultTeam;
   const teamSelectHtml =
-    teamNames.length > 1
+    teamNames.length > 0
       ? `
     <label class="kb-select-row">
       Team

@@ -68,9 +68,17 @@ describe('renderConfig', () => {
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
 
-  it('does not show a team selector when there are 0 or 1 teams in cardSettingsByTeam', () => {
-    const html = renderConfig(state({ config: config({ cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } } }) }));
+  it('does not show a team selector when there are 0 teams in cardSettingsByTeam', () => {
+    const html = renderConfig(state({ config: config() }));
     expect(html).not.toContain('id="kb-team-select"');
+  });
+
+  it('shows a team selector with a single option when there is exactly one team in cardSettingsByTeam', () => {
+    const html = renderConfig(
+      state({ config: config({ cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } } }) }),
+    );
+    expect(html).toContain('id="kb-team-select"');
+    expect(html).toContain('<option value="Team 1"');
   });
 
   it('shows a team selector when there is more than one team in cardSettingsByTeam', () => {
