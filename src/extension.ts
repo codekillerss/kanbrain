@@ -11,6 +11,7 @@ import { registerCheckBoardConfigCommand } from './commands/checkBoardConfig';
 import { registerSyncBoardConfigCommand } from './commands/syncBoardConfig';
 import { registerConfigureWithAiCommand } from './commands/configureWithAi';
 import { registerConnectCommand } from './commands/connect';
+import { registerOpenWorkItemDetailCommand } from './commands/openWorkItemDetail';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
@@ -44,7 +45,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
 
-  if (!workspaceRoot || !client) {
+  if (!workspaceRoot || !client || !detailPanelManager) {
     return;
   }
 
@@ -55,6 +56,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerSyncBoardConfigCommand(client, workspaceRoot, extensionVersion),
     registerConfigureWithAiCommand(client, workspaceRoot),
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
+    registerOpenWorkItemDetailCommand(detailPanelManager),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

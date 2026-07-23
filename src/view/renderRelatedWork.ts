@@ -4,10 +4,11 @@ import { renderTypeAccent } from './renderTypeAccent';
 
 function renderRelatedItem(item: WorkItem, config: KanbrainConfig): string {
   const { iconHtml } = renderTypeAccent(item.type, config);
+  const commandArgs = encodeURIComponent(JSON.stringify([item.id]));
   return `
-    <div class="kb-related-item">
+    <a class="kb-related-item" href="command:kanbrain.openWorkItemDetail?${commandArgs}">
       ${iconHtml}<span class="kb-related-id">#${item.id}</span> ${escapeHtml(item.title)}
-    </div>
+    </a>
   `;
 }
 

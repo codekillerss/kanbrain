@@ -67,4 +67,17 @@ describe('renderRelatedWorkSection', () => {
     expect(html).toContain('#900');
     expect(html).toContain('#101');
   });
+
+  it('links each item to a command URI that opens its own detail panel', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = renderRelatedWorkSection(parent, [], config);
+
+    const hrefMatch = html.match(/href="(command:kanbrain\.openWorkItemDetail\?[^"]+)"/);
+    expect(hrefMatch).not.toBeNull();
+
+    const [, href] = hrefMatch!;
+    const [command, encodedArgs] = href.split('?');
+    expect(command).toBe('command:kanbrain.openWorkItemDetail');
+    expect(JSON.parse(decodeURIComponent(encodedArgs))).toEqual([900]);
+  });
 });

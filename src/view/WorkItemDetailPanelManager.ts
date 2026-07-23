@@ -35,6 +35,7 @@ export class WorkItemDetailPanelManager {
 
     const panel = vscode.window.createWebviewPanel('kanbrain.workItemDetail', `#${id}`, vscode.ViewColumn.Active, {
       enableScripts: false,
+      enableCommandUris: ['kanbrain.openWorkItemDetail'],
     });
     this.panels.set(id, panel);
 
@@ -212,7 +213,8 @@ export class WorkItemDetailPanelManager {
       .kb-detail-field-value { font-size: 13px; }
       .kb-related-subgroup-label { font-size: 11px; font-weight: 600; opacity: 0.7; margin: 8px 0 4px; }
       .kb-related-subgroup-label:first-child { margin-top: 0; }
-      .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; }
+      .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; color: inherit; text-decoration: none; cursor: pointer; }
+      .kb-related-item:hover { color: var(--vscode-textLink-foreground); }
       .kb-related-id { font-weight: 600; flex-shrink: 0; }
       .kb-detail-tag { display: inline-block; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; font-size: 11px; }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
