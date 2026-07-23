@@ -1,0 +1,3 @@
+Sempre exibir parent dos work itens do backlog level de tasks
+exibir parentesco de cards em uma nova secção do card details.
+Links para branches e PR's, como verificar se o repo aberto é o mesmo repo do card, e fazer checkout localmente na branch exibida no card.

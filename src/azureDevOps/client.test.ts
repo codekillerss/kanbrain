@@ -450,62 +450,6 @@ describe('AzureDevOpsClient.getPullRequest', () => {
   });
 });
 
-describe('AzureDevOpsClient.getTaskBacklogWorkItemTypes', () => {
-  it('extracts the work item type names from taskBacklog.workItemTypes', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(
-      jsonResponse({
-        taskBacklog: {
-          id: 'Microsoft.TaskCategory',
-          name: 'Tasks',
-          workItemTypes: [{ name: 'Task', url: 'https://dev.azure.com/my-org/proj/_apis/wit/workItemTypes/Task' }],
-        },
-      }),
-    );
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
-
-    expect(types).toEqual(['Task']);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/backlogconfiguration?api-version=7.1',
-      expect.anything(),
-    );
-  });
-
-  it('supports multiple work item types in the task backlog (e.g. Task and Bug)', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(
-      jsonResponse({
-        taskBacklog: {
-          workItemTypes: [{ name: 'Task' }, { name: 'Bug' }],
-        },
-      }),
-    );
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
-
-    expect(types).toEqual(['Task', 'Bug']);
-  });
-
-  it('returns an empty array when taskBacklog is missing from the response', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
-
-    expect(types).toEqual([]);
-  });
-
-  it('returns an empty array when taskBacklog.workItemTypes is missing', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ taskBacklog: {} }));
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
-
-    expect(types).toEqual([]);
-  });
-});
-
 describe('AzureDevOpsClient.listWorkItemTypes', () => {
   it('maps name/color/icon.url, skipping disabled types and types without an icon', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(

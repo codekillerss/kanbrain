@@ -28,11 +28,6 @@ function resolveCardField(
 }
 
 export function resolveShowParent(config: KanbrainConfig, workItemType: string, selectedTeam: string | undefined): boolean {
-  const teamName = resolveTeamName(config, selectedTeam);
-  const taskBacklogTypes = (teamName && config.taskBacklogTypesByTeam?.[teamName]) ?? [];
-  if (taskBacklogTypes.includes(workItemType)) {
-    return true;
-  }
   return resolveCardField(config, workItemType, selectedTeam, 'parent');
 }
 

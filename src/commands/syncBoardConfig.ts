@@ -40,7 +40,6 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       boardState.typeIcons,
       boardState.defaultTeam,
       boardState.cardSettingsByTeam,
-      boardState.taskBacklogTypesByTeam,
     );
     writeConfig(workspaceRoot, { ...updated, lastSyncedVersion: extensionVersion });
 

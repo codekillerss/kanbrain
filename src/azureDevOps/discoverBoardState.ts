@@ -2,7 +2,6 @@ import type { AzureDevOpsClient } from './client';
 import type { CardFieldSettings } from '../types';
 import { discoverWorkItemTypes, discoverStatusesByType } from './discoverWorkItemTypes';
 import { discoverCardSettingsByTeam } from './discoverCardSettings';
-import { discoverTaskBacklogTypesByTeam } from './discoverTaskBacklogTypes';
 
 export interface BoardState {
   discoveredStatusesByType: Record<string, Record<string, string>>;
@@ -10,7 +9,6 @@ export interface BoardState {
   typeIcons: Record<string, string>;
   defaultTeam: string;
   cardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>;
-  taskBacklogTypesByTeam: Record<string, string[]>;
 }
 
 function filterToTypes<T>(record: Record<string, T>, allowedTypes: Set<string>): Record<string, T> {
@@ -36,7 +34,6 @@ export async function discoverBoardState(client: AzureDevOpsClient, organization
   }
 
   const cardSettingsByTeam = await discoverCardSettingsByTeam(client, organization, project);
-  const taskBacklogTypesByTeam = await discoverTaskBacklogTypesByTeam(client, organization, project);
 
   // Not every process-defined work item type is actually used by this project — many teams never
   // touch defaults like Impediment/Risk/Test Case. Only keep types that have at least one real
@@ -57,6 +54,5 @@ export async function discoverBoardState(client: AzureDevOpsClient, organization
     typeIcons: filterToTypes(typeIcons, typesWithItems),
     defaultTeam,
     cardSettingsByTeam,
-    taskBacklogTypesByTeam,
   };
 }
