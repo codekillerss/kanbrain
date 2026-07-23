@@ -549,7 +549,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'run-configure-with-ai' });
       } else if (target.id === 'kb-home-btn') {
         vscode.postMessage({ type: 'show-home' });
-      } else if (target.id === 'kb-view-details-btn') {
+      } else if (target.id === 'kb-open-flow-btn') {
         vscode.postMessage({ type: 'show-flow' });
       } else if (target.id === 'kb-show-config-btn') {
         vscode.postMessage({ type: 'show-config' });
