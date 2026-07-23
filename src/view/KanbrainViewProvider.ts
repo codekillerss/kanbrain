@@ -650,7 +650,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
       .kb-page-header { position: sticky; top: 0; z-index: 10; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
-      .kb-secondary-btn { box-sizing: border-box; padding: 4px 6px; text-align: start; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-secondary-btn { box-sizing: border-box; padding: 8px 12px; text-align: center; font-size: 12px; font-weight: 500; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: 1px solid var(--vscode-button-border, var(--vscode-panel-border)); border-radius: 4px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-secondary-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
       .kb-header .kb-secondary-btn { flex: 1; }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
@@ -673,7 +673,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-card .kb-home-commands, .kb-section-card .kb-card-wrapper, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
       .kb-section-card .kb-main-card { border: none; margin: 0; }
       .kb-section-card .kb-subtask-card { margin: 8px 10px; }
-      .kb-home-commands { display: flex; flex-direction: column; gap: 4px; }
+      .kb-home-commands { display: flex; flex-direction: column; gap: 6px; }
       .kb-card-wrapper { position: relative; }
       .kb-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
