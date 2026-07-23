@@ -5,17 +5,19 @@ import type { CardFieldSettings } from '../types';
 
 function stubClient(overrides: Partial<{
   getDefaultTeamName: () => Promise<string>;
-  listBacklogLevels: () => Promise<{ name: string; workItemTypes: string[] }[]>;
+  listWorkItemTypes: () => Promise<{ name: string; color: string; iconUrl: string }[]>;
   listWorkItemTypeStates: () => Promise<{ name: string; category: string; color: string }[]>;
-  getWorkItemTypeIcon: () => Promise<{ color: string; iconSvg: string } | null>;
+  getIconSvg: () => Promise<string>;
+  listTeams: () => Promise<{ id: string; name: string }[]>;
   listBoards: () => Promise<{ id: string; name: string }[]>;
   getCardSettings: () => Promise<Record<string, CardFieldSettings>>;
 }> = {}): AzureDevOpsClient {
   return {
     getDefaultTeamName: vi.fn().mockResolvedValue('MyProject Team'),
-    listBacklogLevels: vi.fn().mockResolvedValue([{ name: 'Tasks', workItemTypes: ['Task'] }]),
+    listWorkItemTypes: vi.fn().mockResolvedValue([{ name: 'Task', color: 'f2cb1d', iconUrl: 'https://example.com/icon' }]),
     listWorkItemTypeStates: vi.fn().mockResolvedValue([{ name: 'New', category: 'Proposed', color: 'b2b2b2' }]),
-    getWorkItemTypeIcon: vi.fn().mockResolvedValue({ color: 'f2cb1d', iconSvg: '<svg></svg>' }),
+    getIconSvg: vi.fn().mockResolvedValue('<svg></svg>'),
+    listTeams: vi.fn().mockResolvedValue([{ id: 't1', name: 'MyProject Team' }]),
     listBoards: vi.fn().mockResolvedValue([{ id: 'b1', name: 'Tasks' }]),
     getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
     ...overrides,
@@ -23,42 +25,35 @@ function stubClient(overrides: Partial<{
 }
 
 describe('discoverBoardState', () => {
-  it('fetches team, backlog levels, states, and icons for every discovered type', async () => {
+  it('fetches the default team, statuses by type, and type colors/icons', async () => {
     const client = stubClient();
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
-    expect(result.levels).toEqual([{ name: 'Tasks', workItemTypes: ['Task'] }]);
-    expect(result.statesByType.Task).toEqual([{ name: 'New', category: 'Proposed', color: 'b2b2b2' }]);
+    expect(result.defaultTeam).toBe('MyProject Team');
+    expect(result.discoveredStatusesByType.Task).toEqual({ New: 'Proposed' });
     expect(result.typeColors.Task).toBe('f2cb1d');
     expect(result.typeIcons.Task).toBe('<svg></svg>');
   });
 
-  it('continues without a type when fetching its states fails', async () => {
+  it('continues without a type when discovery fails for it', async () => {
     const client = stubClient({ listWorkItemTypeStates: vi.fn().mockRejectedValue(new Error('boom')) });
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
-    expect(result.statesByType.Task).toBeUndefined();
-  });
-
-  it('continues without a type when fetching its icon fails', async () => {
-    const client = stubClient({ getWorkItemTypeIcon: vi.fn().mockRejectedValue(new Error('boom')) });
-    const result = await discoverBoardState(client, 'my-org', 'MyProject');
-
+    expect(result.discoveredStatusesByType.Task).toBeUndefined();
     expect(result.typeColors.Task).toBeUndefined();
-    expect(result.typeIcons.Task).toBeUndefined();
   });
 
-  it('fetches card settings per board, keyed by board name', async () => {
+  it('fetches card settings for every team, keyed by team then board', async () => {
     const client = stubClient();
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
-    expect(result.cardSettingsByBoard).toEqual({ Tasks: { Task: { parent: true, assignedTo: true } } });
+    expect(result.cardSettingsByTeam).toEqual({ 'MyProject Team': { Tasks: { Task: { parent: true, assignedTo: true } } } });
   });
 
-  it('continues with an empty cardSettingsByBoard when fetching it fails for every board', async () => {
-    const client = stubClient({ getCardSettings: vi.fn().mockRejectedValue(new Error('boom')) });
+  it('continues with an empty cardSettingsByTeam when the project has no teams', async () => {
+    const client = stubClient({ listTeams: vi.fn().mockResolvedValue([]) });
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
-    expect(result.cardSettingsByBoard).toEqual({});
+    expect(result.cardSettingsByTeam).toEqual({});
   });
 });
