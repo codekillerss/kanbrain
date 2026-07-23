@@ -6,6 +6,7 @@ import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 import { renderDevelopmentSection } from './renderDevelopment';
 import { renderRelatedWorkSection } from './renderRelatedWork';
+import { isValidHexColor, normalizeHex } from './badgeColor';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -94,8 +95,18 @@ export interface WorkItemDetailInput {
 
 export function renderWorkItemDetail(input: WorkItemDetailInput): string {
   const { workItem, config, description, groups, htmlSections, comments, avatars, prDetails, parent, children } = input;
-  const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
+  const { iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = renderAssigneeRow(workItem.assignedTo, avatars, 'kb-detail-assignee');
+
+  const typeColor = config.typeColors?.[workItem.type];
+  const statusColor = config.statusColors?.[workItem.status];
+  const borderDeclarations = [
+    typeColor && isValidHexColor(typeColor) ? `border-right: 4px solid ${normalizeHex(typeColor)};` : '',
+    statusColor && isValidHexColor(statusColor) ? `border-bottom: 4px solid ${normalizeHex(statusColor)};` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const headerStyle = borderDeclarations ? ` style="${borderDeclarations}"` : '';
 
   const descriptionHtml = description
     ? `<div class="kb-detail-html-section"><div class="kb-detail-section-label">Description</div><div class="kb-detail-html-body">${stripScriptTags(description)}</div></div>`
@@ -104,14 +115,14 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
   const commentsHtml = comments.length ? comments.map(c => renderComment(c, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
 
   return `
-    <div class="kb-detail-header"${borderStyle}>
-      <div class="kb-detail-header-top">
+    <div class="kb-detail-header"${headerStyle}>
+      <div class="kb-detail-title-row">
         ${iconHtml}
         <span class="kb-detail-id">#${workItem.id}</span>
-        ${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}
+        <h1 class="kb-detail-title">${escapeHtml(workItem.title)}</h1>
       </div>
-      <h1 class="kb-detail-title">${escapeHtml(workItem.title)}</h1>
       ${assigneeHtml}
+      <div class="kb-detail-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

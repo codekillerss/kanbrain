@@ -55,6 +55,52 @@ describe('renderWorkItemDetail', () => {
     expect(html).toContain('kb-type-icon');
   });
 
+  it('shows the icon and id on the same line as the title', () => {
+    const html = renderWorkItemDetail(input());
+
+    const rowStart = html.indexOf('kb-detail-title-row');
+    const rowEnd = html.indexOf('</div>', html.indexOf('kb-detail-title', rowStart));
+    const row = html.slice(rowStart, rowEnd);
+
+    expect(row).toContain('kb-type-icon');
+    expect(row).toContain('#482');
+    expect(row).toContain('Fix bug');
+  });
+
+  it('shows the status row after the assignee', () => {
+    const html = renderWorkItemDetail(input());
+
+    const assigneeIndex = html.indexOf('kb-detail-assignee');
+    const statusIndex = html.indexOf('kb-detail-status-row');
+
+    expect(assigneeIndex).toBeGreaterThanOrEqual(0);
+    expect(statusIndex).toBeGreaterThan(assigneeIndex);
+  });
+
+  it('colors the header border with the type color on the right and the status color on the bottom', () => {
+    const html = renderWorkItemDetail(input());
+
+    const headerStart = html.indexOf('kb-detail-header"');
+    const headerEnd = html.indexOf('>', headerStart);
+    const headerTag = html.slice(headerStart, headerEnd);
+
+    expect(headerTag).toContain('border-right: 4px solid #f2cb1d;');
+    expect(headerTag).toContain('border-bottom: 4px solid #b2b2b2;');
+  });
+
+  it('omits the border declaration for a color that is missing or invalid, without breaking the other one', () => {
+    const html = renderWorkItemDetail(
+      input({ config: { ...config, statusColors: {}, typeColors: { Task: 'not-a-color' } } }),
+    );
+
+    const headerStart = html.indexOf('kb-detail-header');
+    const headerEnd = html.indexOf('>', headerStart);
+    const headerTag = html.slice(headerStart, headerEnd);
+
+    expect(headerTag).not.toContain('border-right');
+    expect(headerTag).not.toContain('border-bottom: 4px');
+  });
+
   it('shows Unassigned when there is no assignee', () => {
     const html = renderWorkItemDetail(input());
     expect(html).toContain('Unassigned');
