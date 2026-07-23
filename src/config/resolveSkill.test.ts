@@ -21,9 +21,9 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
-  typeToBacklogLevel: { 'User Story': 'Stories' },
-  backlogLevels: {
-    Stories: {
+  defaultTeam: 'MyProject Team',
+  skills: {
+    'User Story': {
       New: { path: '.kanbrain/skills/stories-proposed.md' },
       Committed: { path: '.kanbrain/skills/stories-inprogress.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' },
       Done: null,
@@ -35,7 +35,7 @@ const config: KanbrainConfig = {
 };
 
 describe('resolveSkill', () => {
-  it("resolves the full skill entry via the work item type's backlog level and status", () => {
+  it("resolves the full skill entry via the work item's type and status", () => {
     expect(resolveSkill(config, workItem({ status: 'New' }))).toEqual({ path: '.kanbrain/skills/stories-proposed.md' });
   });
 
@@ -48,15 +48,15 @@ describe('resolveSkill', () => {
     });
   });
 
-  it('returns null when the work item type has no backlog level', () => {
+  it('returns null when the work item type has no skill mapping at all', () => {
     expect(resolveSkill(config, workItem({ type: 'Impediment' }))).toBeNull();
   });
 
-  it('returns null when the status has no skill mapped for that level', () => {
+  it('returns null when the status has no skill mapped for that type', () => {
     expect(resolveSkill(config, workItem({ status: 'Unknown Status' }))).toBeNull();
   });
 
-  it('returns null when the level explicitly maps the status to null', () => {
+  it('returns null when the type explicitly maps the status to null', () => {
     expect(resolveSkill(config, workItem({ status: 'Done' }))).toBeNull();
   });
 });
