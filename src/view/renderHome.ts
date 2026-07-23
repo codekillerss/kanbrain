@@ -36,7 +36,9 @@ function renderHomeWorkItemSection(state: RenderState): string {
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
       </div>
     </div>
-    <button id="kb-open-flow-btn" class="kb-secondary-btn">Open Flow →</button>
+    <div class="kb-home-commands">
+      <button id="kb-open-flow-btn" class="kb-secondary-btn">➡️ Open Flow</button>
+    </div>
   `;
 }
 
