@@ -594,7 +594,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       body { font-family: var(--vscode-font-family); padding: 8px; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
-      .kb-parent-banner .kb-pick-btn { position: static; margin-left: auto; }
       .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
       .kb-card-header { display: flex; align-items: center; }
@@ -671,17 +670,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-parent-link { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
       .kb-parent-link .kb-link-text { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-parent-link:hover .kb-link-text { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
-      .kb-parent-banner { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-      .kb-parent-banner:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-parent-banner .kb-link-text { color: var(--vscode-textLink-foreground); }
-      .kb-sibling-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0; }
-      .kb-section-card .kb-parent-banner { margin: 8px 10px 0; }
-      .kb-section-card .kb-sibling-nav { margin: 0 0 4px; }
-      .kb-sibling-arrow { background: none; border: none; color: var(--vscode-foreground); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
-      .kb-sibling-arrow:disabled { opacity: 0.3; cursor: default; }
-      .kb-sibling-dots { display: flex; gap: 6px; }
-      .kb-sibling-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vscode-panel-border); }
-      .kb-sibling-dot-active { background: var(--vscode-textLink-foreground); }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
       .kb-result-item-main { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); min-width: 0; }

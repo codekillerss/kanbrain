@@ -367,7 +367,7 @@ describe('render', () => {
     expect(html.split('kb-field-label').length - 1).toBe(1);
   });
 
-  it('shows the parent banner and sibling navigator on the Flow screen when the item has a parent', () => {
+  it('shows the parent as a full card on the Flow screen when the item has a parent', () => {
     const parent = workItem({ id: 900, title: 'Epic parent', childIds: [482, 501] });
     const html = render({
       hasWorkspace: true,
@@ -378,13 +378,17 @@ describe('render', () => {
       screen: 'flow',
     });
 
-    expect(html).toContain('kb-parent-banner');
-    expect(html).toContain('kb-sibling-nav');
     expect(html).toContain('kb-parent-section');
     expect(html).toContain('>Parent</div>');
+    const parentSectionStart = html.indexOf('kb-parent-section');
+    const parentSectionHtml = html.slice(parentSectionStart, html.indexOf('kb-section-card', parentSectionStart + 1));
+    expect(parentSectionHtml).toContain('kb-subtask-card');
+    expect(parentSectionHtml).toContain('data-id="900"');
+    expect(parentSectionHtml).toContain('Epic parent');
+    expect(parentSectionHtml).toContain('data-action="pick-work-item"');
   });
 
-  it('does not show the parent banner or sibling navigator when there is no parent', () => {
+  it('does not show the parent section when there is no parent', () => {
     const html = render({
       hasWorkspace: true,
       config,
@@ -394,8 +398,6 @@ describe('render', () => {
       screen: 'flow',
     });
 
-    expect(html).not.toContain('kb-parent-banner');
-    expect(html).not.toContain('kb-sibling-nav');
     expect(html).not.toContain('kb-parent-section');
   });
 });
