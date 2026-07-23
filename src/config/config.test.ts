@@ -44,6 +44,25 @@ describe('readConfig', () => {
     fs.writeFileSync(getConfigPath(workspaceRoot), '{ not valid json', 'utf-8');
     expect(readConfig(workspaceRoot)).toBeNull();
   });
+
+  it('migrates a legacy backlogLevels/typeToBacklogLevel config.json into the new skills shape', () => {
+    const legacy = {
+      organization: 'my-org',
+      project: 'MyProject',
+      typeToBacklogLevel: { Task: 'Tasks' },
+      backlogLevels: { Tasks: { New: { path: '.kanbrain/skills/a.md' } } },
+      statusColors: { New: 'b2b2b2' },
+      typeColors: { Task: 'f2cb1d' },
+      typeIcons: { Task: '<svg></svg>' },
+    };
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigPath(workspaceRoot), JSON.stringify(legacy), 'utf-8');
+
+    const config = readConfig(workspaceRoot);
+
+    expect(config?.skills).toEqual({ Task: { New: { path: '.kanbrain/skills/a.md' } } });
+    expect(config?.defaultTeam).toBe('');
+  });
 });
 
 describe('writeConfig', () => {

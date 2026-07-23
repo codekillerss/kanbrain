@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { KanbrainConfig } from '../types';
+import { migrateConfig } from './migrateConfig';
 
 export function getConfigPath(workspaceRoot: string): string {
   return path.join(workspaceRoot, '.kanbrain', 'config.json');
@@ -13,7 +14,7 @@ export function readConfig(workspaceRoot: string): KanbrainConfig | null {
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    return JSON.parse(raw) as KanbrainConfig;
+    return migrateConfig(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -28,7 +29,7 @@ export function readConfigWithDiagnostics(workspaceRoot: string): ConfigReadResu
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    return { status: 'ok', config: JSON.parse(raw) as KanbrainConfig };
+    return { status: 'ok', config: migrateConfig(JSON.parse(raw)) };
   } catch (error) {
     return { status: 'invalid', error: error instanceof Error ? error.message : String(error) };
   }
