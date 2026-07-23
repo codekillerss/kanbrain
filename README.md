@@ -109,3 +109,10 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] A work item with a linked pull request shows `#id Title (Status)` in the Development section; a work item with no linked branches/PRs shows no Development section at all.
 - [ ] If the pull request's title/status fails to load, the Development section still shows that PR's `#id` alone, without breaking the rest of the card.
 - [ ] The Development section is never gated by any Config screen setting — it shows the same way regardless of `showAssignedTo`, `cardSettingsByBoard`, or the selected board.
+- [ ] After `Kanbrain: Setup`, `.kanbrain/config.json` has a `skills` entry per real work item type (not per backlog level) and a `defaultTeam` matching the project's actual default team.
+- [ ] `.kanbrain/config.json`'s `cardSettingsByTeam` has an entry for every team in the project (compare against the real list of teams in Azure DevOps project settings), not just the default team.
+- [ ] The Config screen's skill editor groups skills by work item type (e.g. "Epic", "Feature", "User Story", "Bug", "Task"), not by any backlog-level grouping.
+- [ ] The search dialog's tabs are one per work item type, not per backlog level — a type like "Bug" that used to share a "Stories" tab with "User Story" now has its own tab.
+- [ ] When the project has 2+ teams, the Config screen shows a "Team" dropdown (not "Board"); switching it and reloading the window keeps that same team selected, and it's never written into the committed `.kanbrain/config.json`.
+- [ ] A work item type visible on one team's board but hidden on another team's board (a real per-team backlog-level visibility difference) still gets a correct `skills` entry — the type is never silently missing just because the default team happens to hide it.
+- [ ] `Kanbrain: Check Board Configuration` and `Kanbrain: Sync Board Configuration` report added/removed work item types and statuses correctly after a real process change, with no mention of "backlog level" anywhere in the messages.
