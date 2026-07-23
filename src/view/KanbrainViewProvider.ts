@@ -23,7 +23,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private lastState = '';
   private activeWorkItemId: number | undefined;
-  private selectedBoard: string | undefined;
+  private selectedTeam: string | undefined;
   private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
@@ -38,7 +38,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
     private readonly openWorkItemDetail: (id: number) => Promise<void>,
-    private readonly persistSelectedBoard: (board: string | undefined) => void,
+    private readonly persistSelectedTeam: (team: string | undefined) => void,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -83,8 +83,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
-      } else if (message.type === 'set-selected-board') {
-        this.setSelectedBoard(message.board || undefined);
+      } else if (message.type === 'set-selected-team') {
+        this.setSelectedTeam(message.team || undefined);
       } else if (message.type === 'open-work-item-detail') {
         await this.openWorkItemDetail(Number(message.id));
       }
@@ -116,9 +116,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  setSelectedBoard(board: string | undefined): void {
-    this.selectedBoard = board;
-    this.persistSelectedBoard(board);
+  setSelectedTeam(team: string | undefined): void {
+    this.selectedTeam = team;
+    this.persistSelectedTeam(team);
     this.lastState = '';
     void this.refresh();
   }
@@ -251,13 +251,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const config = readConfig(this.workspaceRoot);
-    if (!config || !config.backlogLevels[level] || !(status in config.backlogLevels[level])) {
+    if (!config || !config.skills[level] || !(status in config.skills[level])) {
       return;
     }
 
     const trimmedPath = filePath.trim();
     if (!trimmedPath) {
-      config.backlogLevels[level][status] = null;
+      config.skills[level][status] = null;
     } else {
       const entry: SkillEntry = { path: trimmedPath };
       if (label.trim()) {
@@ -269,7 +269,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       if (buttonColor.trim()) {
         entry.buttonColor = buttonColor.trim();
       }
-      config.backlogLevels[level][status] = entry;
+      config.skills[level][status] = entry;
     }
 
     writeConfig(this.workspaceRoot, config);
@@ -433,7 +433,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         subtasks,
         screen: this.currentScreen,
         avatars,
-        selectedBoard: this.selectedBoard,
+        selectedTeam: this.selectedTeam,
         prDetails,
       }),
     );
@@ -498,10 +498,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
-    const boardSelect = document.getElementById('kb-board-select');
-    if (boardSelect) {
-      boardSelect.addEventListener('change', () => {
-        vscode.postMessage({ type: 'set-selected-board', board: boardSelect.value });
+    const teamSelect = document.getElementById('kb-team-select');
+    if (teamSelect) {
+      teamSelect.addEventListener('change', () => {
+        vscode.postMessage({ type: 'set-selected-team', team: teamSelect.value });
       });
     }
 
