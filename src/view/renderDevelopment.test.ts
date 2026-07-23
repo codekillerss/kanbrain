@@ -26,6 +26,26 @@ describe('renderDevelopmentSection', () => {
     expect(html).toContain('title="feature/&lt;xss&gt;"');
   });
 
+  it('links a branch item to a checkoutBranch command URI with repositoryId and branchName', () => {
+    const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
+    const html = renderDevelopmentSection(links, {});
+
+    const hrefMatch = html.match(/href="(command:kanbrain\.checkoutBranch\?[^"]+)"/);
+    expect(hrefMatch).not.toBeNull();
+
+    const [, href] = hrefMatch!;
+    const [command, encodedArgs] = href.split('?');
+    expect(command).toBe('command:kanbrain.checkoutBranch');
+    expect(JSON.parse(decodeURIComponent(encodedArgs))).toEqual(['repo-1', 'feature/x']);
+  });
+
+  it('does not link a pull request item to a command URI', () => {
+    const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
+    const html = renderDevelopmentSection(links, {});
+
+    expect(html).not.toContain('command:');
+  });
+
   it('renders a pull request with its resolved title and capitalized status', () => {
     const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
     const prDetails: Record<string, PullRequestDetails> = { 'repo-1:57': { title: 'Fix <login> bug', status: 'active' } };

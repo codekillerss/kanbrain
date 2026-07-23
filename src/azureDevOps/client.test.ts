@@ -472,6 +472,30 @@ describe('AzureDevOpsClient.getPullRequest', () => {
   });
 });
 
+describe('AzureDevOpsClient.getRepository', () => {
+  it('fetches and maps the repository name', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ name: 'kanbrain' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const repo = await client.getRepository('my-org', 'MyProject', 'repo-1');
+
+    expect(repo).toEqual({ name: 'kanbrain' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/repositories/repo-1?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'not found' }, false, 404));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const repo = await client.getRepository('my-org', 'MyProject', 'repo-1');
+
+    expect(repo).toBeNull();
+  });
+});
+
 describe('AzureDevOpsClient.listWorkItemTypes', () => {
   it('maps name/color/icon.url, skipping disabled types and types without an icon', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(

@@ -274,4 +274,14 @@ export class AzureDevOpsClient {
     }
   }
 
+  async getRepository(organization: string, project: string, repositoryId: string): Promise<{ name: string } | null> {
+    try {
+      const data = await this.request<{ name: string }>(
+        `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repositoryId}?api-version=7.1`,
+      );
+      return { name: data.name };
+    } catch {
+      return null;
+    }
+  }
 }

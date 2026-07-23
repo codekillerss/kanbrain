@@ -25,7 +25,8 @@ function capitalize(text: string): string {
 function renderDevelopmentItem(link: DevelopmentLink, prDetails: Record<string, PullRequestDetails>): string {
   if (link.kind === 'branch') {
     const name = escapeHtml(link.branchName);
-    return `<div class="kb-dev-item" title="${name}">${BRANCH_FORK_ICON}<span class="kb-dev-item-text">${name}</span></div>`;
+    const commandArgs = encodeURIComponent(JSON.stringify([link.repositoryId, link.branchName]));
+    return `<a class="kb-dev-item" href="command:kanbrain.checkoutBranch?${commandArgs}" title="${name}">${BRANCH_FORK_ICON}<span class="kb-dev-item-text">${name}</span></a>`;
   }
   const details = prDetails[`${link.repositoryId}:${link.pullRequestId}`];
   const label = details
