@@ -638,8 +638,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
       .kb-section-card .kb-section-label { margin: 0; border-radius: 0; }
       .kb-section-card .kb-home-commands, .kb-section-card .kb-card-wrapper, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
-      .kb-section-card .kb-main-card { border: none; margin: 0; }
-      .kb-section-card .kb-subtask-card { margin: 8px 10px; }
+      .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card { margin: 8px 10px; }
       .kb-home-commands { display: flex; flex-direction: column; gap: 6px; }
       .kb-card-wrapper { position: relative; }
       .kb-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
