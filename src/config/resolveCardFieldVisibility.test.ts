@@ -101,4 +101,39 @@ describe('resolveShowAssignedTo', () => {
     });
     expect(resolveShowAssignedTo(cfg, 'Bug', 'Team 2')).toBe(false);
   });
+
+  it('always returns true for a type in the resolved team\'s task backlog, even when cardSettingsByTeam says assignedTo: false', () => {
+    const cfg = config({
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: false, assignedTo: false } } } },
+      taskBacklogTypesByTeam: { 'Team 1': ['Task'] },
+    });
+    expect(resolveShowAssignedTo(cfg, 'Task', undefined)).toBe(true);
+  });
+
+  it('always returns true for a type in the task backlog even when the type is missing from cardSettingsByTeam entirely', () => {
+    const cfg = config({
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: { 'Team 1': {} },
+      taskBacklogTypesByTeam: { 'Team 1': ['Task'] },
+    });
+    expect(resolveShowAssignedTo(cfg, 'Task', undefined)).toBe(true);
+  });
+
+  it('falls back to cardSettingsByTeam when the type is not in the resolved team\'s task backlog', () => {
+    const cfg = config({
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: { 'Team 1': { Stories: { Bug: { parent: false, assignedTo: true } } } },
+      taskBacklogTypesByTeam: { 'Team 1': ['Task'] },
+    });
+    expect(resolveShowAssignedTo(cfg, 'Bug', undefined)).toBe(true);
+  });
+
+  it('falls back to cardSettingsByTeam when taskBacklogTypesByTeam is absent (config synced before this feature)', () => {
+    const cfg = config({
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: false, assignedTo: false } } } },
+    });
+    expect(resolveShowAssignedTo(cfg, 'Task', undefined)).toBe(false);
+  });
 });

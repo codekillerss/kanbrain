@@ -256,6 +256,13 @@ export class AzureDevOpsClient {
     return result;
   }
 
+  async getTaskBacklogWorkItemTypes(organization: string, project: string, team: string): Promise<string[]> {
+    const data = await this.request<{ taskBacklog?: { workItemTypes?: { name: string }[] } }>(
+      `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/backlogconfiguration?api-version=7.1`,
+    );
+    return (data.taskBacklog?.workItemTypes ?? []).map(t => t.name);
+  }
+
   async getPullRequest(organization: string, project: string, repositoryId: string, pullRequestId: number): Promise<PullRequestDetails | null> {
     try {
       const data = await this.request<{ title: string; status: string }>(

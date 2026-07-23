@@ -426,6 +426,28 @@ describe('AzureDevOpsClient.getCardSettings', () => {
   });
 });
 
+describe('AzureDevOpsClient.getTaskBacklogWorkItemTypes', () => {
+  it('extracts the work item type names from taskBacklog.workItemTypes', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ taskBacklog: { workItemTypes: [{ name: 'Task' }, { name: 'Bug' }] } }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
+
+    expect(types).toEqual(['Task', 'Bug']);
+  });
+
+  it('returns an empty array when the response has no taskBacklog', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
+
+    expect(types).toEqual([]);
+  });
+});
+
 describe('AzureDevOpsClient.getPullRequest', () => {
   it('fetches and maps a pull request title and status', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ title: 'Fix login bug', status: 'active' }));
