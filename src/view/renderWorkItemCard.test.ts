@@ -103,14 +103,25 @@ describe('renderWorkItemCard', () => {
     expect(hidden).not.toContain('kb-assignee-row');
   });
 
-  it('shows the assignee row before the status row', () => {
+  it('shows the status row before the assignee row', () => {
     const html = renderWorkItemCard(workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }), config, 'kb-main-card');
 
-    const assigneeIndex = html.indexOf('kb-assignee-row');
     const statusIndex = html.indexOf('kb-status-row');
+    const assigneeIndex = html.indexOf('kb-assignee-row');
 
-    expect(assigneeIndex).toBeGreaterThanOrEqual(0);
-    expect(statusIndex).toBeGreaterThan(assigneeIndex);
+    expect(statusIndex).toBeGreaterThanOrEqual(0);
+    expect(assigneeIndex).toBeGreaterThan(statusIndex);
+  });
+
+  it('shows the title next to the id in the card header, not on its own line', () => {
+    const html = renderWorkItemCard(workItem({ title: 'Fix bug' }), config, 'kb-main-card');
+
+    const headerStart = html.indexOf('kb-card-header');
+    const headerEnd = html.indexOf('</div>', html.indexOf('kb-title', headerStart));
+    const header = html.slice(headerStart, headerEnd);
+
+    expect(header).toContain('kb-id');
+    expect(header).toContain('Fix bug');
   });
 
   it('does not make the title clickable by default', () => {

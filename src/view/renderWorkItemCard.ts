@@ -55,11 +55,11 @@ export function renderWorkItemCard(
       <div class="kb-card-header">
         ${iconHtml}
         <span class="kb-id">#${workItem.id}</span>
+        <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       </div>
-      <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       ${parentHtml}
-      ${assigneeHtml}
       <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${assigneeHtml}
       ${developmentHtml}
       ${showActionButton ? renderActionButton(workItem, config) : ''}
     </div>

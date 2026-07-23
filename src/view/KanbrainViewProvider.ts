@@ -596,11 +596,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
-      .kb-card-header { display: flex; align-items: center; }
+      .kb-card-header { display: flex; align-items: center; padding-right: 26px; }
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
       .kb-type-icon svg { width: 100%; height: 100%; }
       .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }
-      .kb-title { font-weight: 600; margin: 4px 0; }
+      .kb-title { font-weight: 600; margin-left: 6px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-title-clickable { cursor: pointer; }
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
