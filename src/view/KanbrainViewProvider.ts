@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig, SkillEntry, DevelopmentLink, PullRequestDetails } from '../types';
+import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
 import { render } from './render';
@@ -29,7 +29,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
-  private prCache = new Map<string, PullRequestDetails | null>();
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -204,38 +203,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const dataUri = this.avatarCache.get(url);
       if (dataUri) {
         resolved[url] = dataUri;
-      }
-    }
-    return resolved;
-  }
-
-  private async resolvePullRequestDetails(items: WorkItem[]): Promise<Record<string, PullRequestDetails>> {
-    if (!this.client || !this.workspaceRoot) {
-      return {};
-    }
-    const config = readConfig(this.workspaceRoot);
-    if (!config) {
-      return {};
-    }
-
-    const prLinks = items.flatMap(i =>
-      i.development.filter((d): d is Extract<DevelopmentLink, { kind: 'pullRequest' }> => d.kind === 'pullRequest'),
-    );
-    const uncached = prLinks.filter(link => !this.prCache.has(`${link.repositoryId}:${link.pullRequestId}`));
-
-    await Promise.all(
-      uncached.map(async link => {
-        const key = `${link.repositoryId}:${link.pullRequestId}`;
-        this.prCache.set(key, await this.client!.getPullRequest(config.organization, config.project, link.repositoryId, link.pullRequestId));
-      }),
-    );
-
-    const resolved: Record<string, PullRequestDetails> = {};
-    for (const link of prLinks) {
-      const key = `${link.repositoryId}:${link.pullRequestId}`;
-      const details = this.prCache.get(key);
-      if (details) {
-        resolved[key] = details;
       }
     }
     return resolved;
@@ -427,7 +394,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     // (mirrored from the real board), so avatars are always resolved here rather than gated by the
     // (now search-only) manual showAssignedTo toggle.
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
-    const prDetails = config ? await this.resolvePullRequestDetails([workItem, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
     if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars)) {
       return;
@@ -443,7 +409,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         screen: this.currentScreen,
         avatars,
         selectedTeam: this.selectedTeam,
-        prDetails,
       }),
     );
   }
@@ -711,8 +676,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
-      .kb-dev-label { display: flex; align-items: center; gap: 4px; }
-      .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
+      .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+      .kb-dev-badge svg { flex-shrink: 0; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }
