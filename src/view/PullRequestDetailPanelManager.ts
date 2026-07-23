@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import type { PullRequestThreadComment } from '../types';
 import { readConfig } from '../config/config';
@@ -12,11 +14,31 @@ export class PullRequestDetailPanelManager {
   private lastStateByPanel = new Map<string, string>();
   private avatarCache = new Map<string, string | null>();
   private pollHandle: ReturnType<typeof setInterval> | undefined;
+  private gitLensIconDataUriCache: string | null | undefined;
 
   constructor(
     private readonly workspaceRoot: string,
     private readonly client: AzureDevOpsClient,
   ) {}
+
+  private async resolveGitLensIcon(): Promise<string | null> {
+    if (this.gitLensIconDataUriCache !== undefined) {
+      return this.gitLensIconDataUriCache;
+    }
+    const gitlens = vscode.extensions.getExtension('eamodio.gitlens');
+    if (!gitlens) {
+      this.gitLensIconDataUriCache = null;
+      return null;
+    }
+    try {
+      const iconPath = path.join(gitlens.extensionPath, 'images', 'gitlens-icon.png');
+      const bytes = await fs.promises.readFile(iconPath);
+      this.gitLensIconDataUriCache = `data:image/png;base64,${bytes.toString('base64')}`;
+    } catch {
+      this.gitLensIconDataUriCache = null;
+    }
+    return this.gitLensIconDataUriCache;
+  }
 
   async open(repositoryId: string, pullRequestId: number): Promise<void> {
     const key = `${repositoryId}:${pullRequestId}`;
@@ -33,7 +55,14 @@ export class PullRequestDetailPanelManager {
 
     const panel = vscode.window.createWebviewPanel('kanbrain.pullRequestDetail', `PR #${pullRequestId}`, vscode.ViewColumn.Active, {
       enableScripts: false,
-      enableCommandUris: ['kanbrain.openWorkItemDetail', 'kanbrain.openPullRequestDetail', 'kanbrain.pickWorkItem', 'kanbrain.checkoutBranch'],
+      enableCommandUris: [
+        'kanbrain.openWorkItemDetail',
+        'kanbrain.openPullRequestDetail',
+        'kanbrain.pickWorkItem',
+        'kanbrain.checkoutBranch',
+        'kanbrain.viewPullRequestDiff',
+        'workbench.extensions.search',
+      ],
     });
     this.panels.set(key, panel);
 
@@ -84,15 +113,16 @@ export class PullRequestDetailPanelManager {
       .getPullRequestThreads(config.organization, config.project, repositoryId, pullRequestId)
       .catch(() => []);
     const avatars = await this.resolveAvatars(threads.flatMap(t => t.comments));
+    const gitLensIconDataUri = await this.resolveGitLensIcon();
 
-    const stateKey = JSON.stringify({ pr, workItems, threads, avatars });
+    const stateKey = JSON.stringify({ pr, workItems, threads, avatars, gitLensIconDataUri });
     if (this.lastStateByPanel.get(key) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(key, stateKey);
 
     panel.title = `PR #${pr.id} ${pr.title}`;
-    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars }));
+    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars, gitLensIconDataUri }));
   }
 
   private async resolveAvatars(comments: PullRequestThreadComment[]): Promise<Record<string, string>> {
