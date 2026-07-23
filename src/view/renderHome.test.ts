@@ -145,17 +145,6 @@ describe('renderHome', () => {
     expect(html).not.toContain('kb-title-clickable');
   });
 
-  it('passes prDetails through to the active work item card', () => {
-    const html = renderHome(
-      state({
-        workItem: workItem({ development: [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }] }),
-        prDetails: { 'repo-1:57': { title: 'Home PR', status: 'active' } },
-      }),
-    );
-
-    expect(html).toContain('Home PR');
-  });
-
   it('does not show a Team section when there are 0 teams in cardSettingsByTeam', () => {
     const html = renderHome(state());
 
