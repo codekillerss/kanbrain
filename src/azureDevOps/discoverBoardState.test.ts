@@ -56,4 +56,27 @@ describe('discoverBoardState', () => {
 
     expect(result.cardSettingsByTeam).toEqual({});
   });
+
+  it('excludes work item types that are not on any team board from discoveredStatusesByType, typeColors, and typeIcons', async () => {
+    const client = stubClient({
+      listWorkItemTypes: vi.fn().mockResolvedValue([
+        { name: 'Task', color: 'f2cb1d', iconUrl: 'https://example.com/task-icon' },
+        { name: 'Impediment', color: 'cc0000', iconUrl: 'https://example.com/impediment-icon' },
+      ]),
+      listWorkItemTypeStates: vi
+        .fn()
+        .mockImplementation(async (_org: string, _proj: string, type: string) =>
+          type === 'Task' ? [{ name: 'New', category: 'Proposed', color: 'b2b2b2' }] : [{ name: 'Open', category: 'Proposed', color: 'b2b2b2' }],
+        ),
+      // getCardSettings only ever reports "Task" as a field on the one real board, never "Impediment".
+      getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
+    });
+
+    const result = await discoverBoardState(client, 'my-org', 'MyProject');
+
+    expect(result.discoveredStatusesByType.Task).toEqual({ New: 'Proposed' });
+    expect(result.discoveredStatusesByType.Impediment).toBeUndefined();
+    expect(result.typeColors.Impediment).toBeUndefined();
+    expect(result.typeIcons.Impediment).toBeUndefined();
+  });
 });
