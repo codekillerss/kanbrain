@@ -627,7 +627,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px; }
-      .kb-main-card, .kb-subtask-card, .kb-team-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-main-card, .kb-subtask-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
       .kb-card-header { display: flex; align-items: center; }
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
@@ -640,7 +641,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { margin: 18px 0 8px; padding: 6px 10px 6px 9px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-left: 3px solid var(--vscode-focusBorder); border-radius: 3px; }
-      .kb-home-section:first-child .kb-section-label { margin-top: 0; }
       .kb-hidden { display: none; }
       .kb-result-item { width: 100%; margin: 2px 0; }
       .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
@@ -668,7 +668,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-tab:hover { background: var(--vscode-list-hoverBackground); }
       .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
       .kb-search-tab-empty { opacity: 0.5; }
-      .kb-home-section { margin-bottom: 16px; }
+      .kb-home-section { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
+      .kb-home-section .kb-section-label { margin: 0; border-radius: 0; }
+      .kb-home-section .kb-home-commands, .kb-home-section .kb-card-wrapper { margin: 10px; }
+      .kb-home-section .kb-main-card { border: none; margin: 0; }
       .kb-home-commands { display: flex; flex-direction: column; gap: 4px; }
       .kb-card-wrapper { position: relative; }
       .kb-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
