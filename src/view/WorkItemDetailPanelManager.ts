@@ -1,15 +1,20 @@
 import * as vscode from 'vscode';
 import type { WorkItem, KanbrainConfig, DevelopmentLink, PullRequestDetails } from '../types';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItemComment } from '../azureDevOps/workItemDetail';
+import type { WorkItemComment, WorkItemTypeLayout } from '../azureDevOps/workItemDetail';
 import { resolveDetailFields } from '../azureDevOps/workItemDetail';
 import { readConfig } from '../config/config';
 import { renderWorkItemDetail } from './renderWorkItemDetail';
+
+const POLL_INTERVAL_MS = 5000;
 
 export class WorkItemDetailPanelManager {
   private panels = new Map<number, vscode.WebviewPanel>();
   private avatarCache = new Map<string, string | null>();
   private prCache = new Map<string, PullRequestDetails | null>();
+  private layoutCache = new Map<number, WorkItemTypeLayout | null>();
+  private lastStateByPanel = new Map<number, string>();
+  private pollHandle: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     private readonly workspaceRoot: string,
@@ -28,29 +33,87 @@ export class WorkItemDetailPanelManager {
       return;
     }
 
-    const [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
+    const panel = vscode.window.createWebviewPanel('kanbrain.workItemDetail', `#${id}`, vscode.ViewColumn.Active, {
+      enableScripts: false,
+    });
+    this.panels.set(id, panel);
+
+    panel.onDidDispose(() => {
+      this.panels.delete(id);
+      this.lastStateByPanel.delete(id);
+      this.layoutCache.delete(id);
+      if (this.panels.size === 0 && this.pollHandle) {
+        clearInterval(this.pollHandle);
+        this.pollHandle = undefined;
+      }
+    });
+
+    if (!this.pollHandle) {
+      this.pollHandle = setInterval(() => void this.pollAll(), POLL_INTERVAL_MS);
+    }
+
+    await this.loadAndRender(id, panel);
+  }
+
+  private async pollAll(): Promise<void> {
+    await Promise.all([...this.panels.entries()].map(([id, panel]) => this.loadAndRender(id, panel)));
+  }
+
+  private async loadAndRender(id: number, panel: vscode.WebviewPanel): Promise<void> {
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+
+    let workItem: WorkItem | undefined;
+    try {
+      [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
+    } catch {
+      return; // Transient failure — skip this refresh, retry next poll.
+    }
     if (!workItem) {
       return;
     }
 
-    const [layout, rawFields, comments, parentResult, children] = await Promise.all([
-      this.client.getWorkItemTypeLayout(config.organization, config.project, workItem.type),
-      this.client.getWorkItemRawFields(config.organization, config.project, id),
-      this.client.getComments(config.organization, config.project, id).catch(() => []),
-      workItem.parentId ? this.client.getWorkItems(config.organization, config.project, [workItem.parentId]) : Promise.resolve([]),
-      this.client.getChildren(config.organization, config.project, workItem),
-    ]);
+    let layout = this.layoutCache.get(id);
+    if (layout === undefined) {
+      try {
+        layout = await this.client.getWorkItemTypeLayout(config.organization, config.project, workItem.type);
+      } catch {
+        layout = null;
+      }
+      this.layoutCache.set(id, layout);
+    }
+
+    let rawFields: Record<string, unknown>;
+    let comments: WorkItemComment[];
+    let parentResult: WorkItem[];
+    let children: WorkItem[];
+    try {
+      [rawFields, comments, parentResult, children] = await Promise.all([
+        this.client.getWorkItemRawFields(config.organization, config.project, id),
+        this.client.getComments(config.organization, config.project, id).catch(() => []),
+        workItem.parentId ? this.client.getWorkItems(config.organization, config.project, [workItem.parentId]) : Promise.resolve([]),
+        this.client.getChildren(config.organization, config.project, workItem),
+      ]);
+    } catch {
+      return; // Transient failure — skip this refresh, retry next poll.
+    }
     const parent = parentResult[0] ?? null;
 
-    const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
     const [avatars, prDetails] = await Promise.all([
       this.resolveAvatars(workItem, comments),
       this.resolvePullRequestDetails(workItem, config),
     ]);
 
-    const panel = vscode.window.createWebviewPanel('kanbrain.workItemDetail', `#${workItem.id} ${workItem.title}`, vscode.ViewColumn.Active, {
-      enableScripts: false,
-    });
+    const stateKey = JSON.stringify({ workItem, rawFields, comments, parent, children, avatars, prDetails });
+    if (this.lastStateByPanel.get(id) === stateKey) {
+      return;
+    }
+    this.lastStateByPanel.set(id, stateKey);
+
+    const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
+    panel.title = `#${workItem.id} ${workItem.title}`;
     panel.webview.html = this.wrapHtml(
       renderWorkItemDetail({
         workItem,
@@ -65,8 +128,6 @@ export class WorkItemDetailPanelManager {
         children,
       }),
     );
-    panel.onDidDispose(() => this.panels.delete(id));
-    this.panels.set(id, panel);
   }
 
   private async resolveAvatars(workItem: WorkItem, comments: WorkItemComment[]): Promise<Record<string, string>> {
