@@ -68,62 +68,17 @@ describe('renderConfig', () => {
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
 
-  it('does not show a team selector when there are 0 teams in cardSettingsByTeam', () => {
-    const html = renderConfig(state({ config: config() }));
+  it('does not show a team selector — it lives on the Home screen instead', () => {
+    const html = renderConfig(
+      state({
+        config: config({
+          cardSettingsByTeam: {
+            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
+            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
+          },
+        }),
+      }),
+    );
     expect(html).not.toContain('id="kb-team-select"');
-  });
-
-  it('shows a team selector with a single option when there is exactly one team in cardSettingsByTeam', () => {
-    const html = renderConfig(
-      state({ config: config({ cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } } }) }),
-    );
-    expect(html).toContain('id="kb-team-select"');
-    expect(html).toContain('<option value="Team 1"');
-  });
-
-  it('shows a team selector when there is more than one team in cardSettingsByTeam', () => {
-    const html = renderConfig(
-      state({
-        config: config({
-          cardSettingsByTeam: {
-            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
-            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
-          },
-        }),
-      }),
-    );
-    expect(html).toContain('id="kb-team-select"');
-    expect(html).toContain('<option value="Team 1"');
-    expect(html).toContain('<option value="Team 2"');
-  });
-
-  it('marks the selected team as selected in the dropdown', () => {
-    const html = renderConfig(
-      state({
-        config: config({
-          cardSettingsByTeam: {
-            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
-            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
-          },
-        }),
-        selectedTeam: 'Team 2',
-      }),
-    );
-    expect(html).toMatch(/<option value="Team 2" selected>/);
-  });
-
-  it('marks defaultTeam as selected when no explicit selection was made', () => {
-    const html = renderConfig(
-      state({
-        config: config({
-          defaultTeam: 'Team 1',
-          cardSettingsByTeam: {
-            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
-            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
-          },
-        }),
-      }),
-    );
-    expect(html).toMatch(/<option value="Team 1" selected>/);
   });
 });

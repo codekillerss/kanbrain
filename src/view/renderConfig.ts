@@ -1,24 +1,8 @@
 import type { RenderState } from './render';
 import { renderConfigEditor } from './renderConfigEditor';
-import { escapeHtml } from './escapeHtml';
 
 export function renderConfig(state: RenderState): string {
   const config = state.config!;
-  const teamNames = Object.keys(config.cardSettingsByTeam ?? {});
-  const selected = state.selectedTeam ?? config.defaultTeam;
-  const teamSelectHtml =
-    teamNames.length > 0
-      ? `
-    <label class="kb-select-row">
-      Team
-      <select id="kb-team-select">
-        ${teamNames
-          .map(name => `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`)
-          .join('')}
-      </select>
-    </label>
-  `
-      : '';
 
   return `
     <div class="kb-header kb-page-header">
@@ -29,7 +13,6 @@ export function renderConfig(state: RenderState): string {
       <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
       Show assignee in search results
     </label>
-    ${teamSelectHtml}
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">Skill Configuration</div>
       ${renderConfigEditor(config)}

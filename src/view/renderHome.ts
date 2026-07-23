@@ -1,5 +1,6 @@
 import type { RenderState } from './render';
 import { renderWorkItemCard } from './renderWorkItemCard';
+import { escapeHtml } from './escapeHtml';
 
 function renderHomeWorkItemSection(state: RenderState): string {
   const config = state.config!;
@@ -39,12 +40,35 @@ function renderHomeWorkItemSection(state: RenderState): string {
   `;
 }
 
+function renderHomeTeamSection(state: RenderState): string {
+  const config = state.config!;
+  const teamNames = Object.keys(config.cardSettingsByTeam ?? {});
+  if (teamNames.length === 0) {
+    return '';
+  }
+  const selected = state.selectedTeam ?? config.defaultTeam;
+
+  return `
+    <div class="kb-home-section">
+      <div class="kb-section-label">Team</div>
+      <div class="kb-team-card">
+        <select id="kb-team-select">
+          ${teamNames
+            .map(name => `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`)
+            .join('')}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
 export function renderHome(state: RenderState): string {
   return `
     <div class="kb-home-section">
       <div class="kb-section-label">Flow</div>
       ${renderHomeWorkItemSection(state)}
     </div>
+    ${renderHomeTeamSection(state)}
     <div class="kb-home-section">
       <div class="kb-section-label">Commands</div>
       <div class="kb-home-commands">

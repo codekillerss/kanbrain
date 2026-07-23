@@ -627,7 +627,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px; }
-      .kb-main-card, .kb-subtask-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-main-card, .kb-subtask-card, .kb-team-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
       .kb-card-header { display: flex; align-items: center; }
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
       .kb-type-icon svg { width: 100%; height: 100%; }
@@ -705,8 +706,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
-      .kb-select-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; }
-      .kb-select-row select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; padding: 2px 4px; }
       .kb-dev-label { display: flex; align-items: center; gap: 4px; }
       .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
       .kb-loading { opacity: 0.6; cursor: default; }
