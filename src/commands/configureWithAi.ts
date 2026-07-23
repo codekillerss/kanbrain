@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import { discoverBoardState } from '../azureDevOps/discoverBoardState';
+import { discoverWorkItemTypes } from '../azureDevOps/discoverWorkItemTypes';
 import { discoverBoardColumns } from '../azureDevOps/discoverBoardColumns';
 import { buildSetupAssistantContent } from '../skills/buildSetupAssistantFile';
 import { writeGeneratedFile } from '../skills/writeGeneratedFile';
@@ -17,9 +17,9 @@ export async function configureWithAi(client: AzureDevOpsClient, workspaceRoot: 
   let content: string;
   try {
     const team = await client.getDefaultTeamName(config.organization, config.project);
-    const discovered = await discoverBoardState(client, config.organization, config.project);
+    const types = await discoverWorkItemTypes(client, config.organization, config.project);
     const boards = await discoverBoardColumns(client, config.organization, config.project, team);
-    content = buildSetupAssistantContent(config.organization, config.project, discovered, boards);
+    content = buildSetupAssistantContent(config.organization, config.project, types, boards);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`Could not read the project's board configuration: ${message}`);

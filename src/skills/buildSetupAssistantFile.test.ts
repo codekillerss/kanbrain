@@ -1,31 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import { buildSetupAssistantContent } from './buildSetupAssistantFile';
-import type { BoardState } from '../azureDevOps/discoverBoardState';
+import type { DiscoveredWorkItemType } from '../azureDevOps/discoverWorkItemTypes';
 import type { DiscoveredBoard } from '../azureDevOps/discoverBoardColumns';
 
-function boardState(overrides: Partial<BoardState> = {}): BoardState {
-  return {
-    levels: [{ name: 'Stories', workItemTypes: ['User Story'] }],
-    statesByType: { 'User Story': [{ name: 'New', category: 'Proposed', color: 'b2b2b2' }] },
-    typeColors: {},
-    typeIcons: {},
-    ...overrides,
-  };
+function types(overrides: Partial<DiscoveredWorkItemType>[] = []): DiscoveredWorkItemType[] {
+  if (overrides.length > 0) {
+    return overrides.map(o => ({ name: 'User Story', color: 'b2b2b2', iconSvg: '', states: [], ...o }));
+  }
+  return [
+    { name: 'User Story', color: 'b2b2b2', iconSvg: '', states: [{ name: 'New', category: 'Proposed', color: 'b2b2b2' }] },
+  ];
 }
 
 describe('buildSetupAssistantContent', () => {
   it('includes the organization and project', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('my-org');
     expect(content).toContain('MyProject');
   });
 
-  it('includes each backlog level, work item type, and status with its category', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+  it('includes each work item type and status with its category, with no backlog-level grouping', () => {
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
-    expect(content).toContain('Stories');
-    expect(content).toContain('User Story');
+    expect(content).toContain('### User Story');
     expect(content).toContain('New (Proposed)');
   });
 
@@ -36,7 +34,7 @@ describe('buildSetupAssistantContent', () => {
         columns: [{ name: 'Doing', columnType: 'inProgress', stateMappings: { 'User Story': 'Committed' } }],
       },
     ];
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), boards);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), boards);
 
     expect(content).toContain('MyProject Team Board');
     expect(content).toContain('Doing');
@@ -44,13 +42,13 @@ describe('buildSetupAssistantContent', () => {
   });
 
   it('notes when no boards were found', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('No boards were found');
   });
 
   it('includes all four instructional sections', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('## How Kanbrain works');
     expect(content).toContain('## Important nuance');
@@ -59,7 +57,7 @@ describe('buildSetupAssistantContent', () => {
   });
 
   it('is assertive that Kanbrain only supports one skill per status, never per board column', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('one skill per status, per work item type');
     expect(content).not.toContain('ask them how they want Kanbrain to work');
@@ -67,14 +65,14 @@ describe('buildSetupAssistantContent', () => {
   });
 
   it('instructs the agent to rename auto-generated labels to the real flow step', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('`label`');
     expect(content).toContain('auto-generated');
   });
 
   it('instructs the agent to propose labels from the real board column names before asking the user', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('Propose a first draft');
     expect(content).toContain('Boards and columns');
@@ -82,13 +80,13 @@ describe('buildSetupAssistantContent', () => {
   });
 
   it('only falls back to asking the user when a status has no clear column name to infer from', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('Only fall back to asking');
   });
 
   it('instructs the agent to write real instructions into each skill file using the template placeholders', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('real, useful instructions');
     expect(content).toContain('{{id}}');
@@ -96,7 +94,7 @@ describe('buildSetupAssistantContent', () => {
   });
 
   it('instructs the agent to delete skill files no longer referenced by the final mapping', () => {
-    const content = buildSetupAssistantContent('my-org', 'MyProject', boardState(), []);
+    const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
     expect(content).toContain('delete');
     expect(content).toContain('.kanbrain/skills/');
