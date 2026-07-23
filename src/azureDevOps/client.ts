@@ -1,7 +1,7 @@
 import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
-import type { BacklogLevel, WorkItemTypeState, WorkItemTypeIcon } from './backlogLevels';
+import type { WorkItemTypeState } from './backlogLevels';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
 
 export interface AzureDevOpsClientDeps {
@@ -196,15 +196,6 @@ export class AzureDevOpsClient {
     return data.defaultTeam.name;
   }
 
-  async listBacklogLevels(organization: string, project: string, team: string): Promise<BacklogLevel[]> {
-    const data = await this.request<{
-      value: { name: string; isHidden?: boolean; workItemTypes?: { name: string }[] }[];
-    }>(`https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/backlogs?api-version=7.1`);
-    return data.value
-      .filter(level => !level.isHidden && (level.workItemTypes?.length ?? 0) > 0)
-      .map(level => ({ name: level.name, workItemTypes: (level.workItemTypes ?? []).map(t => t.name) }));
-  }
-
   async listWorkItemTypeStates(organization: string, project: string, type: string): Promise<WorkItemTypeState[]> {
     const data = await this.request<{ value: { name: string; category: string; color: string }[] }>(
       `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}/states?api-version=7.1`,
@@ -212,15 +203,22 @@ export class AzureDevOpsClient {
     return data.value.map(s => ({ name: s.name, category: s.category, color: s.color }));
   }
 
-  async getWorkItemTypeIcon(organization: string, project: string, type: string): Promise<WorkItemTypeIcon | null> {
-    const typeInfo = await this.request<{ color?: string; icon?: { url: string } }>(
-      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes/${encodeURIComponent(type)}?api-version=7.1`,
+  async listWorkItemTypes(organization: string, project: string): Promise<{ name: string; color: string; iconUrl: string }[]> {
+    const data = await this.request<{ value: { name: string; color: string; icon?: { url: string }; isDisabled: boolean }[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitemtypes?api-version=7.1`,
     );
-    if (!typeInfo.icon?.url) {
-      return null;
-    }
-    const iconSvg = await this.requestText(typeInfo.icon.url);
-    return { color: typeInfo.color ?? '', iconSvg };
+    return data.value.filter(t => !t.isDisabled && t.icon?.url).map(t => ({ name: t.name, color: t.color, iconUrl: t.icon!.url }));
+  }
+
+  async getIconSvg(iconUrl: string): Promise<string> {
+    return this.requestText(iconUrl);
+  }
+
+  async listTeams(organization: string, project: string): Promise<{ id: string; name: string }[]> {
+    const data = await this.request<{ value: { id: string; name: string }[] }>(
+      `https://dev.azure.com/${organization}/_apis/projects/${project}/teams?api-version=7.1`,
+    );
+    return data.value.map(t => ({ id: t.id, name: t.name }));
   }
 
   async listBoards(organization: string, project: string, team: string): Promise<AzureDevOpsBoard[]> {

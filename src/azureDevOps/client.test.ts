@@ -149,31 +149,6 @@ describe('AzureDevOpsClient', () => {
     expect(children[0].id).toBe(101);
   });
 
-  it('lists backlog levels for a team, skipping hidden ones and ones without work item types', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(
-      jsonResponse({
-        value: [
-          { name: 'Epics', isHidden: false, workItemTypes: [{ name: 'Epic' }] },
-          { name: 'Stories', isHidden: false, workItemTypes: [{ name: 'User Story' }, { name: 'Bug' }] },
-          { name: 'Hidden Level', isHidden: true, workItemTypes: [{ name: 'Ghost' }] },
-          { name: 'Empty Level', isHidden: false, workItemTypes: [] },
-        ],
-      }),
-    );
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const levels = await client.listBacklogLevels('my-org', 'MyProject', 'MyProject Team');
-
-    expect(levels).toEqual([
-      { name: 'Epics', workItemTypes: ['Epic'] },
-      { name: 'Stories', workItemTypes: ['User Story', 'Bug'] },
-    ]);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/backlogs?api-version=7.1',
-      expect.anything(),
-    );
-  });
-
   it("gets the project's default team name", async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({ id: 'p1', name: 'MyProject', defaultTeam: { id: 't1', name: 'MyProject Team' } }),
@@ -210,42 +185,6 @@ describe('AzureDevOpsClient', () => {
       'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/User%20Story/states?api-version=7.1',
       expect.anything(),
     );
-  });
-
-  it('fetches a work item type icon (type info, then the icon svg)', async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          color: 'CC293D',
-          icon: { id: 'icon_insect', url: 'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect?color=CC293D&v=2' },
-        }),
-      )
-      .mockResolvedValueOnce(textResponse('<svg><path d="M0 0"/></svg>'));
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const icon = await client.getWorkItemTypeIcon('my-org', 'MyProject', 'Bug');
-
-    expect(icon).toEqual({ color: 'CC293D', iconSvg: '<svg><path d="M0 0"/></svg>' });
-    expect(fetchImpl).toHaveBeenNthCalledWith(
-      1,
-      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes/Bug?api-version=7.1',
-      expect.anything(),
-    );
-    expect(fetchImpl).toHaveBeenNthCalledWith(
-      2,
-      'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect?color=CC293D&v=2',
-      expect.anything(),
-    );
-  });
-
-  it('returns null when the work item type has no icon', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ color: 'CC293D' }));
-    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
-
-    const icon = await client.getWorkItemTypeIcon('my-org', 'MyProject', 'Bug');
-
-    expect(icon).toBeNull();
   });
 
   it('lists boards for a team', async () => {
@@ -508,5 +447,70 @@ describe('AzureDevOpsClient.getPullRequest', () => {
     const pr = await client.getPullRequest('my-org', 'MyProject', 'repo-1', 57);
 
     expect(pr).toBeNull();
+  });
+});
+
+describe('AzureDevOpsClient.listWorkItemTypes', () => {
+  it('maps name/color/icon.url, skipping disabled types and types without an icon', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { name: 'Bug', color: 'CC293D', icon: { url: 'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect' }, isDisabled: false },
+          { name: 'Old Type', color: '000000', icon: { url: 'https://example.com/icon' }, isDisabled: true },
+          { name: 'No Icon Type', color: '000000', isDisabled: false },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const types = await client.listWorkItemTypes('my-org', 'MyProject');
+
+    expect(types).toEqual([
+      { name: 'Bug', color: 'CC293D', iconUrl: 'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitemtypes?api-version=7.1',
+      expect.anything(),
+    );
+  });
+});
+
+describe('AzureDevOpsClient.getIconSvg', () => {
+  it('fetches the raw svg text from the given icon url', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(textResponse('<svg><path d="M0 0"/></svg>'));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const svg = await client.getIconSvg('https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect');
+
+    expect(svg).toBe('<svg><path d="M0 0"/></svg>');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/wit/workItemIcons/icon_insect',
+      expect.anything(),
+    );
+  });
+});
+
+describe('AzureDevOpsClient.listTeams', () => {
+  it('maps id/name for every team in the project', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 't1', name: 'Team 1' },
+          { id: 't2', name: 'Team 2' },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const teams = await client.listTeams('my-org', 'MyProject');
+
+    expect(teams).toEqual([
+      { id: 't1', name: 'Team 1' },
+      { id: 't2', name: 'Team 2' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/projects/MyProject/teams?api-version=7.1',
+      expect.anything(),
+    );
   });
 });
