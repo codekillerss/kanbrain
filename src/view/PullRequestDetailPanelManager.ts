@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
+import type { WorkItemComment } from '../azureDevOps/workItemDetail';
 import { readConfig } from '../config/config';
 import { renderPullRequestDetail } from './renderPullRequestDetail';
 import { detailPanelCss } from './detailPanelCss';
@@ -9,6 +10,7 @@ const POLL_INTERVAL_MS = 5000;
 export class PullRequestDetailPanelManager {
   private panels = new Map<string, vscode.WebviewPanel>();
   private lastStateByPanel = new Map<string, string>();
+  private avatarCache = new Map<string, string | null>();
   private pollHandle: ReturnType<typeof setInterval> | undefined;
 
   constructor(
@@ -74,15 +76,37 @@ export class PullRequestDetailPanelManager {
     }
 
     const workItems = pr.workItemIds.length ? await this.client.getWorkItems(config.organization, config.project, pr.workItemIds) : [];
+    const comments = await this.client
+      .getPullRequestThreadComments(config.organization, config.project, repositoryId, pullRequestId)
+      .catch(() => []);
+    const avatars = await this.resolveAvatars(comments);
 
-    const stateKey = JSON.stringify({ pr, workItems });
+    const stateKey = JSON.stringify({ pr, workItems, comments, avatars });
     if (this.lastStateByPanel.get(key) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(key, stateKey);
 
     panel.title = `PR #${pr.id} ${pr.title}`;
-    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config }));
+    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, comments, avatars }));
+  }
+
+  private async resolveAvatars(comments: WorkItemComment[]): Promise<Record<string, string>> {
+    const urls = [...new Set(comments.map(c => c.createdBy.imageUrl).filter((u): u is string => !!u))];
+    const uncached = urls.filter(u => !this.avatarCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.avatarCache.set(url, await this.client.getAvatarDataUri(url));
+      }),
+    );
+    const resolved: Record<string, string> = {};
+    for (const url of urls) {
+      const dataUri = this.avatarCache.get(url);
+      if (dataUri) {
+        resolved[url] = dataUri;
+      }
+    }
+    return resolved;
   }
 
   private wrapHtml(body: string): string {

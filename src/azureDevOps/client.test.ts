@@ -366,6 +366,85 @@ describe('AzureDevOpsClient.getComments', () => {
   });
 });
 
+describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
+  it('flattens comments from all threads, keeping only real user text comments', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            comments: [
+              {
+                id: 1,
+                content: 'Normal Paulk voted 10',
+                author: { displayName: 'Service Account' },
+                publishedDate: '2026-01-01T00:00:00Z',
+                commentType: 'system',
+              },
+            ],
+          },
+          {
+            comments: [
+              {
+                id: 1,
+                content: 'This looks good!',
+                author: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' },
+                publishedDate: '2026-01-02T00:00:00Z',
+                commentType: 'text',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(comments).toEqual([
+      { id: 1, text: 'This looks good!', createdBy: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' }, createdDate: '2026-01-02T00:00:00Z' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/repositories/repo-1/pullRequests/57/threads?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('excludes deleted comments', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            comments: [
+              { id: 1, content: 'Deleted', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text', isDeleted: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(comments).toEqual([]);
+  });
+
+  it('sorts comments chronologically across threads', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { comments: [{ id: 1, content: 'Second', author: { displayName: 'Bob' }, publishedDate: '2026-01-02T00:00:00Z', commentType: 'text' }] },
+          { comments: [{ id: 1, content: 'First', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }] },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(comments.map(c => c.text)).toEqual(['First', 'Second']);
+  });
+});
+
 describe('AzureDevOpsClient.getCardSettings', () => {
   it('maps each work item type to whether Parent and AssignedTo field identifiers are present', async () => {
     // Real shape (confirmed against the documented card-fields payload): cards[type] is a flat

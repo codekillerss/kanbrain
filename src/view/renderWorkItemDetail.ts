@@ -3,10 +3,11 @@ import type { DetailGroup, DetailField, WorkItemComment } from '../azureDevOps/w
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
-import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
+import { renderAssigneeRow } from './renderAssignee';
 import { renderDevelopmentSection } from './renderDevelopment';
 import { renderRelatedWorkSection } from './renderRelatedWork';
 import { isValidHexColor, normalizeHex } from './badgeColor';
+import { renderComment } from './renderComment';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -60,22 +61,6 @@ function renderHtmlSection(field: DetailField): string {
     <div class="kb-detail-html-section">
       <div class="kb-detail-section-label">${escapeHtml(field.label)}</div>
       <div class="kb-detail-html-body">${value}</div>
-    </div>
-  `;
-}
-
-function renderComment(comment: WorkItemComment, avatars: Record<string, string>): string {
-  const avatarHtml = renderAvatarOrInitial(comment.createdBy.displayName, comment.createdBy.imageUrl, avatars);
-  const date = new Date(comment.createdDate);
-  const dateLabel = Number.isNaN(date.getTime()) ? comment.createdDate : date.toLocaleString();
-  return `
-    <div class="kb-comment">
-      <div class="kb-comment-header">
-        ${avatarHtml}
-        <span class="kb-comment-author">${escapeHtml(comment.createdBy.displayName)}</span>
-        <span class="kb-comment-date">${escapeHtml(dateLabel)}</span>
-      </div>
-      <div class="kb-comment-body">${stripScriptTags(comment.text)}</div>
     </div>
   `;
 }

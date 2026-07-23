@@ -191,6 +191,34 @@ export class AzureDevOpsClient {
       .sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
   }
 
+  async getPullRequestThreadComments(
+    organization: string,
+    project: string,
+    repositoryId: string,
+    pullRequestId: number,
+  ): Promise<WorkItemComment[]> {
+    interface RawComment {
+      id: number;
+      content?: string;
+      author?: unknown;
+      publishedDate: string;
+      commentType?: string;
+      isDeleted?: boolean;
+    }
+    interface RawThread {
+      comments?: RawComment[];
+    }
+    const data = await this.request<{ value?: RawThread[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repositoryId}/pullRequests/${pullRequestId}/threads?api-version=7.1`,
+    );
+    const threads = data.value ?? [];
+    return threads
+      .flatMap(t => t.comments ?? [])
+      .filter(c => c.commentType === 'text' && !c.isDeleted)
+      .map(c => ({ id: c.id, text: c.content ?? '', createdBy: mapIdentityRef(c.author), createdDate: c.publishedDate }))
+      .sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
+  }
+
   async getDefaultTeamName(organization: string, project: string): Promise<string> {
     const data = await this.request<{ defaultTeam?: { name: string } }>(
       `https://dev.azure.com/${organization}/_apis/projects/${project}?api-version=7.1`,

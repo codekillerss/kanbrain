@@ -56,5 +56,6 @@ export function detailPanelCss(): string {
     .kb-pr-reviewer { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
     .kb-pr-vote { opacity: 0.75; font-size: 12px; }
     .kb-pr-required-tag { font-size: 10px; text-transform: uppercase; opacity: 0.6; }
+    .kb-pr-comments .kb-comment-body { white-space: pre-wrap; }
   `;
 }

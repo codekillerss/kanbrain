@@ -1,7 +1,9 @@
 import type { WorkItem, KanbrainConfig, PullRequestDetail, PullRequestReviewer } from '../types';
+import type { WorkItemComment } from '../azureDevOps/workItemDetail';
 import { escapeHtml } from './escapeHtml';
 import { renderTypeAccent } from './renderTypeAccent';
 import { capitalize } from './renderDevelopment';
+import { renderComment } from './renderComment';
 
 const VOTE_LABELS: Record<number, string> = {
   10: 'Approved',
@@ -34,11 +36,19 @@ export interface PullRequestDetailInput {
   pr: PullRequestDetail;
   workItems: WorkItem[];
   config: KanbrainConfig;
+  comments: WorkItemComment[];
+  avatars: Record<string, string>;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config } = input;
+  const { pr, workItems, config, comments, avatars } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
+  // PR thread comment content is plain text/Markdown, unlike work item comments (already-safe HTML
+  // from Azure DevOps' rich text editor) — escape it before handing it to renderComment, which only
+  // strips <script> tags and otherwise trusts its input as HTML.
+  const commentsHtml = comments.length
+    ? comments.map(c => renderComment({ ...c, text: escapeHtml(c.text) }, avatars)).join('')
+    : '<div class="kb-empty">No comments.</div>';
 
   return `
     <div class="kb-detail-header">
@@ -67,6 +77,10 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
             : ''
         }
       </div>
+    </div>
+    <div class="kb-detail-section-label">Discussion</div>
+    <div class="kb-comments kb-pr-comments">
+      ${commentsHtml}
     </div>
   `;
 }
