@@ -636,7 +636,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
       .kb-search-tab-empty { opacity: 0.5; }
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
-      .kb-section-card-current { border-image: linear-gradient(135deg, var(--vscode-focusBorder), var(--vscode-panel-border)) 1; }
+      .kb-section-card-current {
+        border-color: transparent;
+        background:
+          linear-gradient(var(--vscode-editor-background), var(--vscode-editor-background)) padding-box,
+          linear-gradient(135deg, var(--vscode-focusBorder), var(--vscode-panel-border)) border-box;
+      }
       .kb-section-card .kb-section-label { margin: 0; border-radius: 0; }
       .kb-section-card .kb-home-commands, .kb-section-card .kb-card-wrapper, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
       .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card { margin: 8px 10px; }
