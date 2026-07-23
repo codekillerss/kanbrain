@@ -40,11 +40,11 @@ export interface CardFieldSettings {
 export interface KanbrainConfig {
   organization: string;
   project: string;
-  typeToBacklogLevel: Record<string, string>;
-  backlogLevels: Record<string, Record<string, SkillEntry | null>>;
+  defaultTeam: string;
+  skills: Record<string, Record<string, SkillEntry | null>>;
   statusColors: Record<string, string>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
-  cardSettingsByBoard?: Record<string, Record<string, CardFieldSettings>>;
+  cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
   showAssignedTo?: boolean;
 }
