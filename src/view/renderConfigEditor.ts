@@ -13,14 +13,14 @@ function renderColorField(field: 'textColor' | 'buttonColor', value: string, pla
   `;
 }
 
-function renderSkillEntryRow(level: string, status: string, entry: SkillEntry | null, statusColors: Record<string, string>): string {
+function renderSkillEntryRow(type: string, status: string, entry: SkillEntry | null, statusColors: Record<string, string>): string {
   const path = entry?.path ?? '';
   const label = entry?.label ?? '';
   const textColor = entry?.textColor ?? '';
   const buttonColor = entry?.buttonColor ?? '';
 
   return `
-    <div class="kb-config-row" data-level="${escapeHtml(level)}" data-status="${escapeHtml(status)}">
+    <div class="kb-config-row" data-level="${escapeHtml(type)}" data-status="${escapeHtml(status)}">
       <div class="kb-config-row-status">${renderStatusDot(status, statusColors)}${escapeHtml(status)}</div>
       <div class="kb-config-field-path">
         <input type="text" class="kb-input" data-field="path" placeholder="Skill file path" value="${escapeHtml(path)}">
@@ -34,21 +34,21 @@ function renderSkillEntryRow(level: string, status: string, entry: SkillEntry | 
 }
 
 export function renderConfigEditor(config: KanbrainConfig): string {
-  const levels = Object.keys(config.backlogLevels);
-  if (levels.length === 0) {
-    return '<div class="kb-empty">No backlog levels configured yet.</div>';
+  const types = Object.keys(config.skills);
+  if (types.length === 0) {
+    return '<div class="kb-empty">No work item types configured yet.</div>';
   }
 
-  return levels
-    .map(level => {
-      const statuses = config.backlogLevels[level];
+  return types
+    .map(type => {
+      const statuses = config.skills[type];
       const rows = Object.keys(statuses)
-        .map(status => renderSkillEntryRow(level, status, statuses[status], config.statusColors ?? {}))
+        .map(status => renderSkillEntryRow(type, status, statuses[status], config.statusColors ?? {}))
         .join('');
       return `
         <div class="kb-config-level">
           <button type="button" class="kb-config-level-header" data-action="toggle-group">
-            <span class="kb-chevron">▾</span>${escapeHtml(level)}
+            <span class="kb-chevron">▾</span>${escapeHtml(type)}
           </button>
           <div class="kb-config-level-body kb-hidden">
             ${rows}
