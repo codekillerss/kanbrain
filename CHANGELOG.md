@@ -2,6 +2,32 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.4.0] - 2026-07-23
+
+### Added
+
+- Pull Request detail panel — opened from a Development section link, it shows title, status (including Draft), source/target branches, description, reviewers (with vote and Required/Optional tags), and linked work items.
+- Discussion section on the PR detail panel with real comment threads: file/line context for code-review comments, threaded replies indented under their parent, and each thread's status (Active/Fixed/Won't Fix/Closed/By Design/Pending).
+- "View Diff" button on the PR detail panel that opens GitLens's Search & Compare view for the PR's branches when GitLens is installed; shows an "Install GitLens to view diffs inline" suggestion instead when it isn't.
+- Click a branch (in the Development section or the PR detail panel) to check it out locally, with a confirmation prompt that warns if it doesn't look like the currently open repository.
+- Related Work section on the work item detail panel, showing the parent and children as clickable links that open their own detail panel; the panel now polls and auto-refreshes to stay in sync with Azure DevOps.
+- Development section (linked branches/PRs) now shows as a compact badge on cards, with the full itemized list — grouped, paginated, with per-kind icons — in the work item detail panel.
+- On the Flow screen, a work item's parent now renders as its own full card above the current item, with a pick-work-item button to jump to it directly.
+- Task-backlog work item cards always show the assignee, regardless of a team's card field settings.
+
+### Changed
+
+- Flow screen's Current Work Item, Parent, and Children sections each get a distinct border color and a fade-only border style.
+- Card layout: title now sits next to the id, and status is shown before the assignee.
+- Card details header reflowed, with a status color stripe.
+- Home screen's Flow section Switch/Clear buttons moved into the section header.
+
+### Fixed
+
+- `ArtifactLink` vstfs URLs using the real `%2F`-encoded separator are now parsed correctly (previously could fail to resolve some linked branches/PRs).
+- Status dot styling in the card details panel; parent row now appears after status/assignee on cards.
+- Current Work Item card's rounded corners no longer clipped by the fade border; removed a vestigial wrapper that was doubling its lateral margin.
+
 ## [0.3.0] - 2026-07-23
 
 ### Added
