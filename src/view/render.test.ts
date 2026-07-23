@@ -121,6 +121,13 @@ describe('render', () => {
     expect(html).not.toContain('kb-card-actions');
   });
 
+  it('marks the Current Work Item and Children section cards with their own modifier classes', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+    expect(html).toContain('kb-section-card kb-section-card-current');
+    expect(html).toContain('kb-section-card kb-section-card-children');
+  });
+
   it('only shows the Home button in the header, not Switch/Clear', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     const headerStart = html.indexOf('kb-page-header');

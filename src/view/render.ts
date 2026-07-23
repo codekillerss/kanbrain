@@ -82,7 +82,7 @@ export function render(state: RenderState): string {
       </div>
     </div>
     ${parentSectionHtml}
-    <div class="kb-section-card">
+    <div class="kb-section-card kb-section-card-current">
       <div class="kb-section-label">
         <span>Current Work Item</span>
         <div class="kb-section-actions">
@@ -94,7 +94,7 @@ export function render(state: RenderState): string {
         ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
       </div>
     </div>
-    <div class="kb-section-card">
+    <div class="kb-section-card kb-section-card-children">
       <div class="kb-section-label">Children (${state.subtasks.length})</div>
       ${subtasksHtml}
     </div>
