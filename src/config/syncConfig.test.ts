@@ -25,6 +25,7 @@ describe('syncConfig', () => {
       { Task: '<svg>new</svg>' },
       'MyProject Team',
       { 'MyProject Team': { Tasks: { Task: { parent: true, assignedTo: true } } } },
+      { 'MyProject Team': ['Task'] },
     );
 
     expect(result.statusColors).toEqual({ 'To Do': 'new-color' });
@@ -34,13 +35,13 @@ describe('syncConfig', () => {
   });
 
   it('keeps organization and project unchanged', () => {
-    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
     expect(result.organization).toBe('org');
     expect(result.project).toBe('proj');
   });
 
   it('preserves an existing skill mapping for a status that still exists for that type', () => {
-    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed', Done: 'Completed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed', Done: 'Completed' } }, {}, {}, {}, 'MyProject Team', {}, {});
     expect(result.skills.Task['To Do']).toEqual({ path: '.kanbrain/skills/task-todo.md' });
     expect(result.skills.Task.Done).toBeNull();
   });
@@ -54,6 +55,7 @@ describe('syncConfig', () => {
       {},
       'MyProject Team',
       {},
+      {},
     );
     expect(result.skills.Task.Cancelled).toBeNull();
   });
@@ -64,7 +66,7 @@ describe('syncConfig', () => {
         Task: { 'To Do': { path: '.kanbrain/skills/task-todo.md' }, Legacy: { path: '.kanbrain/skills/legacy.md' } },
       },
     });
-    const result = syncConfig(withOrphan, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(withOrphan, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
 
     expect(result.skills.Task.Legacy).toEqual({ path: '.kanbrain/skills/legacy.md' });
     expect(result.skills.Task['To Do']).toEqual({ path: '.kanbrain/skills/task-todo.md' });
@@ -74,7 +76,7 @@ describe('syncConfig', () => {
     const withOrphanType = config({
       skills: { Task: { 'To Do': null }, Bug: { New: { path: '.kanbrain/skills/bug-new.md' } } },
     });
-    const result = syncConfig(withOrphanType, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(withOrphanType, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
 
     expect(result.skills.Bug).toEqual({ New: { path: '.kanbrain/skills/bug-new.md' } });
   });
@@ -88,6 +90,7 @@ describe('syncConfig', () => {
       {},
       'MyProject Team',
       {},
+      {},
     );
     expect(result.skills.Bug).toEqual({ New: null });
   });
@@ -98,7 +101,7 @@ describe('syncConfig', () => {
         Task: { 'To Do': { path: '.kanbrain/skills/task-todo.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' } },
       },
     });
-    const result = syncConfig(withCustomization, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(withCustomization, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
 
     expect(result.skills.Task['To Do']).toEqual({
       path: '.kanbrain/skills/task-todo.md',
@@ -109,12 +112,12 @@ describe('syncConfig', () => {
   });
 
   it('preserves showAssignedTo across a sync', () => {
-    const result = syncConfig(config({ showAssignedTo: false }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(config({ showAssignedTo: false }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
     expect(result.showAssignedTo).toBe(false);
   });
 
   it('leaves showAssignedTo undefined when it was never set', () => {
-    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {});
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {});
     expect(result.showAssignedTo).toBeUndefined();
   });
 
@@ -128,8 +131,25 @@ describe('syncConfig', () => {
       {},
       'MyProject Team',
       { 'MyProject Team': { Tasks: { Task: { parent: true, assignedTo: true } } } },
+      {},
     );
 
     expect(result.cardSettingsByTeam).toEqual({ 'MyProject Team': { Tasks: { Task: { parent: true, assignedTo: true } } } });
+  });
+
+  it('replaces taskBacklogTypesByTeam with the fresh value, discarding the previous one', () => {
+    const withOldSettings = config({ taskBacklogTypesByTeam: { 'Old Team': ['Task'] } });
+    const result = syncConfig(
+      withOldSettings,
+      { Task: { 'To Do': 'Proposed' } },
+      {},
+      {},
+      {},
+      'MyProject Team',
+      {},
+      { 'MyProject Team': ['Task', 'Bug'] },
+    );
+
+    expect(result.taskBacklogTypesByTeam).toEqual({ 'MyProject Team': ['Task', 'Bug'] });
   });
 });

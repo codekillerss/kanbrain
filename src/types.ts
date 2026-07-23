@@ -46,6 +46,7 @@ export interface KanbrainConfig {
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
   cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
+  taskBacklogTypesByTeam?: Record<string, string[]>;
   showAssignedTo?: boolean;
   lastSyncedVersion?: string;
 }

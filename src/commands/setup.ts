@@ -63,7 +63,7 @@ export function registerSetupCommand(
       );
       return;
     }
-    const { discoveredStatusesByType, typeColors, typeIcons, defaultTeam, cardSettingsByTeam } = boardState;
+    const { discoveredStatusesByType, typeColors, typeIcons, defaultTeam, cardSettingsByTeam, taskBacklogTypesByTeam } = boardState;
 
     let types;
     try {
@@ -112,6 +112,7 @@ export function registerSetupCommand(
       typeColors,
       typeIcons,
       cardSettingsByTeam,
+      taskBacklogTypesByTeam,
       lastSyncedVersion: extensionVersion,
     });
 
