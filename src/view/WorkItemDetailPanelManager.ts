@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { WorkItem } from '../types';
+import type { WorkItem, KanbrainConfig, DevelopmentLink, PullRequestDetails } from '../types';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import type { WorkItemComment } from '../azureDevOps/workItemDetail';
 import { resolveDetailFields } from '../azureDevOps/workItemDetail';
@@ -9,6 +9,7 @@ import { renderWorkItemDetail } from './renderWorkItemDetail';
 export class WorkItemDetailPanelManager {
   private panels = new Map<number, vscode.WebviewPanel>();
   private avatarCache = new Map<string, string | null>();
+  private prCache = new Map<string, PullRequestDetails | null>();
 
   constructor(
     private readonly workspaceRoot: string,
@@ -39,7 +40,10 @@ export class WorkItemDetailPanelManager {
     ]);
 
     const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
-    const avatars = await this.resolveAvatars(workItem, comments);
+    const [avatars, prDetails] = await Promise.all([
+      this.resolveAvatars(workItem, comments),
+      this.resolvePullRequestDetails(workItem, config),
+    ]);
 
     const panel = vscode.window.createWebviewPanel('kanbrain.workItemDetail', `#${workItem.id} ${workItem.title}`, vscode.ViewColumn.Active, {
       enableScripts: false,
@@ -53,6 +57,7 @@ export class WorkItemDetailPanelManager {
         htmlSections,
         comments,
         avatars,
+        prDetails,
       }),
     );
     panel.onDidDispose(() => this.panels.delete(id));
@@ -74,6 +79,28 @@ export class WorkItemDetailPanelManager {
       const dataUri = this.avatarCache.get(url);
       if (dataUri) {
         resolved[url] = dataUri;
+      }
+    }
+    return resolved;
+  }
+
+  private async resolvePullRequestDetails(workItem: WorkItem, config: KanbrainConfig): Promise<Record<string, PullRequestDetails>> {
+    const prLinks = workItem.development.filter((d): d is Extract<DevelopmentLink, { kind: 'pullRequest' }> => d.kind === 'pullRequest');
+    const uncached = prLinks.filter(link => !this.prCache.has(`${link.repositoryId}:${link.pullRequestId}`));
+
+    await Promise.all(
+      uncached.map(async link => {
+        const key = `${link.repositoryId}:${link.pullRequestId}`;
+        this.prCache.set(key, await this.client.getPullRequest(config.organization, config.project, link.repositoryId, link.pullRequestId));
+      }),
+    );
+
+    const resolved: Record<string, PullRequestDetails> = {};
+    for (const link of prLinks) {
+      const key = `${link.repositoryId}:${link.pullRequestId}`;
+      const details = this.prCache.get(key);
+      if (details) {
+        resolved[key] = details;
       }
     }
     return resolved;
@@ -124,6 +151,8 @@ export class WorkItemDetailPanelManager {
       .kb-comment-author { font-weight: 600; }
       .kb-comment-date { opacity: 0.7; }
       .kb-comment-body { line-height: 1.5; }
+      .kb-dev-label { display: flex; align-items: center; gap: 4px; }
+      .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
     `;
   }
 }

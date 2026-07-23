@@ -38,6 +38,7 @@ function input(overrides: Partial<WorkItemDetailInput> = {}): WorkItemDetailInpu
     htmlSections: [],
     comments: [],
     avatars: {},
+    prDetails: {},
     ...overrides,
   };
 }
@@ -127,6 +128,22 @@ describe('renderWorkItemDetail', () => {
 
     expect(html).not.toContain('<script>');
     expect(html).toContain('ok');
+  });
+
+  it('does not show a Development section when the work item has no development links', () => {
+    const html = renderWorkItemDetail(input());
+    expect(html).not.toContain('kb-dev-label');
+  });
+
+  it('shows the Development section with resolved pull request details when the work item has development links', () => {
+    const html = renderWorkItemDetail(
+      input({
+        workItem: workItem({ development: [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }] }),
+        prDetails: { 'repo-1:57': { title: 'Fix login bug', status: 'active' } },
+      }),
+    );
+    expect(html).toContain('kb-dev-label');
+    expect(html).toContain('#57 Fix login bug (Active)');
   });
 });
 

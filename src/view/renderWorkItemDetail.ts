@@ -1,9 +1,10 @@
-import type { WorkItem, KanbrainConfig } from '../types';
+import type { WorkItem, KanbrainConfig, PullRequestDetails } from '../types';
 import type { DetailGroup, DetailField, WorkItemComment } from '../azureDevOps/workItemDetail';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
+import { renderDevelopmentSection } from './renderDevelopment';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -85,10 +86,11 @@ export interface WorkItemDetailInput {
   htmlSections: DetailField[];
   comments: WorkItemComment[];
   avatars: Record<string, string>;
+  prDetails: Record<string, PullRequestDetails>;
 }
 
 export function renderWorkItemDetail(input: WorkItemDetailInput): string {
-  const { workItem, config, description, groups, htmlSections, comments, avatars } = input;
+  const { workItem, config, description, groups, htmlSections, comments, avatars, prDetails } = input;
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = renderAssigneeRow(workItem.assignedTo, avatars, 'kb-detail-assignee');
 
@@ -115,6 +117,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
       </div>
       <div class="kb-detail-side">
         ${groups.map(renderDetailGroup).join('')}
+        ${renderDevelopmentSection(workItem.development, prDetails)}
       </div>
     </div>
     <div class="kb-detail-section-label">Discussion</div>
