@@ -44,25 +44,25 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: 
 export function renderSearchResults(
   items: WorkItem[],
   config: KanbrainConfig,
-  backlogLevelCounts: Record<string, number>,
+  typeCounts: Record<string, number>,
   avatars: Record<string, string> = {},
 ): string {
   if (items.length === 0) {
     return '<div class="kb-empty">No work items found.</div>';
   }
 
-  const levels = Object.keys(config.backlogLevels);
-  if (levels.length === 0) {
+  const types = Object.keys(config.skills);
+  if (types.length === 0) {
     return renderStatusGroups(items, config, avatars);
   }
 
   const tabs = [
     { id: 'all', label: 'All', count: items.length, items },
-    ...levels.map(level => ({
-      id: level,
-      label: level,
-      count: backlogLevelCounts[level] ?? 0,
-      items: items.filter(item => config.typeToBacklogLevel[item.type] === level),
+    ...types.map(type => ({
+      id: type,
+      label: type,
+      count: typeCounts[type] ?? 0,
+      items: items.filter(item => item.type === type),
     })),
   ];
 

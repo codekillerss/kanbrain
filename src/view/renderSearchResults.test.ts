@@ -22,8 +22,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
-    typeToBacklogLevel: {},
-    backlogLevels: {},
+    defaultTeam: 'MyProject Team',
+    skills: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -88,66 +88,50 @@ describe('renderSearchResults', () => {
     expect(html).not.toContain('data-action="run-skill"');
   });
 
-  it('renders no tab bar when there are no configured backlog levels', () => {
+  it('renders no tab bar when there are no configured work item types', () => {
     const html = renderSearchResults([workItem()], config(), {});
 
     expect(html).not.toContain('kb-search-tabs');
   });
 
-  it('renders a tab per backlog level, in config order, plus an "all" tab first', () => {
+  it('renders a tab per work item type, in config order, plus an "all" tab first', () => {
     const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
-    const html = renderSearchResults(
-      items,
-      config({ backlogLevels: { Epics: {}, Tasks: {} }, typeToBacklogLevel: { Epic: 'Epics', Task: 'Tasks' } }),
-      { Epics: 3, Tasks: 7 },
-    );
+    const html = renderSearchResults(items, config({ skills: { Epic: {}, Task: {} } }), { Epic: 3, Task: 7 });
 
     const allIndex = html.indexOf('data-tab="all"');
-    const epicsIndex = html.indexOf('data-tab="Epics"');
-    const tasksIndex = html.indexOf('data-tab="Tasks"');
+    const epicIndex = html.indexOf('data-tab="Epic"');
+    const taskIndex = html.indexOf('data-tab="Task"');
 
     expect(allIndex).toBeGreaterThanOrEqual(0);
-    expect(epicsIndex).toBeGreaterThan(allIndex);
-    expect(tasksIndex).toBeGreaterThan(epicsIndex);
+    expect(epicIndex).toBeGreaterThan(allIndex);
+    expect(taskIndex).toBeGreaterThan(epicIndex);
     expect(html).toContain('All (2)');
   });
 
-  it('shows the backlog level tab count from backlogLevelCounts, not from the filtered item list', () => {
+  it('shows the type tab count from typeCounts, not from the filtered item list', () => {
     const items = [workItem({ id: 1, type: 'Epic' })];
-    const html = renderSearchResults(
-      items,
-      config({ backlogLevels: { Epics: {} }, typeToBacklogLevel: { Epic: 'Epics' } }),
-      { Epics: 12 },
-    );
+    const html = renderSearchResults(items, config({ skills: { Epic: {} } }), { Epic: 12 });
 
-    expect(html).toContain('Epics (12)');
+    expect(html).toContain('Epic (12)');
   });
 
-  it('marks a backlog level tab as empty when its count is 0', () => {
-    const html = renderSearchResults(
-      [workItem({ type: 'Epic' })],
-      config({ backlogLevels: { Epics: {}, Tasks: {} }, typeToBacklogLevel: { Epic: 'Epics' } }),
-      { Epics: 5, Tasks: 0 },
-    );
+  it('marks a type tab as empty when its count is 0', () => {
+    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ skills: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
 
     expect(html).toContain('kb-search-tab-empty');
-    expect(html).toContain('Tasks (0)');
+    expect(html).toContain('Task (0)');
   });
 
-  it("scopes each backlog level panel to only that level's items", () => {
+  it("scopes each type panel to only that type's items", () => {
     const items = [workItem({ id: 1, type: 'Epic', title: 'An epic' }), workItem({ id: 2, type: 'Task', title: 'A task' })];
-    const html = renderSearchResults(
-      items,
-      config({ backlogLevels: { Epics: {}, Tasks: {} }, typeToBacklogLevel: { Epic: 'Epics', Task: 'Tasks' } }),
-      { Epics: 1, Tasks: 1 },
-    );
+    const html = renderSearchResults(items, config({ skills: { Epic: {}, Task: {} } }), { Epic: 1, Task: 1 });
 
-    const epicsPanelStart = html.indexOf('data-tab-panel="Epics"');
-    const tasksPanelStart = html.indexOf('data-tab-panel="Tasks"');
-    const epicsPanel = html.slice(epicsPanelStart, tasksPanelStart);
+    const epicPanelStart = html.indexOf('data-tab-panel="Epic"');
+    const taskPanelStart = html.indexOf('data-tab-panel="Task"');
+    const epicPanel = html.slice(epicPanelStart, taskPanelStart);
 
-    expect(epicsPanel).toContain('An epic');
-    expect(epicsPanel).not.toContain('A task');
+    expect(epicPanel).toContain('An epic');
+    expect(epicPanel).not.toContain('A task');
   });
 
   it('shows "Unassigned" on a result item when the item has no assignee', () => {

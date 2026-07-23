@@ -24,7 +24,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastState = '';
   private activeWorkItemId: number | undefined;
   private selectedBoard: string | undefined;
-  private backlogLevelCounts: Record<string, number> = {};
+  private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
@@ -159,13 +159,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     let html: string;
     try {
       if (query.trim() === '') {
-        this.backlogLevelCounts = await this.fetchBacklogLevelCounts(this.client, config);
+        this.typeCounts = await this.fetchTypeCounts(this.client, config);
       }
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
       const filtered = filterSearchResults(items, query);
       const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(filtered) : {};
-      html = renderSearchResults(filtered, config, this.backlogLevelCounts, avatars);
+      html = renderSearchResults(filtered, config, this.typeCounts, avatars);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
@@ -174,16 +174,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.view.webview.postMessage({ type: 'search-results', html });
   }
 
-  private async fetchBacklogLevelCounts(client: AzureDevOpsClient, config: KanbrainConfig): Promise<Record<string, number>> {
-    const levels = Object.keys(config.backlogLevels);
+  private async fetchTypeCounts(client: AzureDevOpsClient, config: KanbrainConfig): Promise<Record<string, number>> {
+    const types = Object.keys(config.skills);
     const entries = await Promise.all(
-      levels.map(async level => {
-        const types = Object.entries(config.typeToBacklogLevel)
-          .filter(([, backlogLevel]) => backlogLevel === level)
-          .map(([type]) => type);
-        const count = await client.countWorkItemsByType(config.organization, config.project, types);
-        return [level, count] as const;
-      }),
+      types.map(async type => [type, await client.countWorkItemsByType(config.organization, config.project, [type])] as const),
     );
     return Object.fromEntries(entries);
   }
