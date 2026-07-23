@@ -1,8 +1,13 @@
 import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
-import type { WorkItemTypeState } from './backlogLevels';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
+
+export interface WorkItemTypeState {
+  name: string;
+  category: string;
+  color: string;
+}
 
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
