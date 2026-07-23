@@ -135,6 +135,7 @@ export class WorkItemDetailPanelManager {
       .kb-detail-id { font-weight: 600; font-size: 16px; opacity: 0.75; flex-shrink: 0; }
       .kb-detail-title { font-size: 22px; margin: 0; }
       .kb-detail-status-row { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.75; margin-top: 6px; }
+      .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
       .kb-detail-assignee { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.9; }
       .kb-detail-body { display: flex; flex-wrap: wrap; gap: 24px; }
       .kb-detail-main { flex: 2 1 420px; min-width: 0; }
