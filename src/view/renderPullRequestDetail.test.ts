@@ -64,6 +64,7 @@ function input(overrides: Partial<PullRequestDetailInput> = {}): PullRequestDeta
     config,
     threads: [],
     avatars: {},
+    gitLensIconDataUri: null,
     ...overrides,
   };
 }
@@ -242,5 +243,30 @@ describe('renderPullRequestDetail', () => {
     const threads = [thread({ id: 1 }), thread({ id: 2 })];
     const html = renderPullRequestDetail(input({ threads }));
     expect(html.split('kb-pr-thread"').length - 1).toBe(2);
+  });
+
+  it('shows a View Diff button with the GitLens icon when GitLens is installed', () => {
+    const html = renderPullRequestDetail(input({ gitLensIconDataUri: 'data:image/png;base64,ABC' }));
+
+    expect(html).toContain('View Diff');
+    expect(html).toContain('src="data:image/png;base64,ABC"');
+    expect(html).not.toContain('Install GitLens');
+
+    const match = html.match(/href="(command:kanbrain\.viewPullRequestDiff\?[^"]+)"/);
+    expect(match).not.toBeNull();
+    const [, href] = match!;
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['feature/login-fix', 'main']);
+  });
+
+  it('shows an Install GitLens suggestion when GitLens is not installed, and no View Diff button', () => {
+    const html = renderPullRequestDetail(input({ gitLensIconDataUri: null }));
+
+    expect(html).toContain('Install GitLens to view diffs inline');
+    expect(html).not.toContain('View Diff');
+
+    const match = html.match(/href="(command:workbench\.extensions\.search\?[^"]+)"/);
+    expect(match).not.toBeNull();
+    const [, href] = match!;
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['GitLens']);
   });
 });

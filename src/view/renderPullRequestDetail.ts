@@ -100,16 +100,26 @@ function renderLinkedWorkItem(item: WorkItem, config: KanbrainConfig): string {
   `;
 }
 
+function renderDiffAction(pr: PullRequestDetail, gitLensIconDataUri: string | null): string {
+  if (gitLensIconDataUri) {
+    const commandArgs = encodeURIComponent(JSON.stringify([pr.sourceBranch, pr.targetBranch]));
+    return `<a class="kb-pr-diff-link" href="command:kanbrain.viewPullRequestDiff?${commandArgs}"><img class="kb-pr-gitlens-icon" src="${gitLensIconDataUri}" alt="" /> View Diff</a>`;
+  }
+  const installArgs = encodeURIComponent(JSON.stringify(['GitLens']));
+  return `<a class="kb-pr-web-link" href="command:workbench.extensions.search?${installArgs}">💡 Install GitLens to view diffs inline</a>`;
+}
+
 export interface PullRequestDetailInput {
   pr: PullRequestDetail;
   workItems: WorkItem[];
   config: KanbrainConfig;
   threads: PullRequestThread[];
   avatars: Record<string, string>;
+  gitLensIconDataUri: string | null;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config, threads, avatars } = input;
+  const { pr, workItems, config, threads, avatars, gitLensIconDataUri } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
 
@@ -121,6 +131,7 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
       <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}</div>
       <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch)}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
+      ${renderDiffAction(pr, gitLensIconDataUri)}
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

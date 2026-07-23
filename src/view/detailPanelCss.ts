@@ -58,6 +58,9 @@ export function detailPanelCss(): string {
     .kb-pr-branch-link { color: var(--vscode-textLink-foreground); text-decoration: none; cursor: pointer; }
     .kb-pr-branch-link:hover { text-decoration: underline; }
     .kb-pr-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
+    .kb-pr-diff-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 12px; font-size: 12px; color: var(--vscode-textLink-foreground); text-decoration: none; }
+    .kb-pr-diff-link:hover { text-decoration: underline; }
+    .kb-pr-gitlens-icon { width: 14px; height: 14px; }
     .kb-pr-description { white-space: pre-wrap; }
     .kb-pr-reviewer { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
     .kb-pr-vote { opacity: 0.75; font-size: 12px; }
