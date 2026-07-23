@@ -57,14 +57,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setActiveWorkItem(undefined);
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
+        this.notifyCommandFinished();
       } else if (message.type === 'run-connect') {
         await vscode.commands.executeCommand('kanbrain.connect');
+        this.notifyCommandFinished();
       } else if (message.type === 'run-check-board-config') {
         await vscode.commands.executeCommand('kanbrain.checkBoardConfig');
+        this.notifyCommandFinished();
       } else if (message.type === 'run-sync-board-config') {
         await vscode.commands.executeCommand('kanbrain.syncBoardConfig');
+        this.notifyCommandFinished();
       } else if (message.type === 'run-configure-with-ai') {
         await vscode.commands.executeCommand('kanbrain.configureWithAi');
+        this.notifyCommandFinished();
       } else if (message.type === 'show-home') {
         this.showHomeScreen();
       } else if (message.type === 'show-flow') {
@@ -99,6 +104,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
     });
     void this.runInitialBoardConfigCheck();
+  }
+
+  private notifyCommandFinished(): void {
+    this.view?.webview.postMessage({ type: 'command-finished' });
   }
 
   private async runInitialBoardConfigCheck(): Promise<void> {
@@ -468,6 +477,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    function setLoading(btn) {
+      btn.classList.add('kb-loading');
+      btn.disabled = true;
+    }
+
     function saveSkillRow(row) {
       vscode.postMessage({
         type: 'save-skill-entry',
@@ -529,14 +543,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.id === 'kb-run-setup-btn' || target.id === 'kb-run-setup-home-btn') {
+        setLoading(target);
         vscode.postMessage({ type: 'run-setup' });
       } else if (target.id === 'kb-run-connect-btn') {
+        setLoading(target);
         vscode.postMessage({ type: 'run-connect' });
       } else if (target.id === 'kb-run-check-board-config-btn') {
+        setLoading(target);
         vscode.postMessage({ type: 'run-check-board-config' });
       } else if (target.id === 'kb-run-sync-board-config-btn') {
+        setLoading(target);
         vscode.postMessage({ type: 'run-sync-board-config' });
       } else if (target.id === 'kb-run-configure-ai-btn') {
+        setLoading(target);
         vscode.postMessage({ type: 'run-configure-with-ai' });
       } else if (target.id === 'kb-home-btn') {
         vscode.postMessage({ type: 'show-home' });
@@ -598,6 +617,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             break;
           }
         }
+      } else if (event.data.type === 'command-finished') {
+        document.querySelectorAll('.kb-loading').forEach((btn) => {
+          btn.classList.remove('kb-loading');
+          btn.disabled = false;
+        });
       }
     });
 
@@ -695,6 +719,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-select-row select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; padding: 2px 4px; }
       .kb-dev-label { display: flex; align-items: center; gap: 4px; }
       .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
+      .kb-loading { opacity: 0.6; cursor: default; }
+      .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
+      @keyframes kb-spin { to { transform: rotate(360deg); } }
     `;
   }
 }
