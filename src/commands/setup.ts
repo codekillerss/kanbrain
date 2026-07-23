@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import { discoverBacklogLevelStates, discoverStatusColors, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
+import { discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
+import { discoverWorkItemTypes } from '../azureDevOps/discoverWorkItemTypes';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
 
@@ -57,28 +58,35 @@ export function registerSetupCommand(
       boardState = await discoverBoardState(client, orgPick.org.name, projectPick.project.name);
     } catch (error) {
       vscode.window.showErrorMessage(
-        `Could not read the process's backlog levels: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not read the process's work item types: ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
-    const { levels, statesByType, typeColors, typeIcons } = boardState;
+    const { discoveredStatusesByType, typeColors, typeIcons, defaultTeam, cardSettingsByTeam } = boardState;
 
-    const discovered = discoverBacklogLevelStates(levels, statesByType);
-    const typeToBacklogLevel = buildTypeToBacklogLevel(levels, new Set(Object.keys(statesByType)));
-    const statusColors = discoverStatusColors(levels, statesByType);
+    let types;
+    try {
+      types = await discoverWorkItemTypes(client, orgPick.org.name, projectPick.project.name);
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Could not read the process's status colors: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+    const statusColors = discoverStatusColors(types);
 
     const generateFilesPick = await vscode.window.showQuickPick(
       [
         { label: 'Yes', generate: true },
         { label: 'No', generate: false },
       ],
-      { placeHolder: 'Automatically generate placeholder skill files per category (Proposed/InProgress/Resolved)?' },
+      { placeHolder: 'Automatically generate placeholder skill files per work item type and status?' },
     );
     if (!generateFilesPick) {
       return;
     }
 
-    const preset = buildPresetPlan(discovered, generateFilesPick.generate, statusColors);
+    const preset = buildPresetPlan(discoveredStatusesByType, generateFilesPick.generate, statusColors);
 
     const skillsDir = path.join(workspaceRoot, '.kanbrain', 'skills');
     fs.mkdirSync(skillsDir, { recursive: true });
@@ -97,12 +105,12 @@ export function registerSetupCommand(
     writeConfig(workspaceRoot, {
       organization: orgPick.org.name,
       project: projectPick.project.name,
-      typeToBacklogLevel,
-      backlogLevels: preset.backlogLevels,
+      defaultTeam,
+      skills: preset.skills,
       statusColors,
       typeColors,
       typeIcons,
-      cardSettingsByBoard: boardState.cardSettingsByBoard,
+      cardSettingsByTeam,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

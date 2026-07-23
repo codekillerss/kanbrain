@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
-import { discoverBacklogLevelStates, discoverStatusColors, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
+import { discoverWorkItemTypes, discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
 import { diffBoardConfig, isDiffEmpty, summarizeDiff } from '../azureDevOps/checkBoardConfig';
 import { syncConfig } from '../config/syncConfig';
 import { readConfigWithDiagnostics, writeConfig } from '../config/config';
@@ -19,27 +19,27 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     }
 
     let boardState;
+    let types;
     try {
       boardState = await discoverBoardState(client, result.config.organization, result.config.project);
+      types = await discoverWorkItemTypes(client, result.config.organization, result.config.project);
     } catch (error) {
       vscode.window.showErrorMessage(
         `Could not sync the board configuration: ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
-    const discovered = discoverBacklogLevelStates(boardState.levels, boardState.statesByType);
-    const freshTypeToBacklogLevel = buildTypeToBacklogLevel(boardState.levels, new Set(Object.keys(boardState.statesByType)));
-    const freshStatusColors = discoverStatusColors(boardState.levels, boardState.statesByType);
-    const diff = diffBoardConfig(result.config, discovered, freshTypeToBacklogLevel);
+    const freshStatusColors = discoverStatusColors(types);
+    const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
 
     const updated = syncConfig(
       result.config,
-      discovered,
-      freshTypeToBacklogLevel,
+      boardState.discoveredStatusesByType,
       freshStatusColors,
       boardState.typeColors,
       boardState.typeIcons,
-      boardState.cardSettingsByBoard,
+      boardState.defaultTeam,
+      boardState.cardSettingsByTeam,
     );
     writeConfig(workspaceRoot, updated);
 

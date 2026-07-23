@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
-import { discoverBacklogLevelStates, buildTypeToBacklogLevel } from '../azureDevOps/backlogLevels';
 import { diffBoardConfig, isDiffEmpty, summarizeDiff, type BoardConfigDiff } from '../azureDevOps/checkBoardConfig';
 import { readConfigWithDiagnostics } from '../config/config';
 import type { KanbrainConfig } from '../types';
@@ -25,9 +24,7 @@ export async function checkBoardConfig(client: AzureDevOpsClient, workspaceRoot:
     return { status: 'discovery-failed', error: error instanceof Error ? error.message : String(error) };
   }
 
-  const discovered = discoverBacklogLevelStates(boardState.levels, boardState.statesByType);
-  const freshTypeToBacklogLevel = buildTypeToBacklogLevel(boardState.levels, new Set(Object.keys(boardState.statesByType)));
-  const diff = diffBoardConfig(result.config, discovered, freshTypeToBacklogLevel);
+  const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
 
   return { status: 'ok', diff, config: result.config };
 }
