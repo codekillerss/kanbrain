@@ -5,6 +5,7 @@ import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
 import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 import { renderDevelopmentSection } from './renderDevelopment';
+import { renderRelatedWorkSection } from './renderRelatedWork';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -87,10 +88,12 @@ export interface WorkItemDetailInput {
   comments: WorkItemComment[];
   avatars: Record<string, string>;
   prDetails: Record<string, PullRequestDetails>;
+  parent: WorkItem | null;
+  children: WorkItem[];
 }
 
 export function renderWorkItemDetail(input: WorkItemDetailInput): string {
-  const { workItem, config, description, groups, htmlSections, comments, avatars, prDetails } = input;
+  const { workItem, config, description, groups, htmlSections, comments, avatars, prDetails, parent, children } = input;
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = renderAssigneeRow(workItem.assignedTo, avatars, 'kb-detail-assignee');
 
@@ -117,6 +120,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
       </div>
       <div class="kb-detail-side">
         ${groups.map(renderDetailGroup).join('')}
+        ${renderRelatedWorkSection(parent, children, config)}
         ${renderDevelopmentSection(workItem.development, prDetails)}
       </div>
     </div>

@@ -39,6 +39,8 @@ function input(overrides: Partial<WorkItemDetailInput> = {}): WorkItemDetailInpu
     comments: [],
     avatars: {},
     prDetails: {},
+    parent: null,
+    children: [],
     ...overrides,
   };
 }
@@ -93,6 +95,17 @@ describe('renderWorkItemDetail', () => {
     expect(html).toContain('Planning');
     expect(html).toContain('Area Path');
     expect(html).toContain('Proj\\Area');
+  });
+
+  it('shows the Related Work section in the side column when there is a parent or children', () => {
+    const html = renderWorkItemDetail(input({ parent: workItem({ id: 900, title: 'Epic parent' }) }));
+    expect(html).toContain('Related Work');
+    expect(html).toContain('Epic parent');
+  });
+
+  it('omits the Related Work section when there is no parent and no children', () => {
+    const html = renderWorkItemDetail(input());
+    expect(html).not.toContain('Related Work');
   });
 
   it('shows "No comments." when there are no comments', () => {

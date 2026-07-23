@@ -33,11 +33,14 @@ export class WorkItemDetailPanelManager {
       return;
     }
 
-    const [layout, rawFields, comments] = await Promise.all([
+    const [layout, rawFields, comments, parentResult, children] = await Promise.all([
       this.client.getWorkItemTypeLayout(config.organization, config.project, workItem.type),
       this.client.getWorkItemRawFields(config.organization, config.project, id),
       this.client.getComments(config.organization, config.project, id).catch(() => []),
+      workItem.parentId ? this.client.getWorkItems(config.organization, config.project, [workItem.parentId]) : Promise.resolve([]),
+      this.client.getChildren(config.organization, config.project, workItem),
     ]);
+    const parent = parentResult[0] ?? null;
 
     const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
     const [avatars, prDetails] = await Promise.all([
@@ -58,6 +61,8 @@ export class WorkItemDetailPanelManager {
         comments,
         avatars,
         prDetails,
+        parent,
+        children,
       }),
     );
     panel.onDidDispose(() => this.panels.delete(id));
@@ -141,6 +146,10 @@ export class WorkItemDetailPanelManager {
       .kb-detail-field { margin-bottom: 8px; }
       .kb-detail-field-label { font-size: 11px; opacity: 0.7; }
       .kb-detail-field-value { font-size: 13px; }
+      .kb-related-subgroup-label { font-size: 11px; font-weight: 600; opacity: 0.7; margin: 8px 0 4px; }
+      .kb-related-subgroup-label:first-child { margin-top: 0; }
+      .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; }
+      .kb-related-id { font-weight: 600; flex-shrink: 0; }
       .kb-detail-tag { display: inline-block; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; font-size: 11px; }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
