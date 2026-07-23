@@ -22,8 +22,8 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
-  typeToBacklogLevel: {},
-  backlogLevels: {},
+  defaultTeam: 'MyProject Team',
+  skills: {},
   statusColors: { Active: 'b2b2b2' },
   typeColors: { Task: 'f2cb1d' },
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },

@@ -33,11 +33,11 @@ export function renderWorkItemCard(
   clickableTitle = false,
   parent: WorkItem | null = null,
   showParent = false,
-  selectedBoard: string | undefined = undefined,
+  selectedTeam: string | undefined = undefined,
   prDetails: Record<string, PullRequestDetails> = {},
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
-  const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedBoard);
+  const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
   const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
   const parentHtml = renderParentRow(parent, showParent, config);
   const developmentHtml = renderDevelopmentSection(workItem.development, prDetails);

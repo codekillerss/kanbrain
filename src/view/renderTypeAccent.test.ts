@@ -6,8 +6,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
-    typeToBacklogLevel: {},
-    backlogLevels: {},
+    defaultTeam: 'MyProject Team',
+    skills: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},

@@ -29,8 +29,8 @@ describe('readConfig', () => {
     const config = {
       organization: 'my-org',
       project: 'MyProject',
-      typeToBacklogLevel: { Task: 'Tasks' },
-      backlogLevels: { Tasks: { New: { path: '.kanbrain/skills/a.md' } } },
+      defaultTeam: 'MyProject Team',
+      skills: { Task: { New: { path: '.kanbrain/skills/a.md' } } },
       statusColors: { New: 'b2b2b2' },
       typeColors: { Task: 'f2cb1d' },
       typeIcons: { Task: '<svg></svg>' },
@@ -51,8 +51,8 @@ describe('writeConfig', () => {
     writeConfig(workspaceRoot, {
       organization: 'o',
       project: 'p',
-      typeToBacklogLevel: {},
-      backlogLevels: {},
+      defaultTeam: '',
+      skills: {},
       statusColors: {},
       typeColors: {},
       typeIcons: {},
@@ -92,8 +92,8 @@ describe('readConfigWithDiagnostics', () => {
     const config = {
       organization: 'my-org',
       project: 'MyProject',
-      typeToBacklogLevel: {},
-      backlogLevels: {},
+      defaultTeam: '',
+      skills: {},
       statusColors: {},
       typeColors: {},
       typeIcons: {},

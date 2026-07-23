@@ -21,12 +21,12 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
-  typeToBacklogLevel: { Task: 'Tasks' },
-  backlogLevels: { Tasks: { Active: { path: 'skills/fix.md' } } },
+  defaultTeam: 'MyProject Team',
+  skills: { Task: { Active: { path: 'skills/fix.md' } } },
   statusColors: {},
   typeColors: {},
   typeIcons: {},
-  cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: true } } },
+  cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: true } } } },
 };
 
 describe('renderWorkItemCard', () => {
@@ -57,14 +57,17 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('<img class="kb-avatar" src="data:image/png;base64,X"');
   });
 
-  it('hides the assignee row when cardSettingsByBoard has assignedTo: false for the type', () => {
-    const hiddenConfig: KanbrainConfig = { ...config, cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: false } } } };
+  it('hides the assignee row when cardSettingsByTeam has assignedTo: false for the type', () => {
+    const hiddenConfig: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: false } } } },
+    };
     const html = renderWorkItemCard(workItem(), hiddenConfig, 'kb-main-card');
     expect(html).not.toContain('kb-assignee-row');
   });
 
-  it('hides the assignee row when cardSettingsByBoard is missing entirely (fail-safe default)', () => {
-    const noSettingsConfig: KanbrainConfig = { ...config, cardSettingsByBoard: undefined };
+  it('hides the assignee row when cardSettingsByTeam is missing entirely (fail-safe default)', () => {
+    const noSettingsConfig: KanbrainConfig = { ...config, cardSettingsByTeam: undefined };
     const html = renderWorkItemCard(workItem(), noSettingsConfig, 'kb-main-card');
     expect(html).not.toContain('kb-assignee-row');
   });
@@ -74,16 +77,16 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('kb-assignee-row');
   });
 
-  it('uses the selected board to break a tie when the type appears in more than one board', () => {
+  it('uses the selected team to break a tie when the type appears in more than one team', () => {
     const ambiguousConfig: KanbrainConfig = {
       ...config,
-      cardSettingsByBoard: {
-        Tasks: { Task: { parent: false, assignedTo: true } },
-        Sprints: { Task: { parent: false, assignedTo: false } },
+      cardSettingsByTeam: {
+        'Team A': { Tasks: { Task: { parent: false, assignedTo: true } } },
+        'Team B': { Tasks: { Task: { parent: false, assignedTo: false } } },
       },
     };
-    const shown = renderWorkItemCard(workItem(), ambiguousConfig, 'kb-main-card', true, {}, false, null, false, 'Tasks');
-    const hidden = renderWorkItemCard(workItem(), ambiguousConfig, 'kb-main-card', true, {}, false, null, false, 'Sprints');
+    const shown = renderWorkItemCard(workItem(), ambiguousConfig, 'kb-main-card', true, {}, false, null, false, 'Team A');
+    const hidden = renderWorkItemCard(workItem(), ambiguousConfig, 'kb-main-card', true, {}, false, null, false, 'Team B');
     expect(shown).toContain('kb-assignee-row');
     expect(hidden).not.toContain('kb-assignee-row');
   });

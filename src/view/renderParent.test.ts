@@ -21,8 +21,8 @@ function parent(overrides: Partial<WorkItem> = {}): WorkItem {
 const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
-  typeToBacklogLevel: {},
-  backlogLevels: {},
+  defaultTeam: 'MyProject Team',
+  skills: {},
   statusColors: {},
   typeColors: { Feature: 'f2cb1d' },
   typeIcons: { Feature: '<svg><path d="M0 0"/></svg>' },
