@@ -67,7 +67,7 @@ describe('render', () => {
 
   it('delegates to the home screen when screen is "home"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'home' });
-    expect(html).toContain('kb-home-section');
+    expect(html).toContain('id="kb-run-setup-home-btn"');
   });
 
   it('delegates to the config screen when screen is "config"', () => {
@@ -154,6 +154,19 @@ describe('render', () => {
   it('shows an empty message when there are no children', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('No child items');
+  });
+
+  it('wraps the Children label and list in a bordered section card', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const cardIndex = html.indexOf('kb-section-card');
+    const labelIndex = html.indexOf('Children (1)');
+    const subtaskIndex = html.indexOf('Sub 1');
+
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(labelIndex).toBeGreaterThan(cardIndex);
+    expect(subtaskIndex).toBeGreaterThan(labelIndex);
   });
 
   it('shows the status as a colored dot next to the plain status text', () => {

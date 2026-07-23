@@ -64,7 +64,7 @@ describe('renderHome', () => {
 
     expect(html).toContain('id="kb-show-config-btn"');
     const commandsIndex = html.indexOf('Commands');
-    const commandsSectionEnd = html.indexOf('kb-home-section', commandsIndex + 1);
+    const commandsSectionEnd = html.indexOf('kb-section-card', commandsIndex + 1);
     const configButtonIndex = html.indexOf('id="kb-show-config-btn"');
     expect(configButtonIndex).toBeGreaterThan(commandsSectionEnd);
   });

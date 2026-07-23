@@ -8,11 +8,13 @@ export function renderConfig(state: RenderState): string {
     <div class="kb-header kb-page-header">
       <button id="kb-home-btn" class="kb-secondary-btn">🏠 Home</button>
     </div>
-    <div class="kb-section-label">Display</div>
-    <label class="kb-checkbox-row">
-      <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
-      Show assignee in search results
-    </label>
+    <div class="kb-section-card">
+      <div class="kb-section-label">Display</div>
+      <label class="kb-checkbox-row">
+        <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
+        Show assignee in search results
+      </label>
+    </div>
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">Skill Configuration</div>
       ${renderConfigEditor(config)}

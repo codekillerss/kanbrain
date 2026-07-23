@@ -68,6 +68,18 @@ describe('renderConfig', () => {
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
 
+  it('wraps the Display label and assignee checkbox in a bordered section card', () => {
+    const html = renderConfig(state());
+
+    const cardIndex = html.indexOf('kb-section-card');
+    const labelIndex = html.indexOf('>Display<');
+    const checkboxIndex = html.indexOf('id="kb-show-assignee-toggle"');
+
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(labelIndex).toBeGreaterThan(cardIndex);
+    expect(checkboxIndex).toBeGreaterThan(labelIndex);
+  });
+
   it('does not show a team selector — it lives on the Home screen instead', () => {
     const html = renderConfig(
       state({

@@ -51,7 +51,7 @@ function renderHomeTeamSection(state: RenderState): string {
   const selected = state.selectedTeam ?? config.defaultTeam;
 
   return `
-    <div class="kb-home-section">
+    <div class="kb-section-card">
       <div class="kb-section-label">Team</div>
       <div class="kb-team-card">
         <select id="kb-team-select">
@@ -66,12 +66,12 @@ function renderHomeTeamSection(state: RenderState): string {
 
 export function renderHome(state: RenderState): string {
   return `
-    <div class="kb-home-section">
+    <div class="kb-section-card">
       <div class="kb-section-label">Flow</div>
       ${renderHomeWorkItemSection(state)}
     </div>
     ${renderHomeTeamSection(state)}
-    <div class="kb-home-section">
+    <div class="kb-section-card">
       <div class="kb-section-label">Commands</div>
       <div class="kb-home-commands">
         <button id="kb-run-setup-home-btn" class="kb-secondary-btn">⚙ Setup</button>
@@ -80,7 +80,7 @@ export function renderHome(state: RenderState): string {
         <button id="kb-run-configure-ai-btn" class="kb-secondary-btn">🤖 Configure with AI</button>
       </div>
     </div>
-    <div class="kb-home-section">
+    <div class="kb-section-card">
       <div class="kb-section-label">Configuration</div>
       <div class="kb-home-commands">
         <button id="kb-show-config-btn" class="kb-secondary-btn">🛠️ Configuration</button>

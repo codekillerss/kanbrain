@@ -82,7 +82,9 @@ export function render(state: RenderState): string {
         <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
       </div>
     </div>
-    <div class="kb-section-label">Children (${state.subtasks.length})</div>
-    ${subtasksHtml}
+    <div class="kb-section-card">
+      <div class="kb-section-label">Children (${state.subtasks.length})</div>
+      ${subtasksHtml}
+    </div>
   `;
 }
