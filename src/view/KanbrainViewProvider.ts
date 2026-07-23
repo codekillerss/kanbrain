@@ -39,6 +39,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly checkAzureSession: () => Promise<boolean>,
     private readonly openWorkItemDetail: (id: number) => Promise<void>,
     private readonly persistSelectedTeam: (team: string | undefined) => void,
+    private readonly extensionVersion: string,
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -105,6 +106,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.hasCheckedBoardConfig = true;
+
+    const config = readConfig(this.workspaceRoot);
+    if (config && config.lastSyncedVersion !== this.extensionVersion) {
+      // The extension was updated since this project last synced — catch up automatically instead
+      // of waiting for the user to notice a stale config and click "Sync Now".
+      await vscode.commands.executeCommand('kanbrain.syncBoardConfig');
+      return;
+    }
+
     await presentBoardConfigCheck(this.client, this.workspaceRoot, { quietWhenNothingToReport: true });
   }
 

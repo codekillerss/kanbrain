@@ -47,4 +47,5 @@ export interface KanbrainConfig {
   typeIcons: Record<string, string>;
   cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
   showAssignedTo?: boolean;
+  lastSyncedVersion?: string;
 }

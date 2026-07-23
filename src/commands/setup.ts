@@ -25,6 +25,7 @@ export function registerSetupCommand(
   client: AzureDevOpsClient,
   workspaceRoot: string,
   onSetupComplete: () => void,
+  extensionVersion: string,
 ): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.setup', async () => {
     const organizations = await client.listOrganizations();
@@ -111,6 +112,7 @@ export function registerSetupCommand(
       typeColors,
       typeIcons,
       cardSettingsByTeam,
+      lastSyncedVersion: extensionVersion,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

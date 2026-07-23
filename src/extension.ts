@@ -17,6 +17,7 @@ const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const extensionVersion = context.extension.packageJSON.version as string;
 
   const client = workspaceRoot
     ? new AzureDevOpsClient({
@@ -39,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     },
     team => context.workspaceState.update(SELECTED_TEAM_KEY, team),
+    extensionVersion,
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
@@ -48,10 +50,10 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   context.subscriptions.push(
-    registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined)),
+    registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined), extensionVersion),
     registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
     registerCheckBoardConfigCommand(client, workspaceRoot),
-    registerSyncBoardConfigCommand(client, workspaceRoot),
+    registerSyncBoardConfigCommand(client, workspaceRoot, extensionVersion),
     registerConfigureWithAiCommand(client, workspaceRoot),
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
   );

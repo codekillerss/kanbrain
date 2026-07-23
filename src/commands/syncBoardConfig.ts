@@ -6,7 +6,7 @@ import { diffBoardConfig, isDiffEmpty, summarizeDiff } from '../azureDevOps/chec
 import { syncConfig } from '../config/syncConfig';
 import { readConfigWithDiagnostics, writeConfig } from '../config/config';
 
-export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {
+export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string, extensionVersion: string): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.syncBoardConfig', async () => {
     const result = readConfigWithDiagnostics(workspaceRoot);
     if (result.status === 'missing') {
@@ -41,7 +41,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       boardState.defaultTeam,
       boardState.cardSettingsByTeam,
     );
-    writeConfig(workspaceRoot, updated);
+    writeConfig(workspaceRoot, { ...updated, lastSyncedVersion: extensionVersion });
 
     if (isDiffEmpty(diff)) {
       vscode.window.showInformationMessage('Kanbrain board configuration was already up to date.');
