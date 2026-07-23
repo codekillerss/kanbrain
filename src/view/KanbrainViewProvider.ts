@@ -668,10 +668,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-parent-link { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
       .kb-parent-link .kb-link-text { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-parent-link:hover .kb-link-text { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
-      .kb-parent-banner { display: flex; align-items: center; gap: 6px; padding: 6px 10px; margin-bottom: 4px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .kb-parent-banner { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
       .kb-parent-banner:hover { background: var(--vscode-list-hoverBackground); }
       .kb-parent-banner .kb-link-text { color: var(--vscode-textLink-foreground); }
-      .kb-sibling-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0; margin-bottom: 8px; }
+      .kb-sibling-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0; }
+      .kb-section-card .kb-parent-banner { margin: 8px 10px 0; }
+      .kb-section-card .kb-sibling-nav { margin: 0 0 4px; }
       .kb-sibling-arrow { background: none; border: none; color: var(--vscode-foreground); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
       .kb-sibling-arrow:disabled { opacity: 0.3; cursor: default; }
       .kb-sibling-dots { display: flex; gap: 6px; }

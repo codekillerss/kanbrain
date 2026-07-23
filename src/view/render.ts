@@ -55,8 +55,15 @@ export function render(state: RenderState): string {
 
   const avatars = state.avatars ?? {};
   const showParent = resolveShowParent(state.config, state.workItem.type, state.selectedTeam);
-  const parentBannerHtml = renderParentBanner(state.parent, state.config);
-  const siblingNavHtml = renderSiblingNavigator(state.workItem, state.parent);
+  const parentSectionHtml = state.parent
+    ? `
+    <div class="kb-section-card kb-parent-section">
+      <div class="kb-section-label">Parent</div>
+      ${renderParentBanner(state.parent, state.config)}
+      ${renderSiblingNavigator(state.workItem, state.parent)}
+    </div>
+  `
+    : '';
   const subtasksHtml = state.subtasks.length
     ? state.subtasks
         .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam))
@@ -76,8 +83,7 @@ export function render(state: RenderState): string {
         <div id="kb-search-results"></div>
       </div>
     </div>
-    ${parentBannerHtml}
-    ${siblingNavHtml}
+    ${parentSectionHtml}
     <div class="kb-card-wrapper">
       ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
       <div class="kb-card-actions">

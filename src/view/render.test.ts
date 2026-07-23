@@ -355,6 +355,8 @@ describe('render', () => {
 
     expect(html).toContain('kb-parent-banner');
     expect(html).toContain('kb-sibling-nav');
+    expect(html).toContain('kb-parent-section');
+    expect(html).toContain('>Parent</div>');
   });
 
   it('does not show the parent banner or sibling navigator when there is no parent', () => {
@@ -369,5 +371,6 @@ describe('render', () => {
 
     expect(html).not.toContain('kb-parent-banner');
     expect(html).not.toContain('kb-sibling-nav');
+    expect(html).not.toContain('kb-parent-section');
   });
 });
