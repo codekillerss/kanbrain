@@ -119,6 +119,7 @@ describe('render', () => {
     expect(label).toContain('id="kb-toggle-search-btn"');
     expect(label).toContain('id="kb-clear-btn"');
     expect(html).not.toContain('kb-card-actions');
+    expect(html).not.toContain('kb-card-wrapper');
   });
 
   it('marks the Current Work Item and Children section cards with their own modifier classes', () => {

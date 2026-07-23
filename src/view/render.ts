@@ -90,9 +90,7 @@ export function render(state: RenderState): string {
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>
       </div>
-      <div class="kb-card-wrapper">
-        ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
-      </div>
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
     </div>
     <div class="kb-section-card kb-section-card-children">
       <div class="kb-section-label">Children (${state.subtasks.length})</div>
