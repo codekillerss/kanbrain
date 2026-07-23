@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItemComment } from '../azureDevOps/workItemDetail';
+import type { PullRequestThreadComment } from '../types';
 import { readConfig } from '../config/config';
 import { renderPullRequestDetail } from './renderPullRequestDetail';
 import { detailPanelCss } from './detailPanelCss';
@@ -80,22 +80,22 @@ export class PullRequestDetailPanelManager {
     const workItems = pr.workItemIds.length
       ? await this.client.getWorkItems(config.organization, config.project, pr.workItemIds).catch(() => [])
       : [];
-    const comments = await this.client
-      .getPullRequestThreadComments(config.organization, config.project, repositoryId, pullRequestId)
+    const threads = await this.client
+      .getPullRequestThreads(config.organization, config.project, repositoryId, pullRequestId)
       .catch(() => []);
-    const avatars = await this.resolveAvatars(comments);
+    const avatars = await this.resolveAvatars(threads.flatMap(t => t.comments));
 
-    const stateKey = JSON.stringify({ pr, workItems, comments, avatars });
+    const stateKey = JSON.stringify({ pr, workItems, threads, avatars });
     if (this.lastStateByPanel.get(key) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(key, stateKey);
 
     panel.title = `PR #${pr.id} ${pr.title}`;
-    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, comments, avatars }));
+    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars }));
   }
 
-  private async resolveAvatars(comments: WorkItemComment[]): Promise<Record<string, string>> {
+  private async resolveAvatars(comments: PullRequestThreadComment[]): Promise<Record<string, string>> {
     const urls = [...new Set(comments.map(c => c.createdBy.imageUrl).filter((u): u is string => !!u))];
     const uncached = urls.filter(u => !this.avatarCache.has(u));
     await Promise.all(

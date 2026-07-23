@@ -366,12 +366,14 @@ describe('AzureDevOpsClient.getComments', () => {
   });
 });
 
-describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
-  it('flattens comments from all threads, keeping only real user text comments', async () => {
+describe('AzureDevOpsClient.getPullRequestThreads', () => {
+  it('keeps only real user text comments per thread, dropping system-only threads', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         value: [
           {
+            id: 141,
+            status: 'active',
             comments: [
               {
                 id: 1,
@@ -383,6 +385,8 @@ describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
             ],
           },
           {
+            id: 148,
+            status: 'active',
             comments: [
               {
                 id: 1,
@@ -398,10 +402,24 @@ describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
 
-    expect(comments).toEqual([
-      { id: 1, text: 'This looks good!', createdBy: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' }, createdDate: '2026-01-02T00:00:00Z' },
+    expect(threads).toEqual([
+      {
+        id: 148,
+        status: 'active',
+        filePath: null,
+        line: null,
+        comments: [
+          {
+            id: 1,
+            parentCommentId: 0,
+            text: 'This looks good!',
+            createdBy: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' },
+            createdDate: '2026-01-02T00:00:00Z',
+          },
+        ],
+      },
     ]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://dev.azure.com/my-org/MyProject/_apis/git/repositories/repo-1/pullRequests/57/threads?api-version=7.1',
@@ -409,11 +427,12 @@ describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
     );
   });
 
-  it('excludes deleted comments', async () => {
+  it('excludes deleted comments, dropping the thread entirely if none remain', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         value: [
           {
+            id: 1,
             comments: [
               { id: 1, content: 'Deleted', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text', isDeleted: true },
             ],
@@ -423,25 +442,99 @@ describe('AzureDevOpsClient.getPullRequestThreadComments', () => {
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
 
-    expect(comments).toEqual([]);
+    expect(threads).toEqual([]);
   });
 
-  it('sorts comments chronologically across threads', async () => {
+  it('sorts threads chronologically by their first comment', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         value: [
-          { comments: [{ id: 1, content: 'Second', author: { displayName: 'Bob' }, publishedDate: '2026-01-02T00:00:00Z', commentType: 'text' }] },
-          { comments: [{ id: 1, content: 'First', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }] },
+          { id: 2, comments: [{ id: 1, content: 'Second', author: { displayName: 'Bob' }, publishedDate: '2026-01-02T00:00:00Z', commentType: 'text' }] },
+          { id: 1, comments: [{ id: 1, content: 'First', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }] },
         ],
       }),
     );
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const comments = await client.getPullRequestThreadComments('my-org', 'MyProject', 'repo-1', 57);
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
 
-    expect(comments.map(c => c.text)).toEqual(['First', 'Second']);
+    expect(threads.map(t => t.comments[0].text)).toEqual(['First', 'Second']);
+  });
+
+  it('preserves parentCommentId for replies', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            id: 1,
+            comments: [
+              { id: 1, content: 'Root', author: { displayName: 'Bob' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' },
+              { id: 2, parentCommentId: 1, content: 'Reply', author: { displayName: 'Jane' }, publishedDate: '2026-01-01T01:00:00Z', commentType: 'text' },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(threads[0].comments.map(c => ({ id: c.id, parentCommentId: c.parentCommentId }))).toEqual([
+      { id: 1, parentCommentId: 0 },
+      { id: 2, parentCommentId: 1 },
+    ]);
+  });
+
+  it('extracts filePath and line from threadContext, falling back from right to left side', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            id: 1,
+            status: 'active',
+            threadContext: { filePath: '/src/foo.ts', leftFileStart: { line: 5 } },
+            comments: [{ id: 1, content: 'Comment', author: { displayName: 'Bob' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(threads[0].filePath).toBe('/src/foo.ts');
+    expect(threads[0].line).toBe(5);
+  });
+
+  it('defaults filePath and line to null for a general (non-file) thread', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 1, comments: [{ id: 1, content: 'General comment', author: { displayName: 'Bob' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }] },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(threads[0].filePath).toBeNull();
+    expect(threads[0].line).toBeNull();
+  });
+
+  it('defaults status to "unknown" when the thread has none', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [{ id: 1, comments: [{ id: 1, content: 'Comment', author: { displayName: 'Bob' }, publishedDate: '2026-01-01T00:00:00Z', commentType: 'text' }] }],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(threads[0].status).toBe('unknown');
   });
 });
 

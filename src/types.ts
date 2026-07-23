@@ -32,6 +32,22 @@ export interface PullRequestReviewer {
   isRequired: boolean;
 }
 
+export interface PullRequestThreadComment {
+  id: number;
+  parentCommentId: number;
+  text: string;
+  createdBy: AssignedTo;
+  createdDate: string;
+}
+
+export interface PullRequestThread {
+  id: number;
+  status: string;
+  filePath: string | null;
+  line: number | null;
+  comments: PullRequestThreadComment[];
+}
+
 export interface PullRequestDetail {
   id: number;
   repositoryId: string;

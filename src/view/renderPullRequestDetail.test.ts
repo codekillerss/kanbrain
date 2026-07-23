@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderPullRequestDetail, type PullRequestDetailInput } from './renderPullRequestDetail';
-import type { WorkItem, KanbrainConfig, PullRequestDetail } from '../types';
-import type { WorkItemComment } from '../azureDevOps/workItemDetail';
+import type { WorkItem, KanbrainConfig, PullRequestDetail, PullRequestThread } from '../types';
 
 function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
   return {
@@ -47,12 +46,23 @@ const config: KanbrainConfig = {
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
 };
 
+function thread(overrides: Partial<PullRequestThread> = {}): PullRequestThread {
+  return {
+    id: 1,
+    status: 'active',
+    filePath: null,
+    line: null,
+    comments: [{ id: 1, parentCommentId: 0, text: 'Looks good', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' }],
+    ...overrides,
+  };
+}
+
 function input(overrides: Partial<PullRequestDetailInput> = {}): PullRequestDetailInput {
   return {
     pr: pullRequest(),
     workItems: [],
     config,
-    comments: [],
+    threads: [],
     avatars: {},
     ...overrides,
   };
@@ -167,13 +177,70 @@ describe('renderPullRequestDetail', () => {
   });
 
   it('shows real comments, escaped, with author and date', () => {
-    const comments: WorkItemComment[] = [
-      { id: 1, text: '<b>Looks good!</b>', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' },
+    const threads = [
+      thread({
+        comments: [{ id: 1, parentCommentId: 0, text: '<b>Looks good!</b>', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' }],
+      }),
     ];
-    const html = renderPullRequestDetail(input({ comments }));
+    const html = renderPullRequestDetail(input({ threads }));
 
     expect(html).not.toContain('No comments.');
     expect(html).toContain('Bob');
     expect(html).toContain('&lt;b&gt;Looks good!&lt;/b&gt;');
+  });
+
+  it('shows a file/line badge for a code review thread', () => {
+    const threads = [thread({ filePath: 'src/foo.ts', line: 42 })];
+    const html = renderPullRequestDetail(input({ threads }));
+    expect(html).toContain('src/foo.ts:42');
+  });
+
+  it('omits the file badge for a general (non-file) thread', () => {
+    const threads = [thread({ filePath: null, line: null })];
+    const html = renderPullRequestDetail(input({ threads }));
+    expect(html).not.toContain('kb-pr-thread-file');
+  });
+
+  it.each([
+    ['fixed', 'Fixed'],
+    ['wontFix', "Won't Fix"],
+    ['closed', 'Closed'],
+    ['byDesign', 'By Design'],
+    ['pending', 'Pending'],
+    ['active', 'Active'],
+  ])('shows the status label for thread status %s', (status, label) => {
+    const html = renderPullRequestDetail(input({ threads: [thread({ status })] }));
+    expect(html).toContain(label);
+  });
+
+  it('omits the status tag for an unknown thread status', () => {
+    const html = renderPullRequestDetail(input({ threads: [thread({ status: 'unknown' })] }));
+    expect(html).not.toContain('kb-pr-thread-status');
+  });
+
+  it('shows a reply indented below the root comment', () => {
+    const threads = [
+      thread({
+        comments: [
+          { id: 1, parentCommentId: 0, text: 'Root comment', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' },
+          { id: 2, parentCommentId: 1, text: 'A reply', createdBy: { displayName: 'Jane', imageUrl: null }, createdDate: '2026-01-01T01:00:00Z' },
+        ],
+      }),
+    ];
+    const html = renderPullRequestDetail(input({ threads }));
+
+    const replyStart = html.indexOf('kb-pr-reply');
+    const rootIndex = html.indexOf('Root comment');
+    const replyIndex = html.indexOf('A reply');
+
+    expect(replyStart).toBeGreaterThan(-1);
+    expect(rootIndex).toBeGreaterThan(-1);
+    expect(replyIndex).toBeGreaterThan(rootIndex);
+  });
+
+  it('renders multiple threads as separate cards', () => {
+    const threads = [thread({ id: 1 }), thread({ id: 2 })];
+    const html = renderPullRequestDetail(input({ threads }));
+    expect(html.split('kb-pr-thread"').length - 1).toBe(2);
   });
 });

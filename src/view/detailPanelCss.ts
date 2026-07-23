@@ -62,6 +62,12 @@ export function detailPanelCss(): string {
     .kb-pr-reviewer { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 6px; }
     .kb-pr-vote { opacity: 0.75; font-size: 12px; }
     .kb-pr-required-tag, .kb-pr-optional-tag { font-size: 10px; text-transform: uppercase; opacity: 0.6; }
-    .kb-pr-comments .kb-comment-body { white-space: pre-wrap; }
+    .kb-pr-threads .kb-comment-body { white-space: pre-wrap; }
+    .kb-pr-thread { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; margin-bottom: 12px; }
+    .kb-pr-thread-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 12px; opacity: 0.75; }
+    .kb-pr-thread-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kb-pr-thread-status { flex-shrink: 0; text-transform: uppercase; font-size: 10px; opacity: 0.7; }
+    .kb-pr-reply { margin-left: 24px; margin-top: 8px; }
+    .kb-pr-thread .kb-comment { border: none; padding: 0; }
   `;
 }

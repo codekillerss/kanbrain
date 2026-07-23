@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail, PullRequestThread } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
@@ -191,21 +191,30 @@ export class AzureDevOpsClient {
       .sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
   }
 
-  async getPullRequestThreadComments(
+  async getPullRequestThreads(
     organization: string,
     project: string,
     repositoryId: string,
     pullRequestId: number,
-  ): Promise<WorkItemComment[]> {
+  ): Promise<PullRequestThread[]> {
     interface RawComment {
       id: number;
+      parentCommentId?: number;
       content?: string;
       author?: unknown;
       publishedDate: string;
       commentType?: string;
       isDeleted?: boolean;
     }
+    interface RawThreadContext {
+      filePath?: string;
+      rightFileStart?: { line: number };
+      leftFileStart?: { line: number };
+    }
     interface RawThread {
+      id: number;
+      status?: string;
+      threadContext?: RawThreadContext | null;
       comments?: RawComment[];
     }
     const data = await this.request<{ value?: RawThread[] }>(
@@ -213,10 +222,26 @@ export class AzureDevOpsClient {
     );
     const threads = data.value ?? [];
     return threads
-      .flatMap(t => t.comments ?? [])
-      .filter(c => c.commentType === 'text' && !c.isDeleted)
-      .map(c => ({ id: c.id, text: c.content ?? '', createdBy: mapIdentityRef(c.author), createdDate: c.publishedDate }))
-      .sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
+      .map(t => {
+        const comments = (t.comments ?? [])
+          .filter(c => c.commentType === 'text' && !c.isDeleted)
+          .map(c => ({
+            id: c.id,
+            parentCommentId: c.parentCommentId ?? 0,
+            text: c.content ?? '',
+            createdBy: mapIdentityRef(c.author),
+            createdDate: c.publishedDate,
+          }));
+        return {
+          id: t.id,
+          status: t.status ?? 'unknown',
+          filePath: t.threadContext?.filePath ?? null,
+          line: t.threadContext?.rightFileStart?.line ?? t.threadContext?.leftFileStart?.line ?? null,
+          comments,
+        };
+      })
+      .filter(t => t.comments.length > 0)
+      .sort((a, b) => new Date(a.comments[0].createdDate).getTime() - new Date(b.comments[0].createdDate).getTime());
   }
 
   async getDefaultTeamName(organization: string, project: string): Promise<string> {

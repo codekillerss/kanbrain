@@ -1,5 +1,4 @@
-import type { WorkItem, KanbrainConfig, PullRequestDetail, PullRequestReviewer } from '../types';
-import type { WorkItemComment } from '../azureDevOps/workItemDetail';
+import type { WorkItem, KanbrainConfig, PullRequestDetail, PullRequestReviewer, PullRequestThread, PullRequestThreadComment } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { renderTypeAccent } from './renderTypeAccent';
 import { capitalize } from './renderDevelopment';
@@ -40,6 +39,53 @@ function renderBranchLink(repositoryId: string, branchName: string): string {
   return `<a class="kb-pr-branch-link" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${escapeHtml(branchName)}">${escapeHtml(branchName)}</a>`;
 }
 
+const THREAD_STATUS_LABELS: Record<string, string> = {
+  active: 'Active',
+  fixed: 'Fixed',
+  wontFix: "Won't Fix",
+  closed: 'Closed',
+  byDesign: 'By Design',
+  pending: 'Pending',
+};
+
+function renderThread(thread: PullRequestThread, avatars: Record<string, string>): string {
+  const roots = thread.comments.filter(c => !c.parentCommentId);
+  const repliesByParent = new Map<number, PullRequestThreadComment[]>();
+  for (const c of thread.comments) {
+    if (c.parentCommentId) {
+      const list = repliesByParent.get(c.parentCommentId) ?? [];
+      list.push(c);
+      repliesByParent.set(c.parentCommentId, list);
+    }
+  }
+
+  const fileLabel = thread.filePath
+    ? `<div class="kb-pr-thread-file">📄 ${escapeHtml(thread.filePath)}${thread.line ? `:${thread.line}` : ''}</div>`
+    : '';
+  const statusLabel = THREAD_STATUS_LABELS[thread.status]
+    ? `<span class="kb-pr-thread-status">${THREAD_STATUS_LABELS[thread.status]}</span>`
+    : '';
+
+  // PR thread comment content is plain text/Markdown, unlike work item comments (already-safe HTML
+  // from Azure DevOps' rich text editor) — escape it before handing it to renderComment, which only
+  // strips <script> tags and otherwise trusts its input as HTML.
+  const commentsHtml = roots
+    .map(root => {
+      const replyHtml = (repliesByParent.get(root.id) ?? [])
+        .map(r => `<div class="kb-pr-reply">${renderComment({ ...r, text: escapeHtml(r.text) }, avatars)}</div>`)
+        .join('');
+      return renderComment({ ...root, text: escapeHtml(root.text) }, avatars) + replyHtml;
+    })
+    .join('');
+
+  return `
+    <div class="kb-pr-thread">
+      ${fileLabel || statusLabel ? `<div class="kb-pr-thread-header">${fileLabel}${statusLabel}</div>` : ''}
+      ${commentsHtml}
+    </div>
+  `;
+}
+
 function renderLinkedWorkItem(item: WorkItem, config: KanbrainConfig): string {
   const { iconHtml } = renderTypeAccent(item.type, config);
   const detailCommandArgs = encodeURIComponent(JSON.stringify([item.id]));
@@ -58,19 +104,14 @@ export interface PullRequestDetailInput {
   pr: PullRequestDetail;
   workItems: WorkItem[];
   config: KanbrainConfig;
-  comments: WorkItemComment[];
+  threads: PullRequestThread[];
   avatars: Record<string, string>;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config, comments, avatars } = input;
+  const { pr, workItems, config, threads, avatars } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
-  // PR thread comment content is plain text/Markdown, unlike work item comments (already-safe HTML
-  // from Azure DevOps' rich text editor) — escape it before handing it to renderComment, which only
-  // strips <script> tags and otherwise trusts its input as HTML.
-  const commentsHtml = comments.length
-    ? comments.map(c => renderComment({ ...c, text: escapeHtml(c.text) }, avatars)).join('')
-    : '<div class="kb-empty">No comments.</div>';
+  const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
 
   return `
     <div class="kb-detail-header">
@@ -101,8 +142,8 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
       </div>
     </div>
     <div class="kb-detail-section-label">Discussion</div>
-    <div class="kb-comments kb-pr-comments">
-      ${commentsHtml}
+    <div class="kb-pr-threads">
+      ${threadsHtml}
     </div>
   `;
 }
