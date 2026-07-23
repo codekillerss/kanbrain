@@ -152,7 +152,15 @@ export class WorkItemDetailPanelManager {
       .kb-comment-date { opacity: 0.7; }
       .kb-comment-body { line-height: 1.5; }
       .kb-dev-label { display: flex; align-items: center; gap: 4px; }
-      .kb-dev-item { font-size: 12px; margin-top: 2px; opacity: 0.85; }
+      .kb-dev-item { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-top: 4px; opacity: 0.85; }
+      .kb-dev-item svg { flex-shrink: 0; }
+      .kb-dev-item-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .kb-dev-more-toggle { display: none; }
+      .kb-dev-extra { display: none; }
+      .kb-dev-more-toggle:checked + .kb-dev-extra { display: block; }
+      .kb-dev-more-toggle:checked ~ .kb-dev-more-btn { display: none; }
+      .kb-dev-more-btn { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--vscode-textLink-foreground); cursor: pointer; }
+      .kb-dev-more-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
     `;
   }
 }

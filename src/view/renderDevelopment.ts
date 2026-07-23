@@ -8,8 +8,15 @@ function renderBranchForkIcon(fill: string): string {
   return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${BRANCH_FORK_ICON_PATH}" fill="${fill}"/></svg>`;
 }
 
+function renderPullRequestIcon(): string {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="18" r="2.5" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2.5" stroke="currentColor" stroke-width="2"/><path d="M6 15.5V9a3 3 0 0 1 3-3h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 3l4 3-4 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 const BRANCH_FORK_ICON = renderBranchForkIcon('currentColor');
+const PULL_REQUEST_ICON = renderPullRequestIcon();
 const BADGE_ICON_COLOR = '#EAA300';
+const INITIAL_VISIBLE = 3;
+const BATCH_SIZE = 5;
 
 function capitalize(text: string): string {
   return text.length ? text.charAt(0).toUpperCase() + text.slice(1) : text;
@@ -17,23 +24,42 @@ function capitalize(text: string): string {
 
 function renderDevelopmentItem(link: DevelopmentLink, prDetails: Record<string, PullRequestDetails>): string {
   if (link.kind === 'branch') {
-    return `<div class="kb-dev-item">${escapeHtml(link.branchName)}</div>`;
+    const name = escapeHtml(link.branchName);
+    return `<div class="kb-dev-item" title="${name}">${BRANCH_FORK_ICON}<span class="kb-dev-item-text">${name}</span></div>`;
   }
   const details = prDetails[`${link.repositoryId}:${link.pullRequestId}`];
   const label = details
     ? `#${link.pullRequestId} ${escapeHtml(details.title)} (${escapeHtml(capitalize(details.status))})`
     : `#${link.pullRequestId}`;
-  return `<div class="kb-dev-item">${label}</div>`;
+  return `<div class="kb-dev-item" title="${label}">${PULL_REQUEST_ICON}<span class="kb-dev-item-text">${label}</span></div>`;
+}
+
+function renderMoreBatches(development: DevelopmentLink[], prDetails: Record<string, PullRequestDetails>, startIndex: number): string {
+  if (startIndex >= development.length) {
+    return '';
+  }
+  const batch = development.slice(startIndex, startIndex + BATCH_SIZE);
+  const checkboxId = `kb-dev-more-${startIndex}`;
+  return `
+    <input type="checkbox" id="${checkboxId}" class="kb-dev-more-toggle" />
+    <div class="kb-dev-extra">
+      ${batch.map(link => renderDevelopmentItem(link, prDetails)).join('')}
+      ${renderMoreBatches(development, prDetails, startIndex + BATCH_SIZE)}
+    </div>
+    <label for="${checkboxId}" class="kb-dev-more-btn">See more</label>
+  `;
 }
 
 export function renderDevelopmentSection(development: DevelopmentLink[], prDetails: Record<string, PullRequestDetails>): string {
   if (development.length === 0) {
     return '';
   }
+  const visible = development.slice(0, INITIAL_VISIBLE);
   return `
-    <div class="kb-field-row">
-      <div class="kb-field-label kb-dev-label">${BRANCH_FORK_ICON}<span>Development</span></div>
-      ${development.map(link => renderDevelopmentItem(link, prDetails)).join('')}
+    <div class="kb-detail-group">
+      <div class="kb-detail-group-label kb-dev-label">${BRANCH_FORK_ICON}<span>Development</span></div>
+      ${visible.map(link => renderDevelopmentItem(link, prDetails)).join('')}
+      ${renderMoreBatches(development, prDetails, INITIAL_VISIBLE)}
     </div>
   `;
 }

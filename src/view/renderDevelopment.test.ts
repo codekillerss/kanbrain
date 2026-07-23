@@ -7,19 +7,23 @@ describe('renderDevelopmentSection', () => {
     expect(renderDevelopmentSection([], {})).toBe('');
   });
 
-  it('renders the "Development" label with the branch-fork icon when there is at least one link', () => {
+  it('wraps the section in the same bordered group used by other detail fields', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'main' }];
     const html = renderDevelopmentSection(links, {});
+    expect(html).toContain('kb-detail-group');
+    expect(html).toContain('kb-detail-group-label');
     expect(html).toContain('kb-dev-label');
     expect(html).toContain('Development');
     expect(html).toContain('<svg');
   });
 
-  it('renders a branch link by its escaped name', () => {
+  it('renders a branch link by its escaped name, inside a text span, with a hover tooltip', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/<xss>' }];
     const html = renderDevelopmentSection(links, {});
     expect(html).toContain('kb-dev-item');
+    expect(html).toContain('kb-dev-item-text');
     expect(html).toContain('feature/&lt;xss&gt;');
+    expect(html).toContain('title="feature/&lt;xss&gt;"');
   });
 
   it('renders a pull request with its resolved title and capitalized status', () => {
@@ -42,9 +46,55 @@ describe('renderDevelopmentSection', () => {
       { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 },
     ];
     const html = renderDevelopmentSection(links, {});
-    expect(html.split('kb-dev-item').length - 1).toBe(2);
+    expect(html.split('class="kb-dev-item"').length - 1).toBe(2);
     expect(html).toContain('main');
     expect(html).toContain('#57');
+  });
+
+  it('uses a visually distinct icon for branch vs pull request items', () => {
+    const links: DevelopmentLink[] = [
+      { kind: 'branch', repositoryId: 'repo-1', branchName: 'main' },
+      { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 },
+    ];
+    const html = renderDevelopmentSection(links, {});
+    expect(html).toContain('M11 5.5'); // branch fork icon signature
+    expect(html).toContain('<circle'); // pull request icon signature, absent from the branch icon
+  });
+
+  it('does not paginate when there are 3 or fewer links', () => {
+    const links: DevelopmentLink[] = [
+      { kind: 'branch', repositoryId: 'repo-1', branchName: 'a' },
+      { kind: 'branch', repositoryId: 'repo-1', branchName: 'b' },
+      { kind: 'branch', repositoryId: 'repo-1', branchName: 'c' },
+    ];
+    const html = renderDevelopmentSection(links, {});
+    expect(html).not.toContain('kb-dev-more-toggle');
+    expect(html).not.toContain('See more');
+  });
+
+  it('shows only 3 items plus a "See more" control when there are more than 3 links', () => {
+    const links: DevelopmentLink[] = Array.from({ length: 5 }, (_, i) => ({
+      kind: 'branch' as const,
+      repositoryId: 'repo-1',
+      branchName: `branch-${i}`,
+    }));
+    const html = renderDevelopmentSection(links, {});
+    expect(html.split('class="kb-dev-item"').length - 1).toBe(5);
+    expect(html.split('kb-dev-more-toggle').length - 1).toBe(1);
+    expect(html.split('See more').length - 1).toBe(1);
+  });
+
+  it('adds one more repeatable "See more" batch per additional 5 items beyond the first 3', () => {
+    const links: DevelopmentLink[] = Array.from({ length: 10 }, (_, i) => ({
+      kind: 'branch' as const,
+      repositoryId: 'repo-1',
+      branchName: `branch-${i}`,
+    }));
+    const html = renderDevelopmentSection(links, {});
+    // 10 items - 3 initial = 7 remaining -> ceil(7 / 5) = 2 batches/buttons.
+    expect(html.split('class="kb-dev-item"').length - 1).toBe(10);
+    expect(html.split('kb-dev-more-toggle').length - 1).toBe(2);
+    expect(html.split('See more').length - 1).toBe(2);
   });
 });
 
