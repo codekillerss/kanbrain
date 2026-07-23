@@ -40,7 +40,6 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     },
     team => context.workspaceState.update(SELECTED_TEAM_KEY, team),
-    extensionVersion,
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
