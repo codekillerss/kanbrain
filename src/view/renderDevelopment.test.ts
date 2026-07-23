@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderDevelopmentSection } from './renderDevelopment';
+import { renderDevelopmentSection, renderDevelopmentBadge } from './renderDevelopment';
 import type { DevelopmentLink, PullRequestDetails } from '../types';
 
 describe('renderDevelopmentSection', () => {
@@ -45,5 +45,30 @@ describe('renderDevelopmentSection', () => {
     expect(html.split('kb-dev-item').length - 1).toBe(2);
     expect(html).toContain('main');
     expect(html).toContain('#57');
+  });
+});
+
+describe('renderDevelopmentBadge', () => {
+  it('returns an empty string when there are no development links', () => {
+    expect(renderDevelopmentBadge([])).toBe('');
+  });
+
+  it('renders the fork icon and the combined count of branches and pull requests', () => {
+    const links: DevelopmentLink[] = [
+      { kind: 'branch', repositoryId: 'repo-1', branchName: 'main' },
+      { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 },
+      { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 58 },
+    ];
+    const html = renderDevelopmentBadge(links);
+    expect(html).toContain('kb-dev-badge');
+    expect(html).toContain('<svg');
+    expect(html).toContain('>3<');
+  });
+
+  it('shows only the count, not any PR id or title', () => {
+    const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
+    const html = renderDevelopmentBadge(links);
+    expect(html).toContain('>1<');
+    expect(html).not.toContain('#57');
   });
 });
