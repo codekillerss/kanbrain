@@ -6,8 +6,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
-    typeToBacklogLevel: {},
-    backlogLevels: {},
+    defaultTeam: 'Team 1',
+    skills: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -16,83 +16,89 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
 }
 
 describe('resolveShowParent', () => {
-  it('returns false when the type is not found in any board', () => {
-    const result = resolveShowParent(config({ cardSettingsByBoard: { Stories: { Bug: { parent: true, assignedTo: true } } } }), 'Task', undefined);
+  it('returns false when the type is not found in any board of any team', () => {
+    const result = resolveShowParent(
+      config({ cardSettingsByTeam: { 'Team 1': { Stories: { Bug: { parent: true, assignedTo: true } } } } }),
+      'Task',
+      undefined,
+    );
     expect(result).toBe(false);
   });
 
-  it('returns false when cardSettingsByBoard is undefined', () => {
+  it('returns false when cardSettingsByTeam is undefined', () => {
     expect(resolveShowParent(config(), 'Task', undefined)).toBe(false);
   });
 
-  it('uses the single board that has the type', () => {
-    const result = resolveShowParent(
-      config({ cardSettingsByBoard: { Stories: { 'User Story': { parent: true, assignedTo: false } } } }),
-      'User Story',
-      undefined,
-    );
-    expect(result).toBe(true);
-  });
-
-  it('uses the selected board when the type appears in more than one board with different values', () => {
+  it('falls back to defaultTeam when no team is explicitly selected', () => {
     const cfg = config({
-      cardSettingsByBoard: {
-        Stories: { Bug: { parent: true, assignedTo: true } },
-        Sprints: { Bug: { parent: false, assignedTo: true } },
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: {
+        'Team 1': { Stories: { Bug: { parent: true, assignedTo: false } } },
+        'Team 2': { Stories: { Bug: { parent: false, assignedTo: false } } },
       },
     });
-    expect(resolveShowParent(cfg, 'Bug', 'Sprints')).toBe(false);
-    expect(resolveShowParent(cfg, 'Bug', 'Stories')).toBe(true);
+    expect(resolveShowParent(cfg, 'Bug', undefined)).toBe(true);
   });
 
-  it('falls back to the first matching board when the selected board does not have the type', () => {
+  it('uses the explicitly selected team over defaultTeam', () => {
     const cfg = config({
-      cardSettingsByBoard: {
-        Stories: { Bug: { parent: true, assignedTo: true } },
-        Sprints: { Bug: { parent: false, assignedTo: true } },
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: {
+        'Team 1': { Stories: { Bug: { parent: true, assignedTo: false } } },
+        'Team 2': { Stories: { Bug: { parent: false, assignedTo: false } } },
       },
     });
-    expect(resolveShowParent(cfg, 'Bug', 'Features')).toBe(true);
+    expect(resolveShowParent(cfg, 'Bug', 'Team 2')).toBe(false);
+  });
+
+  it('finds the type in whichever board of the selected team has it', () => {
+    const cfg = config({
+      cardSettingsByTeam: {
+        'Team 1': { Epics: { Epic: { parent: true, assignedTo: true } }, Stories: { Bug: { parent: false, assignedTo: true } } },
+      },
+    });
+    expect(resolveShowParent(cfg, 'Epic', 'Team 1')).toBe(true);
+    expect(resolveShowParent(cfg, 'Bug', 'Team 1')).toBe(false);
+  });
+
+  it('falls back to the first team found when neither the selected team nor defaultTeam exist in cardSettingsByTeam', () => {
+    const cfg = config({
+      defaultTeam: 'Missing Team',
+      cardSettingsByTeam: { 'Team 1': { Stories: { Bug: { parent: true, assignedTo: true } } } },
+    });
+    expect(resolveShowParent(cfg, 'Bug', 'Also Missing')).toBe(true);
   });
 });
 
 describe('resolveShowAssignedTo', () => {
-  it('returns false when the type is not found in any board', () => {
-    const result = resolveShowAssignedTo(config({ cardSettingsByBoard: { Stories: { Bug: { parent: true, assignedTo: true } } } }), 'Task', undefined);
+  it('returns false when the type is not found in any board of any team', () => {
+    const result = resolveShowAssignedTo(
+      config({ cardSettingsByTeam: { 'Team 1': { Stories: { Bug: { parent: true, assignedTo: true } } } } }),
+      'Task',
+      undefined,
+    );
     expect(result).toBe(false);
   });
 
-  it('returns false when cardSettingsByBoard is undefined', () => {
-    expect(resolveShowAssignedTo(config(), 'Task', undefined)).toBe(false);
-  });
-
-  it('uses the single board that has the type', () => {
-    const result = resolveShowAssignedTo(
-      config({ cardSettingsByBoard: { Stories: { 'User Story': { parent: false, assignedTo: true } } } }),
-      'User Story',
-      undefined,
-    );
-    expect(result).toBe(true);
-  });
-
-  it('uses the selected board when the type appears in more than one board with different values', () => {
+  it('falls back to defaultTeam when no team is explicitly selected', () => {
     const cfg = config({
-      cardSettingsByBoard: {
-        Stories: { Bug: { parent: true, assignedTo: false } },
-        Sprints: { Bug: { parent: true, assignedTo: true } },
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: {
+        'Team 1': { Stories: { Bug: { parent: false, assignedTo: true } } },
+        'Team 2': { Stories: { Bug: { parent: false, assignedTo: false } } },
       },
     });
-    expect(resolveShowAssignedTo(cfg, 'Bug', 'Sprints')).toBe(true);
-    expect(resolveShowAssignedTo(cfg, 'Bug', 'Stories')).toBe(false);
+    expect(resolveShowAssignedTo(cfg, 'Bug', undefined)).toBe(true);
   });
 
-  it('falls back to the first matching board when the selected board does not have the type', () => {
+  it('uses the explicitly selected team over defaultTeam', () => {
     const cfg = config({
-      cardSettingsByBoard: {
-        Stories: { Bug: { parent: true, assignedTo: true } },
-        Sprints: { Bug: { parent: true, assignedTo: false } },
+      defaultTeam: 'Team 1',
+      cardSettingsByTeam: {
+        'Team 1': { Stories: { Bug: { parent: false, assignedTo: true } } },
+        'Team 2': { Stories: { Bug: { parent: false, assignedTo: false } } },
       },
     });
-    expect(resolveShowAssignedTo(cfg, 'Bug', 'Features')).toBe(true);
+    expect(resolveShowAssignedTo(cfg, 'Bug', 'Team 2')).toBe(false);
   });
 });
