@@ -108,6 +108,18 @@ describe('renderHome', () => {
     expect(html).toContain('Open Flow');
   });
 
+  it('puts the switch/clear buttons in the Flow section header, not overlaid on the card', () => {
+    const html = renderHome(state({ workItem: workItem() }));
+
+    const labelStart = html.indexOf('kb-section-label');
+    const labelEnd = html.indexOf('</div>', html.indexOf('kb-section-actions', labelStart));
+    const label = html.slice(labelStart, labelEnd);
+    expect(label).toContain('id="kb-toggle-search-btn"');
+    expect(label).toContain('id="kb-clear-btn"');
+    expect(html).not.toContain('kb-card-actions');
+    expect(html).not.toContain('kb-card-wrapper');
+  });
+
   it('does not show the skill action button on the active work item card, even when a skill is configured', () => {
     const html = renderHome(
       state({

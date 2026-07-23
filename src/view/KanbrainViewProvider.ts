@@ -643,11 +643,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           linear-gradient(135deg, var(--vscode-focusBorder), var(--vscode-panel-border)) border-box;
       }
       .kb-section-card .kb-section-label { margin: 0; border-radius: 0; }
-      .kb-section-card .kb-home-commands, .kb-section-card .kb-card-wrapper, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
+      .kb-section-card .kb-home-commands, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
       .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card { margin: 8px 10px; }
       .kb-home-commands { display: flex; flex-direction: column; gap: 6px; }
-      .kb-card-wrapper { position: relative; }
-      .kb-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
       .kb-icon-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }

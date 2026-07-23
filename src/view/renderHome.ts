@@ -2,6 +2,18 @@ import type { RenderState } from './render';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { escapeHtml } from './escapeHtml';
 
+function renderHomeFlowActions(state: RenderState): string {
+  if (!state.workItem) {
+    return '';
+  }
+  return `
+    <div class="kb-section-actions">
+      <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
+      <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
+    </div>
+  `;
+}
+
 function renderHomeWorkItemSection(state: RenderState): string {
   const config = state.config!;
   const avatars = state.avatars ?? {};
@@ -29,13 +41,7 @@ function renderHomeWorkItemSection(state: RenderState): string {
 
   return `
     ${searchDialog}
-    <div class="kb-card-wrapper">
-      ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false, avatars, false, null, false, state.selectedTeam)}
-      <div class="kb-card-actions">
-        <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
-        <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
-      </div>
-    </div>
+    ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false, avatars, false, null, false, state.selectedTeam)}
     <div class="kb-home-commands">
       <button id="kb-open-flow-btn" class="kb-secondary-btn">➡️ Open Flow</button>
     </div>
@@ -67,7 +73,10 @@ function renderHomeTeamSection(state: RenderState): string {
 export function renderHome(state: RenderState): string {
   return `
     <div class="kb-section-card">
-      <div class="kb-section-label">Flow</div>
+      <div class="kb-section-label">
+        <span>Flow</span>
+        ${renderHomeFlowActions(state)}
+      </div>
       ${renderHomeWorkItemSection(state)}
     </div>
     ${renderHomeTeamSection(state)}
