@@ -3,6 +3,7 @@ import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
+import { renderParentBanner, renderSiblingNavigator } from './renderParentContext';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -54,6 +55,8 @@ export function render(state: RenderState): string {
 
   const avatars = state.avatars ?? {};
   const showParent = resolveShowParent(state.config, state.workItem.type, state.selectedTeam);
+  const parentBannerHtml = renderParentBanner(state.parent, state.config);
+  const siblingNavHtml = renderSiblingNavigator(state.workItem, state.parent);
   const subtasksHtml = state.subtasks.length
     ? state.subtasks
         .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam))
@@ -73,6 +76,8 @@ export function render(state: RenderState): string {
         <div id="kb-search-results"></div>
       </div>
     </div>
+    ${parentBannerHtml}
+    ${siblingNavHtml}
     <div class="kb-card-wrapper">
       ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
       <div class="kb-card-actions">

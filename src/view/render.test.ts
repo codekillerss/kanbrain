@@ -341,4 +341,33 @@ describe('render', () => {
 
     expect(html.split('kb-field-label').length - 1).toBe(1);
   });
+
+  it('shows the parent banner and sibling navigator on the Flow screen when the item has a parent', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent', childIds: [482, 501] });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    expect(html).toContain('kb-parent-banner');
+    expect(html).toContain('kb-sibling-nav');
+  });
+
+  it('does not show the parent banner or sibling navigator when there is no parent', () => {
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem(),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    expect(html).not.toContain('kb-parent-banner');
+    expect(html).not.toContain('kb-sibling-nav');
+  });
 });

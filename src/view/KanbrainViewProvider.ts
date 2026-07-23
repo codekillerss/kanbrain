@@ -668,6 +668,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-parent-link { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
       .kb-parent-link .kb-link-text { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-parent-link:hover .kb-link-text { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
+      .kb-parent-banner { display: flex; align-items: center; gap: 6px; padding: 6px 10px; margin-bottom: 4px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .kb-parent-banner:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-parent-banner .kb-link-text { color: var(--vscode-textLink-foreground); }
+      .kb-sibling-nav { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0; margin-bottom: 8px; }
+      .kb-sibling-arrow { background: none; border: none; color: var(--vscode-foreground); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+      .kb-sibling-arrow:disabled { opacity: 0.3; cursor: default; }
+      .kb-sibling-dots { display: flex; gap: 6px; }
+      .kb-sibling-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vscode-panel-border); }
+      .kb-sibling-dot-active { background: var(--vscode-textLink-foreground); }
       .kb-avatar { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
       .kb-avatar-initial { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 9px; flex-shrink: 0; }
       .kb-result-item-main { display: flex; align-items: center; width: 100%; text-align: left; padding: 4px 6px; background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); min-width: 0; }
