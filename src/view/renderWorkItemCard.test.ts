@@ -156,7 +156,7 @@ describe('renderWorkItemCard', () => {
     expect(html).not.toContain('kb-field-label');
   });
 
-  it('shows the parent row before the assignee row', () => {
+  it('shows the parent row after the assignee row, so status/assignee read as the card\'s own', () => {
     const parentItem = workItem({ id: 900, title: 'Epic parent' });
     const html = renderWorkItemCard(
       workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
@@ -169,11 +169,13 @@ describe('renderWorkItemCard', () => {
       true,
     );
 
-    const parentIndex = html.indexOf('kb-field-label');
+    const statusIndex = html.indexOf('kb-status-row');
     const assigneeIndex = html.indexOf('kb-assignee-row');
+    const parentIndex = html.indexOf('kb-field-label');
 
-    expect(parentIndex).toBeGreaterThanOrEqual(0);
-    expect(assigneeIndex).toBeGreaterThan(parentIndex);
+    expect(statusIndex).toBeGreaterThanOrEqual(0);
+    expect(assigneeIndex).toBeGreaterThan(statusIndex);
+    expect(parentIndex).toBeGreaterThan(assigneeIndex);
   });
 
   it('does not show a Development badge when the work item has no development links', () => {
