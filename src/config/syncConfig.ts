@@ -1,34 +1,33 @@
 import type { KanbrainConfig, SkillEntry, CardFieldSettings } from '../types';
-import type { DiscoveredBacklogLevels } from '../azureDevOps/backlogLevels';
 
 export function syncConfig(
   config: KanbrainConfig,
-  discovered: DiscoveredBacklogLevels,
-  freshTypeToBacklogLevel: Record<string, string>,
+  discoveredStatusesByType: Record<string, Record<string, string>>,
   freshStatusColors: Record<string, string>,
   freshTypeColors: Record<string, string>,
   freshTypeIcons: Record<string, string>,
-  freshCardSettingsByBoard: Record<string, Record<string, CardFieldSettings>>,
+  freshDefaultTeam: string,
+  freshCardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>,
 ): KanbrainConfig {
-  const backlogLevels: Record<string, Record<string, SkillEntry | null>> = {};
+  const skills: Record<string, Record<string, SkillEntry | null>> = {};
 
-  for (const [level, statuses] of Object.entries(discovered)) {
-    const existingLevel = config.backlogLevels[level] ?? {};
+  for (const [type, statuses] of Object.entries(discoveredStatusesByType)) {
+    const existingType = config.skills[type] ?? {};
     const merged: Record<string, SkillEntry | null> = {};
     for (const status of Object.keys(statuses)) {
-      merged[status] = status in existingLevel ? existingLevel[status] : null;
+      merged[status] = status in existingType ? existingType[status] : null;
     }
-    backlogLevels[level] = merged;
+    skills[type] = merged;
   }
 
-  for (const [level, statuses] of Object.entries(config.backlogLevels)) {
-    if (!(level in backlogLevels)) {
-      backlogLevels[level] = { ...statuses };
+  for (const [type, statuses] of Object.entries(config.skills)) {
+    if (!(type in skills)) {
+      skills[type] = { ...statuses };
       continue;
     }
     for (const [status, skill] of Object.entries(statuses)) {
-      if (!(status in backlogLevels[level])) {
-        backlogLevels[level][status] = skill;
+      if (!(status in skills[type])) {
+        skills[type][status] = skill;
       }
     }
   }
@@ -36,12 +35,12 @@ export function syncConfig(
   return {
     organization: config.organization,
     project: config.project,
-    typeToBacklogLevel: freshTypeToBacklogLevel,
-    backlogLevels,
+    defaultTeam: freshDefaultTeam,
+    skills,
     statusColors: freshStatusColors,
     typeColors: freshTypeColors,
     typeIcons: freshTypeIcons,
-    cardSettingsByBoard: freshCardSettingsByBoard,
+    cardSettingsByTeam: freshCardSettingsByTeam,
     showAssignedTo: config.showAssignedTo,
   };
 }
