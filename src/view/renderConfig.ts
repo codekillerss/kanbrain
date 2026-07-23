@@ -4,15 +4,16 @@ import { escapeHtml } from './escapeHtml';
 
 export function renderConfig(state: RenderState): string {
   const config = state.config!;
-  const boardNames = Object.keys(config.cardSettingsByBoard ?? {});
-  const boardSelectHtml =
-    boardNames.length > 1
+  const teamNames = Object.keys(config.cardSettingsByTeam ?? {});
+  const selected = state.selectedTeam ?? config.defaultTeam;
+  const teamSelectHtml =
+    teamNames.length > 1
       ? `
     <label class="kb-select-row">
-      Board (desempate de campos)
-      <select id="kb-board-select">
-        ${boardNames
-          .map(name => `<option value="${escapeHtml(name)}"${name === state.selectedBoard ? ' selected' : ''}>${escapeHtml(name)}</option>`)
+      Team
+      <select id="kb-team-select">
+        ${teamNames
+          .map(name => `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`)
           .join('')}
       </select>
     </label>
@@ -28,7 +29,7 @@ export function renderConfig(state: RenderState): string {
       <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
       Show assignee in search results
     </label>
-    ${boardSelectHtml}
+    ${teamSelectHtml}
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">Skill Configuration</div>
       ${renderConfigEditor(config)}

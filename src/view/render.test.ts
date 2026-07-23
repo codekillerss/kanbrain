@@ -21,8 +21,8 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
 const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
-  typeToBacklogLevel: { Task: 'Tasks' },
-  backlogLevels: { Tasks: { Active: { path: 'skills/fix.md' }, Closed: null } },
+  defaultTeam: 'MyProject Team',
+  skills: { Task: { Active: { path: 'skills/fix.md' }, Closed: null } },
   statusColors: { Active: 'b2b2b2' },
   typeColors: { Task: 'f2cb1d' },
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
@@ -194,7 +194,7 @@ describe('render', () => {
   it('uses a custom label when the skill entry defines one', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', label: 'Fix it now' }, Closed: null } },
+      skills: { Task: { Active: { path: 'skills/fix.md', label: 'Fix it now' }, Closed: null } },
     };
     const html = render({
       hasWorkspace: true,
@@ -211,7 +211,7 @@ describe('render', () => {
   it('applies textColor and buttonColor as inline style when valid hex', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', textColor: 'ffffff', buttonColor: '007acc' }, Closed: null } },
+      skills: { Task: { Active: { path: 'skills/fix.md', textColor: 'ffffff', buttonColor: '007acc' }, Closed: null } },
     };
     const html = render({
       hasWorkspace: true,
@@ -228,7 +228,7 @@ describe('render', () => {
   it('ignores an invalid hex color and falls back to the theme default', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      backlogLevels: { Tasks: { Active: { path: 'skills/fix.md', buttonColor: 'not-a-color' }, Closed: null } },
+      skills: { Task: { Active: { path: 'skills/fix.md', buttonColor: 'not-a-color' }, Closed: null } },
     };
     const html = render({
       hasWorkspace: true,
@@ -244,7 +244,10 @@ describe('render', () => {
   });
 
   it('passes avatars through to the main card and subtasks', () => {
-    const configWithAssignee: KanbrainConfig = { ...config, cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: true } } } };
+    const configWithAssignee: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: true } } } },
+    };
     const subtasks = [workItem({ id: 101, assignedTo: { displayName: 'Bob', imageUrl: 'https://example.com/bob.png' } })];
     const html = render({
       hasWorkspace: true,
@@ -273,8 +276,11 @@ describe('render', () => {
     expect(html).toContain('data-action="open-work-item-detail" data-id="101"');
   });
 
-  it('shows the parent row on the main card when cardSettingsByBoard enables Parent for the type', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } };
+  it('shows the parent row on the main card when cardSettingsByTeam enables Parent for the type', () => {
+    const configWithParent: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Stories: { Task: { parent: true, assignedTo: false } } } },
+    };
     const html = render({
       hasWorkspace: true,
       config: configWithParent,
@@ -288,8 +294,11 @@ describe('render', () => {
     expect(html).toContain('data-id="900"');
   });
 
-  it('does not show the parent row when the type is not enabled in cardSettingsByBoard', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: false, assignedTo: false } } } };
+  it('does not show the parent row when the type is not enabled in cardSettingsByTeam', () => {
+    const configWithParent: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Stories: { Task: { parent: false, assignedTo: false } } } },
+    };
     const html = render({
       hasWorkspace: true,
       config: configWithParent,
@@ -303,7 +312,10 @@ describe('render', () => {
   });
 
   it('does not show the parent row on subtask cards', () => {
-    const configWithParent: KanbrainConfig = { ...config, cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } };
+    const configWithParent: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Stories: { Task: { parent: true, assignedTo: false } } } },
+    };
     const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
     const html = render({
       hasWorkspace: true,

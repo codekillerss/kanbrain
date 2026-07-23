@@ -7,8 +7,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
-    typeToBacklogLevel: {},
-    backlogLevels: {},
+    defaultTeam: 'MyProject Team',
+    skills: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -35,8 +35,8 @@ describe('renderConfig', () => {
   });
 
   it('renders the config editor', () => {
-    const html = renderConfig(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
-    expect(html).toContain('data-level="Tasks"');
+    const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
+    expect(html).toContain('data-level="Task"');
   });
 
   it('makes the header sticky', () => {
@@ -57,38 +57,65 @@ describe('renderConfig', () => {
   });
 
   it('wraps Skill Configuration in a parent section container around the config editor', () => {
-    const html = renderConfig(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
+    const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
 
     const parentIndex = html.indexOf('kb-config-parent-section');
     const headerIndex = html.indexOf('Skill Configuration');
-    const levelIndex = html.indexOf('data-level="Tasks"');
+    const levelIndex = html.indexOf('data-level="Task"');
 
     expect(parentIndex).toBeGreaterThanOrEqual(0);
     expect(headerIndex).toBeGreaterThan(parentIndex);
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
 
-  it('does not show a board selector when there are 0 or 1 boards in cardSettingsByBoard', () => {
-    const html = renderConfig(state({ config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } } } }) }));
-    expect(html).not.toContain('id="kb-board-select"');
+  it('does not show a team selector when there are 0 or 1 teams in cardSettingsByTeam', () => {
+    const html = renderConfig(state({ config: config({ cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } } }) }));
+    expect(html).not.toContain('id="kb-team-select"');
   });
 
-  it('shows a board selector when there is more than one board in cardSettingsByBoard', () => {
-    const html = renderConfig(
-      state({ config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } }, Sprints: { Task: { parent: false, assignedTo: true } } } }) }),
-    );
-    expect(html).toContain('id="kb-board-select"');
-    expect(html).toContain('<option value="Stories"');
-    expect(html).toContain('<option value="Sprints"');
-  });
-
-  it('marks the selected board as selected in the dropdown', () => {
+  it('shows a team selector when there is more than one team in cardSettingsByTeam', () => {
     const html = renderConfig(
       state({
-        config: config({ cardSettingsByBoard: { Stories: { Task: { parent: true, assignedTo: false } }, Sprints: { Task: { parent: false, assignedTo: true } } } }),
-        selectedBoard: 'Sprints',
+        config: config({
+          cardSettingsByTeam: {
+            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
+            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
+          },
+        }),
       }),
     );
-    expect(html).toMatch(/<option value="Sprints" selected>/);
+    expect(html).toContain('id="kb-team-select"');
+    expect(html).toContain('<option value="Team 1"');
+    expect(html).toContain('<option value="Team 2"');
+  });
+
+  it('marks the selected team as selected in the dropdown', () => {
+    const html = renderConfig(
+      state({
+        config: config({
+          cardSettingsByTeam: {
+            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
+            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
+          },
+        }),
+        selectedTeam: 'Team 2',
+      }),
+    );
+    expect(html).toMatch(/<option value="Team 2" selected>/);
+  });
+
+  it('marks defaultTeam as selected when no explicit selection was made', () => {
+    const html = renderConfig(
+      state({
+        config: config({
+          defaultTeam: 'Team 1',
+          cardSettingsByTeam: {
+            'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } },
+            'Team 2': { Stories: { Task: { parent: false, assignedTo: true } } },
+          },
+        }),
+      }),
+    );
+    expect(html).toMatch(/<option value="Team 1" selected>/);
   });
 });

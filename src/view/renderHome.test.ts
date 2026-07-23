@@ -23,8 +23,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
-    typeToBacklogLevel: {},
-    backlogLevels: {},
+    defaultTeam: 'MyProject Team',
+    skills: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -112,8 +112,7 @@ describe('renderHome', () => {
       state({
         workItem: workItem(),
         config: config({
-          typeToBacklogLevel: { Task: 'Tasks' },
-          backlogLevels: { Tasks: { Active: { path: 'skills/fix.md' } } },
+          skills: { Task: { Active: { path: 'skills/fix.md' } } },
         }),
       }),
     );
@@ -123,9 +122,9 @@ describe('renderHome', () => {
   });
 
   it('does not render a config editor section', () => {
-    const html = renderHome(state({ config: config({ backlogLevels: { Tasks: { 'To Do': null } } }) }));
+    const html = renderHome(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
 
-    expect(html).not.toContain('data-level="Tasks"');
+    expect(html).not.toContain('data-level="Task"');
   });
 
   it('passes avatars through to the active work item card', () => {
@@ -133,7 +132,7 @@ describe('renderHome', () => {
       state({
         workItem: workItem({ assignedTo: { displayName: 'Jane', imageUrl: 'https://example.com/jane.png' } }),
         avatars: { 'https://example.com/jane.png': 'data:image/png;base64,JANE' },
-        config: config({ cardSettingsByBoard: { Tasks: { Task: { parent: false, assignedTo: true } } } }),
+        config: config({ cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: true } } } } }),
       }),
     );
 
