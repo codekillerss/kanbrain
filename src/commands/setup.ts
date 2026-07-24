@@ -7,6 +7,8 @@ import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { discoverWorkItemTypes } from '../azureDevOps/discoverWorkItemTypes';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
+import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
+import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 
 const EXAMPLE_SKILL = `# Example skill
 
@@ -87,6 +89,21 @@ export function registerSetupCommand(
       return;
     }
 
+    const mapReposPick = await vscode.window.showQuickPick(
+      [
+        { label: 'Yes', map: true },
+        { label: 'No', map: false },
+      ],
+      { placeHolder: 'Do you want to map the repositories of this project?' },
+    );
+    if (!mapReposPick) {
+      return;
+    }
+
+    const azureRepos = await client.listRepositories(orgPick.org.name, projectPick.project.name);
+    const localRepos = mapReposPick.map ? await discoverLocalRepositories(workspaceRoot) : new Map<string, string>();
+    const repositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
+
     const preset = buildPresetPlan(discoveredStatusesByType, generateFilesPick.generate, statusColors);
 
     const skillsDir = path.join(workspaceRoot, '.kanbrain', 'skills');
@@ -113,6 +130,7 @@ export function registerSetupCommand(
       typeIcons,
       cardSettingsByTeam,
       taskBacklogTypesByTeam,
+      repositories,
       lastSyncedVersion: extensionVersion,
     });
 
