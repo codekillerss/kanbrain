@@ -1,4 +1,4 @@
-import type { WorkItem, KanbrainConfig } from '../types';
+import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
 import { resolveSkill } from '../config/resolveSkill';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
@@ -13,10 +13,30 @@ function renderPickButton(id: number): string {
   return `<button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${id}" title="Set as current work item">⇄</button>`;
 }
 
+function renderGlobalSkillSelect(id: number, globalSkills: Record<string, SkillEntry>): string {
+  const entries = Object.entries(globalSkills);
+  if (entries.length === 0) {
+    return '';
+  }
+  const options = entries
+    .map(([skillId, entry]) => {
+      const label = entry.label ?? entry.path.split('/').pop() ?? entry.path;
+      return `<option value="${escapeHtml(skillId)}">${escapeHtml(label)}</option>`;
+    })
+    .join('');
+  return `
+    <select class="kb-global-skill-select" data-action="run-global-skill" data-id="${id}">
+      <option value="" selected disabled>▾</option>
+      ${options}
+    </select>
+  `;
+}
+
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skill = resolveSkill(config, workItem);
+  const globalSkillHtml = renderGlobalSkillSelect(workItem.id, config.globalSkills ?? {});
   if (!skill) {
-    return '';
+    return globalSkillHtml;
   }
   const label = skill.label ?? skill.path.split('/').pop() ?? skill.path;
   const textColor = skill.textColor && isValidHexColor(skill.textColor) ? normalizeHex(skill.textColor) : null;
@@ -25,7 +45,7 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
     buttonColor || textColor
       ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
       : '';
-  return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}"${style}>▶ ${escapeHtml(label)}</button>`;
+  return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}"${style}>▶ ${escapeHtml(label)}</button>${globalSkillHtml}`;
 }
 
 export function renderWorkItemCard(

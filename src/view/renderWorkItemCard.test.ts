@@ -194,4 +194,32 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('kb-dev-badge');
     expect(html).toContain('>2<');
   });
+
+  it('does not show the global skill select when no global skills are configured', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('kb-global-skill-select');
+  });
+
+  it('shows the global skill select with an option per entry when global skills are configured', () => {
+    const withGlobal: KanbrainConfig = {
+      ...config,
+      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+    };
+    const html = renderWorkItemCard(workItem(), withGlobal, 'kb-main-card');
+    expect(html).toContain('kb-global-skill-select');
+    expect(html).toContain('data-action="run-global-skill"');
+    expect(html).toContain('data-id="482"');
+    expect(html).toContain('Avaliar Effort');
+  });
+
+  it('shows the global skill select even when the card has no status skill', () => {
+    const noStatusSkill: KanbrainConfig = {
+      ...config,
+      skills: { Task: { Active: null } },
+      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+    };
+    const html = renderWorkItemCard(workItem(), noStatusSkill, 'kb-main-card');
+    expect(html).not.toContain('data-action="run-skill"');
+    expect(html).toContain('data-action="run-global-skill"');
+  });
 });

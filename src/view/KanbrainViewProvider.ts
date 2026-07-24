@@ -741,6 +741,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
+    document.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.dataset && target.dataset.action === 'run-global-skill' && target.value) {
+        vscode.postMessage({ type: 'run-global-skill', workItemId: target.dataset.id, skillId: target.value });
+        target.value = '';
+      }
+    });
+
     const searchInput = document.getElementById('kb-search-input');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -818,6 +826,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
+      .kb-global-skill-select { margin-top: 6px; margin-left: 4px; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
       .kb-section-actions { display: flex; gap: 2px; }
