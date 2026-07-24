@@ -19,6 +19,7 @@ export class PullRequestDetailPanelManager {
   constructor(
     private readonly workspaceRoot: string,
     private readonly client: AzureDevOpsClient,
+    private readonly extensionUri: vscode.Uri,
   ) {}
 
   private async resolveGitLensIcon(): Promise<string | null> {
@@ -65,6 +66,7 @@ export class PullRequestDetailPanelManager {
         'workbench.extensions.search',
       ],
     });
+    panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'icons', 'pull-request.svg');
     this.panels.set(key, panel);
 
     panel.onDidDispose(() => {
