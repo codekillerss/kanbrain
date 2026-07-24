@@ -668,6 +668,35 @@ describe('AzureDevOpsClient.getRepository', () => {
   });
 });
 
+describe('AzureDevOpsClient.listRepositories', () => {
+  it('fetches and maps the project repositories', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ value: [{ id: 'repo-1', name: 'kanbrain' }, { id: 'repo-2', name: 'other-repo' }] }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const repos = await client.listRepositories('my-org', 'MyProject');
+
+    expect(repos).toEqual([
+      { id: 'repo-1', name: 'kanbrain' },
+      { id: 'repo-2', name: 'other-repo' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/repositories?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns an empty array when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'error' }, false, 500));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const repos = await client.listRepositories('my-org', 'MyProject');
+
+    expect(repos).toEqual([]);
+  });
+});
+
 describe('AzureDevOpsClient.getPullRequestDetail', () => {
   it('maps the full pull request payload', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(

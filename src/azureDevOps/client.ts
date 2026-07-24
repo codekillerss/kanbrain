@@ -383,4 +383,15 @@ export class AzureDevOpsClient {
       return null;
     }
   }
+
+  async listRepositories(organization: string, project: string): Promise<{ id: string; name: string }[]> {
+    try {
+      const data = await this.request<{ value: { id: string; name: string }[] }>(
+        `https://dev.azure.com/${organization}/${project}/_apis/git/repositories?api-version=7.1`,
+      );
+      return data.value.map(r => ({ id: r.id, name: r.name }));
+    } catch {
+      return [];
+    }
+  }
 }
