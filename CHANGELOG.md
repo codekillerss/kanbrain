@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.5.1] - 2026-07-24
+
+### Fixed
+
+- Skill Configuration group headers now show each work item type's icon and accent color, matching how types are displayed everywhere else in the app.
+
 ## [0.5.0] - 2026-07-24
 
 ### Added
