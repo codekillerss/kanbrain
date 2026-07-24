@@ -93,4 +93,5 @@ export interface KanbrainConfig {
   showAssignedTo?: boolean;
   lastSyncedVersion?: string;
   repositories?: Record<string, RepositoryPathEntry>;
+  globalSkills?: Record<string, SkillEntry>;
 }

@@ -63,5 +63,6 @@ export function syncConfig(
     taskBacklogTypesByTeam: freshTaskBacklogTypesByTeam,
     showAssignedTo: config.showAssignedTo,
     repositories: mergeRepositories(config.repositories, freshRepositories),
+    globalSkills: config.globalSkills,
   };
 }
