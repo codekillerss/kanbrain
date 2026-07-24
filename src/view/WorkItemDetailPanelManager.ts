@@ -20,6 +20,7 @@ export class WorkItemDetailPanelManager {
   constructor(
     private readonly workspaceRoot: string,
     private readonly client: AzureDevOpsClient,
+    private readonly extensionUri: vscode.Uri,
   ) {}
 
   async open(id: number): Promise<void> {
@@ -43,6 +44,7 @@ export class WorkItemDetailPanelManager {
         'kanbrain.resolveRepositoryTag',
       ],
     });
+    panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'icons', 'work-item.svg');
     this.panels.set(id, panel);
 
     panel.onDidDispose(() => {

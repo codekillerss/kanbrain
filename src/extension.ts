@@ -33,8 +33,8 @@ export function activate(context: vscode.ExtensionContext): void {
       })
     : undefined;
 
-  const detailPanelManager = workspaceRoot && client ? new WorkItemDetailPanelManager(workspaceRoot, client) : undefined;
-  const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client) : undefined;
+  const detailPanelManager = workspaceRoot && client ? new WorkItemDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
+  const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
 
   const provider = new KanbrainViewProvider(
     workspaceRoot,
