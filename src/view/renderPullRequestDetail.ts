@@ -34,7 +34,10 @@ function renderReviewer(reviewer: PullRequestReviewer): string {
   return `<div class="kb-pr-reviewer"><span>${escapeHtml(reviewer.displayName)}</span><span class="kb-pr-vote">${renderVoteLabel(reviewer.vote)}</span>${requirementTag}</div>`;
 }
 
-function renderBranchLink(repositoryId: string, branchName: string): string {
+function renderBranchLink(repositoryId: string, branchName: string, isMapped: boolean): string {
+  if (!isMapped) {
+    return `<span class="kb-pr-branch-link kb-pr-branch-link-disabled" title="No local path configured for this repository">${escapeHtml(branchName)}</span>`;
+  }
   const commandArgs = encodeURIComponent(JSON.stringify([repositoryId, branchName]));
   return `<a class="kb-pr-branch-link" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${escapeHtml(branchName)}">${escapeHtml(branchName)}</a>`;
 }
@@ -124,6 +127,7 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
   const repoNameHtml = repositoryName ? `<span class="kb-pr-repo-name">${escapeHtml(repositoryName)}</span>` : '';
+  const isRepoMapped = !!config.repositories?.[pr.repositoryId]?.path;
 
   return `
     <div class="kb-detail-header">
@@ -131,7 +135,7 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
         <h1 class="kb-detail-title">${escapeHtml(pr.title)}</h1>
       </div>
       <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoNameHtml}</div>
-      <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch)}</div>
+      <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch, isRepoMapped)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch, isRepoMapped)}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
       ${renderDiffAction(pr, gitLensIconDataUri)}
     </div>

@@ -59,6 +59,7 @@ export function detailPanelCss(): string {
     .kb-pr-branches { font-size: 12px; opacity: 0.75; margin-top: 6px; }
     .kb-pr-branch-link { color: var(--vscode-textLink-foreground); text-decoration: none; cursor: pointer; }
     .kb-pr-branch-link:hover { text-decoration: underline; }
+    .kb-pr-branch-link-disabled { color: inherit; opacity: 0.5; cursor: default; }
     .kb-pr-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
     .kb-pr-diff-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 12px; font-size: 12px; color: var(--vscode-textLink-foreground); text-decoration: none; }
     .kb-pr-diff-link:hover { text-decoration: underline; }

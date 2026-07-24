@@ -44,6 +44,7 @@ const config: KanbrainConfig = {
   statusColors: {},
   typeColors: {},
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
+  repositories: { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } },
 };
 
 function thread(overrides: Partial<PullRequestThread> = {}): PullRequestThread {
@@ -120,6 +121,24 @@ describe('renderPullRequestDetail', () => {
       ['repo-1', 'feature/login-fix'],
       ['repo-1', 'main'],
     ]);
+  });
+
+  it('shows branches as disabled, non-clickable spans when the repository has no configured path', () => {
+    const html = renderPullRequestDetail(
+      input({ config: { ...config, repositories: { 'repo-1': { name: 'kanbrain', path: '' } } } }),
+    );
+
+    expect(html).not.toContain('command:kanbrain.checkoutBranch');
+    expect(html).toContain('kb-pr-branch-link-disabled');
+    expect(html).toContain('feature/login-fix');
+    expect(html).toContain('main');
+  });
+
+  it('shows branches as disabled when the repository is entirely unmapped', () => {
+    const html = renderPullRequestDetail(input({ config: { ...config, repositories: {} } }));
+
+    expect(html).not.toContain('command:kanbrain.checkoutBranch');
+    expect(html).toContain('kb-pr-branch-link-disabled');
   });
 
   it('shows the description, escaped', () => {
