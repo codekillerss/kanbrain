@@ -26,7 +26,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private selectedTeam: string | undefined;
   private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
-  private currentScreen: 'home' | 'flow' | 'config' = 'home';
+  private currentScreen: 'home' | 'flow' | 'config' | 'repositories' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
 
@@ -89,6 +89,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setShowAssignedTo(Boolean(message.value));
       } else if (message.type === 'set-selected-team') {
         this.setSelectedTeam(message.team || undefined);
+      } else if (message.type === 'show-repositories') {
+        this.showRepositoriesScreen();
+      } else if (message.type === 'save-repository-path') {
+        this.saveRepositoryPath(String(message.repositoryId ?? ''), String(message.path ?? ''));
+      } else if (message.type === 'pick-repository-folder') {
+        await this.pickRepositoryFolder(String(message.repositoryId ?? ''));
       } else if (message.type === 'open-work-item-detail') {
         await this.openWorkItemDetail(Number(message.id));
       }
@@ -145,6 +151,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   showConfigScreen(): void {
     this.currentScreen = 'config';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  showRepositoriesScreen(): void {
+    this.currentScreen = 'repositories';
     this.lastState = '';
     void this.refresh();
   }
@@ -266,6 +278,35 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     const relativePath = path.relative(this.workspaceRoot, picked.fsPath).split(path.sep).join('/');
     this.view.webview.postMessage({ type: 'skill-file-picked', level, status, path: relativePath });
+  }
+
+  private saveRepositoryPath(repositoryId: string, newPath: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config?.repositories?.[repositoryId]) {
+      return;
+    }
+    config.repositories[repositoryId].path = newPath.trim();
+    writeConfig(this.workspaceRoot, config);
+  }
+
+  private async pickRepositoryFolder(repositoryId: string): Promise<void> {
+    if (!this.workspaceRoot || !this.view) {
+      return;
+    }
+    const uris = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(this.workspaceRoot),
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+    });
+    const picked = uris?.[0];
+    if (!picked) {
+      return;
+    }
+    this.view.webview.postMessage({ type: 'repository-folder-picked', repositoryId, path: picked.fsPath });
   }
 
   private async runSkill(id: number): Promise<void> {
@@ -458,6 +499,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    function saveRepositoryRow(row) {
+      vscode.postMessage({
+        type: 'save-repository-path',
+        repositoryId: row.dataset.repositoryId,
+        path: row.querySelector('[data-field="path"]').value,
+      });
+    }
+
+    document.querySelectorAll('.kb-repo-row input[data-field="path"]').forEach((input) => {
+      input.addEventListener('blur', () => {
+        const row = input.closest('.kb-repo-row');
+        if (row) {
+          saveRepositoryRow(row);
+        }
+      });
+    });
+
     document.querySelectorAll('.kb-color-picker').forEach((picker) => {
       picker.addEventListener('input', () => {
         const row = picker.closest('.kb-config-row');
@@ -518,6 +576,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-flow' });
       } else if (target.id === 'kb-show-config-btn') {
         vscode.postMessage({ type: 'show-config' });
+      } else if (target.id === 'kb-show-repositories-btn') {
+        vscode.postMessage({ type: 'show-repositories' });
+      } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
+        const row = target.closest('.kb-repo-row');
+        if (row) {
+          vscode.postMessage({ type: 'pick-repository-folder', repositoryId: row.dataset.repositoryId });
+        }
       } else if (target.id === 'kb-search-close-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {
@@ -569,6 +634,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             const pathInput = row.querySelector('[data-field="path"]');
             pathInput.value = event.data.path;
             saveSkillRow(row);
+            break;
+          }
+        }
+      } else if (event.data.type === 'repository-folder-picked') {
+        const rows = document.querySelectorAll('.kb-repo-row');
+        for (const row of rows) {
+          if (row.dataset.repositoryId === event.data.repositoryId) {
+            const pathInput = row.querySelector('[data-field="path"]');
+            pathInput.value = event.data.path;
+            saveRepositoryRow(row);
             break;
           }
         }
@@ -659,6 +734,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-chevron { display: inline-block; margin-right: 6px; transition: transform 0.15s ease; }
       .kb-config-level-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-config-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
+      .kb-repo-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
+      .kb-repo-name { font-weight: 600; margin-bottom: 4px; font-size: 12px; }
       .kb-config-row-status { display: flex; align-items: center; font-weight: 600; margin-bottom: 4px; font-size: 12px; }
       .kb-config-field-path { display: flex; gap: 4px; align-items: center; }
       .kb-config-field-path .kb-input { flex: 1; margin-bottom: 0; }
