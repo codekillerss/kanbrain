@@ -1,4 +1,21 @@
-import type { KanbrainConfig, SkillEntry, CardFieldSettings } from '../types';
+import type { KanbrainConfig, SkillEntry, CardFieldSettings, RepositoryPathEntry } from '../types';
+
+function mergeRepositories(
+  existing: Record<string, RepositoryPathEntry> | undefined,
+  fresh: Record<string, RepositoryPathEntry>,
+): Record<string, RepositoryPathEntry> {
+  const merged: Record<string, RepositoryPathEntry> = {};
+  for (const [id, freshEntry] of Object.entries(fresh)) {
+    const existingEntry = existing?.[id];
+    merged[id] = { name: freshEntry.name, path: existingEntry?.path || freshEntry.path };
+  }
+  for (const [id, existingEntry] of Object.entries(existing ?? {})) {
+    if (!(id in merged)) {
+      merged[id] = existingEntry;
+    }
+  }
+  return merged;
+}
 
 export function syncConfig(
   config: KanbrainConfig,
@@ -9,6 +26,7 @@ export function syncConfig(
   freshDefaultTeam: string,
   freshCardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>,
   freshTaskBacklogTypesByTeam: Record<string, string[]>,
+  freshRepositories: Record<string, RepositoryPathEntry>,
 ): KanbrainConfig {
   const skills: Record<string, Record<string, SkillEntry | null>> = {};
 
@@ -44,5 +62,6 @@ export function syncConfig(
     cardSettingsByTeam: freshCardSettingsByTeam,
     taskBacklogTypesByTeam: freshTaskBacklogTypesByTeam,
     showAssignedTo: config.showAssignedTo,
+    repositories: mergeRepositories(config.repositories, freshRepositories),
   };
 }

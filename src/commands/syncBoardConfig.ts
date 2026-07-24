@@ -5,6 +5,8 @@ import { discoverWorkItemTypes, discoverStatusColors } from '../azureDevOps/disc
 import { diffBoardConfig, isDiffEmpty, summarizeDiff } from '../azureDevOps/checkBoardConfig';
 import { syncConfig } from '../config/syncConfig';
 import { readConfigWithDiagnostics, writeConfig } from '../config/config';
+import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
+import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 
 export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string, extensionVersion: string): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.syncBoardConfig', async () => {
@@ -32,6 +34,10 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     const freshStatusColors = discoverStatusColors(types);
     const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
 
+    const azureRepos = await client.listRepositories(result.config.organization, result.config.project);
+    const localRepos = await discoverLocalRepositories(workspaceRoot);
+    const freshRepositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
+
     const updated = syncConfig(
       result.config,
       boardState.discoveredStatusesByType,
@@ -41,6 +47,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       boardState.defaultTeam,
       boardState.cardSettingsByTeam,
       boardState.taskBacklogTypesByTeam,
+      freshRepositories,
     );
     writeConfig(workspaceRoot, { ...updated, lastSyncedVersion: extensionVersion });
 
