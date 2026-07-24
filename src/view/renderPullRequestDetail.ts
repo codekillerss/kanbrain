@@ -3,6 +3,7 @@ import { escapeHtml } from './escapeHtml';
 import { renderTypeAccent } from './renderTypeAccent';
 import { capitalize } from './renderDevelopment';
 import { renderComment } from './renderComment';
+import { renderBranchTag, renderRepoTag } from './renderRepoBranchTags';
 
 const VOTE_LABELS: Record<number, string> = {
   10: 'Approved',
@@ -32,14 +33,6 @@ function renderReviewer(reviewer: PullRequestReviewer): string {
     ? '<span class="kb-pr-required-tag">Required</span>'
     : '<span class="kb-pr-optional-tag">Optional</span>';
   return `<div class="kb-pr-reviewer"><span>${escapeHtml(reviewer.displayName)}</span><span class="kb-pr-vote">${renderVoteLabel(reviewer.vote)}</span>${requirementTag}</div>`;
-}
-
-function renderBranchLink(repositoryId: string, branchName: string, isMapped: boolean): string {
-  if (!isMapped) {
-    return `<span class="kb-pr-branch-link kb-pr-branch-link-disabled" title="No local path configured for this repository">${escapeHtml(branchName)}</span>`;
-  }
-  const commandArgs = encodeURIComponent(JSON.stringify([repositoryId, branchName]));
-  return `<a class="kb-pr-branch-link" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${escapeHtml(branchName)}">${escapeHtml(branchName)}</a>`;
 }
 
 const THREAD_STATUS_LABELS: Record<string, string> = {
@@ -126,16 +119,18 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
   const { pr, workItems, config, threads, avatars, gitLensIconDataUri, repositoryName } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
-  const repoNameHtml = repositoryName ? `<span class="kb-pr-repo-name">${escapeHtml(repositoryName)}</span>` : '';
+  const repoTagHtml = repositoryName ? renderRepoTag(repositoryName) : '';
   const isRepoMapped = !!config.repositories?.[pr.repositoryId]?.path;
+  const sourceBranchTag = renderBranchTag(pr.sourceBranch, isRepoMapped ? [pr.repositoryId, pr.sourceBranch] : null);
+  const targetBranchTag = renderBranchTag(pr.targetBranch, isRepoMapped ? [pr.repositoryId, pr.targetBranch] : null);
 
   return `
     <div class="kb-detail-header">
       <div class="kb-detail-title-row">
         <h1 class="kb-detail-title">${escapeHtml(pr.title)}</h1>
       </div>
-      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoNameHtml}</div>
-      <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch, isRepoMapped)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch, isRepoMapped)}</div>
+      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoTagHtml}</div>
+      <div class="kb-pr-branches">${sourceBranchTag} &rarr; ${targetBranchTag}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
       ${renderDiffAction(pr, gitLensIconDataUri)}
     </div>

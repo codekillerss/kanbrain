@@ -88,7 +88,7 @@ describe('renderPullRequestDetail', () => {
 
   it('omits the repository name tag when unknown', () => {
     const html = renderPullRequestDetail(input({ repositoryName: null }));
-    expect(html).not.toContain('kb-pr-repo-name');
+    expect(html).not.toContain('kb-repo-tag');
   });
 
   it('shows "Draft" instead of the status when the PR is a draft', () => {
@@ -129,7 +129,7 @@ describe('renderPullRequestDetail', () => {
     );
 
     expect(html).not.toContain('command:kanbrain.checkoutBranch');
-    expect(html).toContain('kb-pr-branch-link-disabled');
+    expect(html).toContain('kb-branch-tag-disabled');
     expect(html).toContain('feature/login-fix');
     expect(html).toContain('main');
   });
@@ -138,7 +138,7 @@ describe('renderPullRequestDetail', () => {
     const html = renderPullRequestDetail(input({ config: { ...config, repositories: {} } }));
 
     expect(html).not.toContain('command:kanbrain.checkoutBranch');
-    expect(html).toContain('kb-pr-branch-link-disabled');
+    expect(html).toContain('kb-branch-tag-disabled');
   });
 
   it('shows the description, escaped', () => {

@@ -43,10 +43,10 @@ export function detailPanelCss(): string {
     .kb-comment-date { opacity: 0.7; }
     .kb-comment-body { line-height: 1.5; }
     .kb-dev-label { display: flex; align-items: center; gap: 4px; }
-    .kb-dev-item { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-top: 4px; opacity: 0.85; }
+    .kb-dev-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .kb-dev-item { display: flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.85; min-width: 0; }
     a.kb-dev-item { cursor: pointer; text-decoration: none; color: inherit; }
     a.kb-dev-item:hover { color: var(--vscode-textLink-foreground); }
-    .kb-dev-item-disabled { opacity: 0.5; }
     .kb-dev-item svg { flex-shrink: 0; }
     .kb-dev-item-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .kb-dev-more-toggle { display: none; }
@@ -55,12 +55,13 @@ export function detailPanelCss(): string {
     .kb-dev-more-toggle:checked ~ .kb-dev-more-btn { display: none; }
     .kb-dev-more-btn { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--vscode-textLink-foreground); cursor: pointer; }
     .kb-dev-more-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
-    .kb-pr-repo-name { opacity: 0.6; }
-    .kb-pr-repo-name::before { content: '·'; margin: 0 4px; }
     .kb-pr-branches { font-size: 12px; opacity: 0.75; margin-top: 6px; }
-    .kb-pr-branch-link { color: var(--vscode-textLink-foreground); text-decoration: none; cursor: pointer; }
-    .kb-pr-branch-link:hover { text-decoration: underline; }
-    .kb-pr-branch-link-disabled { color: inherit; opacity: 0.5; cursor: default; }
+    .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }
+    .kb-branch-tag { color: var(--vscode-charts-blue); border-color: var(--vscode-charts-blue); cursor: pointer; }
+    .kb-branch-tag:hover { background: var(--vscode-charts-blue); color: var(--vscode-editor-background); }
+    .kb-branch-tag-disabled { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); cursor: default; opacity: 0.7; }
+    .kb-branch-tag-disabled:hover { background: none; color: var(--vscode-descriptionForeground); }
+    .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
     .kb-pr-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
     .kb-pr-diff-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 12px; font-size: 12px; color: var(--vscode-textLink-foreground); text-decoration: none; }
     .kb-pr-diff-link:hover { text-decoration: underline; }
