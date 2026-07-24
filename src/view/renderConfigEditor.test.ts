@@ -131,4 +131,28 @@ describe('renderConfigEditor', () => {
     expect(html).not.toContain('kb-type-icon');
     expect(html).not.toContain('border-right');
   });
+
+  it('renders a Global Skills section with one row per entry', () => {
+    const html = renderConfigEditor(config({ globalSkills: { 'global-skill-1': { path: '.kanbrain/skills/effort.md', label: 'Avaliar Effort' } } }));
+
+    expect(html).toContain('Global Skills');
+    expect(html).toContain('data-global-skill-id="global-skill-1"');
+    expect(html).toContain('value=".kanbrain/skills/effort.md"');
+    expect(html).toContain('value="Avaliar Effort"');
+  });
+
+  it('shows the Global Skills section even when there are no work item types configured', () => {
+    const html = renderConfigEditor(config());
+
+    expect(html).toContain('No work item types configured yet.');
+    expect(html).toContain('Global Skills');
+    expect(html).toContain('data-action="add-global-skill"');
+  });
+
+  it('shows a remove button for each global skill row', () => {
+    const html = renderConfigEditor(config({ globalSkills: { 'global-skill-1': { path: 'x.md' } } }));
+
+    expect(html).toContain('data-action="remove-global-skill"');
+    expect(html).toContain('data-global-skill-id="global-skill-1"');
+  });
 });

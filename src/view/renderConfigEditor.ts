@@ -34,13 +34,50 @@ function renderSkillEntryRow(type: string, status: string, entry: SkillEntry | n
   `;
 }
 
+function renderGlobalSkillRow(id: string, entry: SkillEntry): string {
+  const path = entry.path ?? '';
+  const label = entry.label ?? '';
+  const textColor = entry.textColor ?? '';
+  const buttonColor = entry.buttonColor ?? '';
+
+  return `
+    <div class="kb-config-row" data-global-skill-id="${escapeHtml(id)}">
+      <div class="kb-config-field-path">
+        <input type="text" class="kb-input" data-field="path" placeholder="Skill file path" value="${escapeHtml(path)}">
+        <button type="button" data-action="pick-skill-file" title="Browse for a file">…</button>
+      </div>
+      <input type="text" class="kb-input" data-field="label" placeholder="Label" value="${escapeHtml(label)}">
+      ${renderColorField('textColor', textColor, 'Text color hex')}
+      ${renderColorField('buttonColor', buttonColor, 'Button color hex')}
+      <button type="button" class="kb-icon-btn" data-action="remove-global-skill" data-global-skill-id="${escapeHtml(id)}" title="Remove">✕</button>
+    </div>
+  `;
+}
+
+function renderGlobalSkillsSection(globalSkills: Record<string, SkillEntry>): string {
+  const rows = Object.entries(globalSkills)
+    .map(([id, entry]) => renderGlobalSkillRow(id, entry))
+    .join('');
+  return `
+    <div class="kb-config-level">
+      <div class="kb-config-static-header">Global Skills</div>
+      <div class="kb-config-level-body">
+        ${rows}
+        <button type="button" class="kb-secondary-btn" data-action="add-global-skill">+ Add global skill</button>
+      </div>
+    </div>
+  `;
+}
+
 export function renderConfigEditor(config: KanbrainConfig): string {
   const types = Object.keys(config.skills);
+  const globalSkillsHtml = renderGlobalSkillsSection(config.globalSkills ?? {});
+
   if (types.length === 0) {
-    return '<div class="kb-empty">No work item types configured yet.</div>';
+    return `<div class="kb-empty">No work item types configured yet.</div>${globalSkillsHtml}`;
   }
 
-  return types
+  const typesHtml = types
     .map(type => {
       const statuses = config.skills[type];
       const rows = Object.keys(statuses)
@@ -59,4 +96,6 @@ export function renderConfigEditor(config: KanbrainConfig): string {
       `;
     })
     .join('');
+
+  return typesHtml + globalSkillsHtml;
 }
