@@ -95,5 +95,11 @@ export function renderHome(state: RenderState): string {
         <button id="kb-show-config-btn" class="kb-secondary-btn">🛠️ Configuration</button>
       </div>
     </div>
+    <div class="kb-section-card">
+      <div class="kb-section-label">Repositories</div>
+      <div class="kb-home-commands">
+        <button id="kb-show-repositories-btn" class="kb-secondary-btn">📁 Repositories</button>
+      </div>
+    </div>
   `;
 }

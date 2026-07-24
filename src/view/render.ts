@@ -2,6 +2,7 @@ import type { WorkItem, KanbrainConfig } from '../types';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
+import { renderRepositories } from './renderRepositories';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 
 export interface RenderState {
@@ -10,7 +11,7 @@ export interface RenderState {
   workItem: WorkItem | null;
   parent: WorkItem | null;
   subtasks: WorkItem[];
-  screen: 'home' | 'flow' | 'config';
+  screen: 'home' | 'flow' | 'config' | 'repositories';
   connectionStatus?: 'connected' | 'disconnected';
   avatars?: Record<string, string>;
   selectedTeam?: string;
@@ -41,6 +42,9 @@ export function render(state: RenderState): string {
   }
   if (state.screen === 'config') {
     return renderConfig(state);
+  }
+  if (state.screen === 'repositories') {
+    return renderRepositories(state);
   }
 
   if (!state.workItem) {
