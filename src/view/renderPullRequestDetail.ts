@@ -102,7 +102,7 @@ function renderLinkedWorkItem(item: WorkItem, config: KanbrainConfig): string {
 
 function renderDiffAction(pr: PullRequestDetail, gitLensIconDataUri: string | null): string {
   if (gitLensIconDataUri) {
-    const commandArgs = encodeURIComponent(JSON.stringify([pr.sourceBranch, pr.targetBranch]));
+    const commandArgs = encodeURIComponent(JSON.stringify([pr.repositoryId, pr.sourceBranch, pr.targetBranch]));
     return `<a class="kb-pr-diff-link" href="command:kanbrain.viewPullRequestDiff?${commandArgs}"><img class="kb-pr-gitlens-icon" src="${gitLensIconDataUri}" alt="" /> View Diff</a>`;
   }
   const installArgs = encodeURIComponent(JSON.stringify(['GitLens']));

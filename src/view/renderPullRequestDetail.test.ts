@@ -255,7 +255,7 @@ describe('renderPullRequestDetail', () => {
     const match = html.match(/href="(command:kanbrain\.viewPullRequestDiff\?[^"]+)"/);
     expect(match).not.toBeNull();
     const [, href] = match!;
-    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['feature/login-fix', 'main']);
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['repo-1', 'feature/login-fix', 'main']);
   });
 
   it('shows an Install GitLens suggestion when GitLens is not installed, and no View Diff button', () => {
