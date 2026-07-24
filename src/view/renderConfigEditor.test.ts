@@ -111,4 +111,24 @@ describe('renderConfigEditor', () => {
 
     expect(html).toContain('class="kb-config-level-body kb-hidden"');
   });
+
+  it('shows the type icon and accent color in the group header when configured', () => {
+    const html = renderConfigEditor(
+      config({
+        skills: { Task: { 'To Do': null } },
+        typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
+        typeColors: { Task: 'f2cb1d' },
+      }),
+    );
+
+    expect(html).toContain('kb-type-icon');
+    expect(html).toContain('border-right: 4px solid #f2cb1d');
+  });
+
+  it('omits the icon and accent color when the type has none configured', () => {
+    const html = renderConfigEditor(config({ skills: { Task: { 'To Do': null } } }));
+
+    expect(html).not.toContain('kb-type-icon');
+    expect(html).not.toContain('border-right');
+  });
 });

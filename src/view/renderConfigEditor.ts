@@ -2,6 +2,7 @@ import type { KanbrainConfig, SkillEntry } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { isValidHexColor, normalizeHex } from './badgeColor';
+import { renderTypeAccent } from './renderTypeAccent';
 
 function renderColorField(field: 'textColor' | 'buttonColor', value: string, placeholder: string): string {
   const pickerValue = value && isValidHexColor(value) ? normalizeHex(value) : '#000000';
@@ -45,10 +46,11 @@ export function renderConfigEditor(config: KanbrainConfig): string {
       const rows = Object.keys(statuses)
         .map(status => renderSkillEntryRow(type, status, statuses[status], config.statusColors ?? {}))
         .join('');
+      const { borderStyle, iconHtml } = renderTypeAccent(type, config);
       return `
         <div class="kb-config-level">
-          <button type="button" class="kb-config-level-header" data-action="toggle-group">
-            <span class="kb-chevron">▾</span>${escapeHtml(type)}
+          <button type="button" class="kb-config-level-header" data-action="toggle-group"${borderStyle}>
+            <span class="kb-chevron">▾</span>${iconHtml}${escapeHtml(type)}
           </button>
           <div class="kb-config-level-body kb-hidden">
             ${rows}
