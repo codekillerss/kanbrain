@@ -112,15 +112,15 @@ export interface PullRequestDetailInput {
   threads: PullRequestThread[];
   avatars: Record<string, string>;
   gitLensIconDataUri: string | null;
-  repositoryName: string | null;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config, threads, avatars, gitLensIconDataUri, repositoryName } = input;
+  const { pr, workItems, config, threads, avatars, gitLensIconDataUri } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
-  const repoTagHtml = repositoryName ? renderRepoTag(repositoryName) : '';
-  const isRepoMapped = !!config.repositories?.[pr.repositoryId]?.path;
+  const repoEntry = config.repositories?.[pr.repositoryId];
+  const repoTagHtml = renderRepoTag(pr.repositoryId, repoEntry);
+  const isRepoMapped = !!repoEntry?.path;
   const sourceBranchTag = renderBranchTag(pr.sourceBranch, isRepoMapped ? [pr.repositoryId, pr.sourceBranch] : null);
   const targetBranchTag = renderBranchTag(pr.targetBranch, isRepoMapped ? [pr.repositoryId, pr.targetBranch] : null);
 

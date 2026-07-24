@@ -66,7 +66,6 @@ function input(overrides: Partial<PullRequestDetailInput> = {}): PullRequestDeta
     threads: [],
     avatars: {},
     gitLensIconDataUri: null,
-    repositoryName: null,
     ...overrides,
   };
 }
@@ -81,14 +80,18 @@ describe('renderPullRequestDetail', () => {
     expect(html).toContain('main');
   });
 
-  it('shows the repository name, escaped, when known', () => {
-    const html = renderPullRequestDetail(input({ repositoryName: 'Fix <me>' }));
+  it('shows a mapped repository tag with the escaped name when the repository has a path', () => {
+    const html = renderPullRequestDetail(
+      input({ config: { ...config, repositories: { 'repo-1': { name: 'Fix <me>', path: 'C:\\repos\\kanbrain' } } } }),
+    );
+    expect(html).toContain('kb-repo-tag-mapped');
     expect(html).toContain('Fix &lt;me&gt;');
   });
 
-  it('omits the repository name tag when unknown', () => {
-    const html = renderPullRequestDetail(input({ repositoryName: null }));
-    expect(html).not.toContain('kb-repo-tag');
+  it('shows an "Unknown repository" tag when the repository is not in config at all', () => {
+    const html = renderPullRequestDetail(input({ config: { ...config, repositories: {} } }));
+    expect(html).toContain('kb-repo-tag-unmapped');
+    expect(html).toContain('Unknown repository');
   });
 
   it('shows "Draft" instead of the status when the PR is a draft', () => {

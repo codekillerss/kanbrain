@@ -28,8 +28,7 @@ function renderDevelopmentItem(
   prDetails: Record<string, PullRequestDetails>,
   repositories: Record<string, RepositoryPathEntry>,
 ): string {
-  const repoName = repositories[link.repositoryId]?.name;
-  const repoTagHtml = repoName ? renderRepoTag(repoName) : '';
+  const repoTagHtml = renderRepoTag(link.repositoryId, repositories[link.repositoryId]);
 
   if (link.kind === 'branch') {
     const isMapped = !!repositories[link.repositoryId]?.path;

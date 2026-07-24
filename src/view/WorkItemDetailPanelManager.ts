@@ -36,7 +36,12 @@ export class WorkItemDetailPanelManager {
 
     const panel = vscode.window.createWebviewPanel('kanbrain.workItemDetail', `#${id}`, vscode.ViewColumn.Active, {
       enableScripts: false,
-      enableCommandUris: ['kanbrain.openWorkItemDetail', 'kanbrain.checkoutBranch', 'kanbrain.openPullRequestDetail'],
+      enableCommandUris: [
+        'kanbrain.openWorkItemDetail',
+        'kanbrain.checkoutBranch',
+        'kanbrain.openPullRequestDetail',
+        'kanbrain.resolveRepositoryTag',
+      ],
     });
     this.panels.set(id, panel);
 
@@ -108,7 +113,7 @@ export class WorkItemDetailPanelManager {
       this.resolvePullRequestDetails(workItem, config),
     ]);
 
-    const stateKey = JSON.stringify({ workItem, rawFields, comments, parent, children, avatars, prDetails });
+    const stateKey = JSON.stringify({ workItem, rawFields, comments, parent, children, avatars, prDetails, repositories: config.repositories });
     if (this.lastStateByPanel.get(id) === stateKey) {
       return;
     }

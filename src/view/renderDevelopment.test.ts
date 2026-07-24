@@ -163,10 +163,11 @@ describe('renderDevelopmentSection', () => {
     expect(html).toContain('kanbrain');
   });
 
-  it('omits the repository tag entirely when the repository is unknown', () => {
+  it('shows an "Unknown repository" tag when the repository is not in config at all', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
     const html = renderDevelopmentSection(links, {}, {});
-    expect(html).not.toContain('kb-repo-tag');
+    expect(html).toContain('kb-repo-tag-unmapped');
+    expect(html).toContain('Unknown repository');
   });
 });
 

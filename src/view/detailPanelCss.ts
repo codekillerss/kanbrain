@@ -62,6 +62,8 @@ export function detailPanelCss(): string {
     .kb-branch-tag-disabled { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); cursor: default; opacity: 0.7; }
     .kb-branch-tag-disabled:hover { background: none; color: var(--vscode-descriptionForeground); }
     .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
+    .kb-repo-tag-unmapped { border-style: dashed; cursor: pointer; }
+    .kb-repo-tag-unmapped:hover { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
     .kb-pr-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
     .kb-pr-diff-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 12px; font-size: 12px; color: var(--vscode-textLink-foreground); text-decoration: none; }
     .kb-pr-diff-link:hover { text-decoration: underline; }
