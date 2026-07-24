@@ -114,15 +114,18 @@ export class PullRequestDetailPanelManager {
       .catch(() => []);
     const avatars = await this.resolveAvatars(threads.flatMap(t => t.comments));
     const gitLensIconDataUri = await this.resolveGitLensIcon();
+    const repositoryName = config.repositories?.[repositoryId]?.name ?? null;
 
-    const stateKey = JSON.stringify({ pr, workItems, threads, avatars, gitLensIconDataUri });
+    const stateKey = JSON.stringify({ pr, workItems, threads, avatars, gitLensIconDataUri, repositoryName });
     if (this.lastStateByPanel.get(key) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(key, stateKey);
 
     panel.title = `PR #${pr.id} ${pr.title}`;
-    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars, gitLensIconDataUri }));
+    panel.webview.html = this.wrapHtml(
+      renderPullRequestDetail({ pr, workItems, config, threads, avatars, gitLensIconDataUri, repositoryName }),
+    );
   }
 
   private async resolveAvatars(comments: PullRequestThreadComment[]): Promise<Record<string, string>> {

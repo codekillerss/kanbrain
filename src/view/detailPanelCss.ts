@@ -54,6 +54,8 @@ export function detailPanelCss(): string {
     .kb-dev-more-toggle:checked ~ .kb-dev-more-btn { display: none; }
     .kb-dev-more-btn { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--vscode-textLink-foreground); cursor: pointer; }
     .kb-dev-more-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground)); }
+    .kb-pr-repo-name { opacity: 0.6; }
+    .kb-pr-repo-name::before { content: '·'; margin: 0 4px; }
     .kb-pr-branches { font-size: 12px; opacity: 0.75; margin-top: 6px; }
     .kb-pr-branch-link { color: var(--vscode-textLink-foreground); text-decoration: none; cursor: pointer; }
     .kb-pr-branch-link:hover { text-decoration: underline; }

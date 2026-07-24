@@ -65,6 +65,7 @@ function input(overrides: Partial<PullRequestDetailInput> = {}): PullRequestDeta
     threads: [],
     avatars: {},
     gitLensIconDataUri: null,
+    repositoryName: null,
     ...overrides,
   };
 }
@@ -77,6 +78,16 @@ describe('renderPullRequestDetail', () => {
     expect(html).toContain('Active');
     expect(html).toContain('feature/login-fix');
     expect(html).toContain('main');
+  });
+
+  it('shows the repository name, escaped, when known', () => {
+    const html = renderPullRequestDetail(input({ repositoryName: 'Fix <me>' }));
+    expect(html).toContain('Fix &lt;me&gt;');
+  });
+
+  it('omits the repository name tag when unknown', () => {
+    const html = renderPullRequestDetail(input({ repositoryName: null }));
+    expect(html).not.toContain('kb-pr-repo-name');
   });
 
   it('shows "Draft" instead of the status when the PR is a draft', () => {

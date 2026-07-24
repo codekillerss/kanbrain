@@ -116,19 +116,21 @@ export interface PullRequestDetailInput {
   threads: PullRequestThread[];
   avatars: Record<string, string>;
   gitLensIconDataUri: string | null;
+  repositoryName: string | null;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config, threads, avatars, gitLensIconDataUri } = input;
+  const { pr, workItems, config, threads, avatars, gitLensIconDataUri, repositoryName } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
+  const repoNameHtml = repositoryName ? `<span class="kb-pr-repo-name">${escapeHtml(repositoryName)}</span>` : '';
 
   return `
     <div class="kb-detail-header">
       <div class="kb-detail-title-row">
         <h1 class="kb-detail-title">${escapeHtml(pr.title)}</h1>
       </div>
-      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}</div>
+      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoNameHtml}</div>
       <div class="kb-pr-branches">${renderBranchLink(pr.repositoryId, pr.sourceBranch)} &rarr; ${renderBranchLink(pr.repositoryId, pr.targetBranch)}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
       ${renderDiffAction(pr, gitLensIconDataUri)}
