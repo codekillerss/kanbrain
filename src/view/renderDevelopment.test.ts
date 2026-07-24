@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { renderDevelopmentSection, renderDevelopmentBadge } from './renderDevelopment';
-import type { DevelopmentLink, PullRequestDetails } from '../types';
+import type { DevelopmentLink, PullRequestDetails, RepositoryPathEntry } from '../types';
+
+const MAPPED: Record<string, RepositoryPathEntry> = { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } };
 
 describe('renderDevelopmentSection', () => {
   it('returns an empty string when there are no development links', () => {
-    expect(renderDevelopmentSection([], {})).toBe('');
+    expect(renderDevelopmentSection([], {}, MAPPED)).toBe('');
   });
 
   it('wraps the section in the same bordered group used by other detail fields', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'main' }];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html).toContain('kb-detail-group');
     expect(html).toContain('kb-detail-group-label');
     expect(html).toContain('kb-dev-label');
@@ -19,16 +21,16 @@ describe('renderDevelopmentSection', () => {
 
   it('renders a branch link by its escaped name, inside a text span, with a hover tooltip', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/<xss>' }];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html).toContain('kb-dev-item');
     expect(html).toContain('kb-dev-item-text');
     expect(html).toContain('feature/&lt;xss&gt;');
-    expect(html).toContain('title="feature/&lt;xss&gt;"');
+    expect(html).toContain('title="kanbrain: feature/&lt;xss&gt;"');
   });
 
   it('links a branch item to a checkoutBranch command URI with repositoryId and branchName', () => {
     const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
 
     const hrefMatch = html.match(/href="(command:kanbrain\.checkoutBranch\?[^"]+)"/);
     expect(hrefMatch).not.toBeNull();
@@ -41,7 +43,7 @@ describe('renderDevelopmentSection', () => {
 
   it('links a pull request item to an openPullRequestDetail command URI with repositoryId and pullRequestId', () => {
     const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
 
     const hrefMatch = html.match(/href="(command:kanbrain\.openPullRequestDetail\?[^"]+)"/);
     expect(hrefMatch).not.toBeNull();
@@ -55,13 +57,13 @@ describe('renderDevelopmentSection', () => {
   it('renders a pull request with its resolved title and capitalized status', () => {
     const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
     const prDetails: Record<string, PullRequestDetails> = { 'repo-1:57': { title: 'Fix <login> bug', status: 'active' } };
-    const html = renderDevelopmentSection(links, prDetails);
+    const html = renderDevelopmentSection(links, prDetails, MAPPED);
     expect(html).toContain('#57 Fix &lt;login&gt; bug (Active)');
   });
 
   it('renders only the #id when the pull request details were not resolved', () => {
     const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html).toContain('#57');
     expect(html).not.toContain('(Active)');
   });
@@ -71,7 +73,7 @@ describe('renderDevelopmentSection', () => {
       { kind: 'branch', repositoryId: 'repo-1', branchName: 'main' },
       { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 },
     ];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html.split('class="kb-dev-item"').length - 1).toBe(2);
     expect(html).toContain('main');
     expect(html).toContain('#57');
@@ -82,7 +84,7 @@ describe('renderDevelopmentSection', () => {
       { kind: 'branch', repositoryId: 'repo-1', branchName: 'main' },
       { kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 },
     ];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html).toContain('M11 5.5'); // branch fork icon signature
     expect(html).toContain('<circle'); // pull request icon signature, absent from the branch icon
   });
@@ -93,7 +95,7 @@ describe('renderDevelopmentSection', () => {
       { kind: 'branch', repositoryId: 'repo-1', branchName: 'b' },
       { kind: 'branch', repositoryId: 'repo-1', branchName: 'c' },
     ];
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html).not.toContain('kb-dev-more-toggle');
     expect(html).not.toContain('See more');
   });
@@ -104,7 +106,7 @@ describe('renderDevelopmentSection', () => {
       repositoryId: 'repo-1',
       branchName: `branch-${i}`,
     }));
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     expect(html.split('class="kb-dev-item"').length - 1).toBe(5);
     expect(html.split('kb-dev-more-toggle').length - 1).toBe(1);
     expect(html.split('See more').length - 1).toBe(1);
@@ -116,11 +118,55 @@ describe('renderDevelopmentSection', () => {
       repositoryId: 'repo-1',
       branchName: `branch-${i}`,
     }));
-    const html = renderDevelopmentSection(links, {});
+    const html = renderDevelopmentSection(links, {}, MAPPED);
     // 10 items - 3 initial = 7 remaining -> ceil(7 / 5) = 2 batches/buttons.
     expect(html.split('class="kb-dev-item"').length - 1).toBe(10);
     expect(html.split('kb-dev-more-toggle').length - 1).toBe(2);
     expect(html.split('See more').length - 1).toBe(2);
+  });
+
+  it('shows the branch as a disabled, non-clickable span when the repository has no mapped path', () => {
+    const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
+    const html = renderDevelopmentSection(links, {}, { 'repo-1': { name: 'kanbrain', path: '' } });
+
+    expect(html).not.toContain('command:kanbrain.checkoutBranch');
+    expect(html).toContain('kb-dev-item-disabled');
+    expect(html).toContain('feature/x');
+  });
+
+  it('shows the branch as disabled when the repository is entirely unmapped', () => {
+    const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
+    const html = renderDevelopmentSection(links, {}, {});
+
+    expect(html).not.toContain('command:kanbrain.checkoutBranch');
+    expect(html).toContain('kb-dev-item-disabled');
+  });
+
+  it('never disables a pull request item, even when the repository is unmapped', () => {
+    const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
+    const html = renderDevelopmentSection(links, {}, {});
+
+    expect(html).toContain('command:kanbrain.openPullRequestDetail');
+    expect(html).not.toContain('kb-dev-item-disabled');
+  });
+
+  it('prefixes a branch item with the repository name when known', () => {
+    const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
+    const html = renderDevelopmentSection(links, {}, MAPPED);
+    expect(html).toContain('kanbrain: feature/x');
+  });
+
+  it('prefixes a pull request item with the repository name when known', () => {
+    const links: DevelopmentLink[] = [{ kind: 'pullRequest', repositoryId: 'repo-1', pullRequestId: 57 }];
+    const html = renderDevelopmentSection(links, {}, MAPPED);
+    expect(html).toContain('kanbrain — #57');
+  });
+
+  it('omits the repository name prefix when the repository is unknown', () => {
+    const links: DevelopmentLink[] = [{ kind: 'branch', repositoryId: 'repo-1', branchName: 'feature/x' }];
+    const html = renderDevelopmentSection(links, {}, {});
+    expect(html).not.toContain(': feature/x');
+    expect(html).toContain('>feature/x<');
   });
 });
 

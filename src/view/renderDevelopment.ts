@@ -1,4 +1,4 @@
-import type { DevelopmentLink, PullRequestDetails } from '../types';
+import type { DevelopmentLink, PullRequestDetails, RepositoryPathEntry } from '../types';
 import { escapeHtml } from './escapeHtml';
 
 const BRANCH_FORK_ICON_PATH =
@@ -22,21 +22,39 @@ export function capitalize(text: string): string {
   return text.length ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }
 
-function renderDevelopmentItem(link: DevelopmentLink, prDetails: Record<string, PullRequestDetails>): string {
+function renderDevelopmentItem(
+  link: DevelopmentLink,
+  prDetails: Record<string, PullRequestDetails>,
+  repositories: Record<string, RepositoryPathEntry>,
+): string {
+  const repoName = repositories[link.repositoryId]?.name;
+
   if (link.kind === 'branch') {
-    const name = escapeHtml(link.branchName);
+    const label = repoName ? `${repoName}: ${link.branchName}` : link.branchName;
+    const name = escapeHtml(label);
+    const isMapped = !!repositories[link.repositoryId]?.path;
+    if (!isMapped) {
+      return `<span class="kb-dev-item kb-dev-item-disabled" title="${name} — no local path configured">${BRANCH_FORK_ICON}<span class="kb-dev-item-text">${name}</span></span>`;
+    }
     const commandArgs = encodeURIComponent(JSON.stringify([link.repositoryId, link.branchName]));
     return `<a class="kb-dev-item" href="command:kanbrain.checkoutBranch?${commandArgs}" title="${name}">${BRANCH_FORK_ICON}<span class="kb-dev-item-text">${name}</span></a>`;
   }
+
   const details = prDetails[`${link.repositoryId}:${link.pullRequestId}`];
-  const label = details
+  const baseLabel = details
     ? `#${link.pullRequestId} ${escapeHtml(details.title)} (${escapeHtml(capitalize(details.status))})`
     : `#${link.pullRequestId}`;
+  const label = repoName ? `${escapeHtml(repoName)} — ${baseLabel}` : baseLabel;
   const commandArgs = encodeURIComponent(JSON.stringify([link.repositoryId, link.pullRequestId]));
   return `<a class="kb-dev-item" href="command:kanbrain.openPullRequestDetail?${commandArgs}" title="${label}">${PULL_REQUEST_ICON}<span class="kb-dev-item-text">${label}</span></a>`;
 }
 
-function renderMoreBatches(development: DevelopmentLink[], prDetails: Record<string, PullRequestDetails>, startIndex: number): string {
+function renderMoreBatches(
+  development: DevelopmentLink[],
+  prDetails: Record<string, PullRequestDetails>,
+  repositories: Record<string, RepositoryPathEntry>,
+  startIndex: number,
+): string {
   if (startIndex >= development.length) {
     return '';
   }
@@ -45,14 +63,18 @@ function renderMoreBatches(development: DevelopmentLink[], prDetails: Record<str
   return `
     <input type="checkbox" id="${checkboxId}" class="kb-dev-more-toggle" />
     <div class="kb-dev-extra">
-      ${batch.map(link => renderDevelopmentItem(link, prDetails)).join('')}
-      ${renderMoreBatches(development, prDetails, startIndex + BATCH_SIZE)}
+      ${batch.map(link => renderDevelopmentItem(link, prDetails, repositories)).join('')}
+      ${renderMoreBatches(development, prDetails, repositories, startIndex + BATCH_SIZE)}
     </div>
     <label for="${checkboxId}" class="kb-dev-more-btn">See more</label>
   `;
 }
 
-export function renderDevelopmentSection(development: DevelopmentLink[], prDetails: Record<string, PullRequestDetails>): string {
+export function renderDevelopmentSection(
+  development: DevelopmentLink[],
+  prDetails: Record<string, PullRequestDetails>,
+  repositories: Record<string, RepositoryPathEntry> = {},
+): string {
   if (development.length === 0) {
     return '';
   }
@@ -60,8 +82,8 @@ export function renderDevelopmentSection(development: DevelopmentLink[], prDetai
   return `
     <div class="kb-detail-group">
       <div class="kb-detail-group-label kb-dev-label">${BRANCH_FORK_ICON}<span>Development</span></div>
-      ${visible.map(link => renderDevelopmentItem(link, prDetails)).join('')}
-      ${renderMoreBatches(development, prDetails, INITIAL_VISIBLE)}
+      ${visible.map(link => renderDevelopmentItem(link, prDetails, repositories)).join('')}
+      ${renderMoreBatches(development, prDetails, repositories, INITIAL_VISIBLE)}
     </div>
   `;
 }

@@ -117,7 +117,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
       <div class="kb-detail-side">
         ${groups.map(renderDetailGroup).join('')}
         ${renderRelatedWorkSection(parent, children, config)}
-        ${renderDevelopmentSection(workItem.development, prDetails)}
+        ${renderDevelopmentSection(workItem.development, prDetails, config.repositories ?? {})}
       </div>
     </div>
     <div class="kb-detail-section-label">Discussion</div>

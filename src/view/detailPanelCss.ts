@@ -46,6 +46,7 @@ export function detailPanelCss(): string {
     .kb-dev-item { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-top: 4px; opacity: 0.85; }
     a.kb-dev-item { cursor: pointer; text-decoration: none; color: inherit; }
     a.kb-dev-item:hover { color: var(--vscode-textLink-foreground); }
+    .kb-dev-item-disabled { opacity: 0.5; }
     .kb-dev-item svg { flex-shrink: 0; }
     .kb-dev-item-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .kb-dev-more-toggle { display: none; }
