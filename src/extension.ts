@@ -63,7 +63,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerConfigureWithAiCommand(client, workspaceRoot),
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
     registerOpenWorkItemDetailCommand(detailPanelManager),
-    registerCheckoutBranchCommand(client, workspaceRoot),
+    registerCheckoutBranchCommand(workspaceRoot),
     registerOpenPullRequestDetailCommand(prDetailPanelManager),
     registerPickWorkItemCommand(provider),
     registerViewPullRequestDiffCommand(workspaceRoot),
