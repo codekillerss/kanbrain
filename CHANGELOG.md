@@ -2,6 +2,21 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.5.0] - 2026-07-24
+
+### Added
+
+- Repository path mapping — Kanbrain now maps each Azure DevOps repository to a local clone path, so branch checkout and the GitLens diff action work correctly even when the workspace is a parent folder containing several cloned repos (or just isn't the repo a given PR/branch belongs to).
+- `Kanbrain: Setup` asks whether to auto-discover and map the project's repositories to local clones; `Kanbrain: Sync Board Configuration` keeps that mapping current without ever overwriting a path you've set manually.
+- New "Repositories" screen (Home → Repositories) listing every repository in the project with an editable local path field and a folder picker.
+- Branch and repository names now render as colored tags (blue for branches, orange for repositories) in the PR detail panel header and the Development section.
+- A repository tag with no local path configured (or one Kanbrain doesn't recognize) is clickable — it offers to configure the path, clone the repository directly into a folder you pick, or sync the board configuration if the repository isn't recognized at all.
+- The PR detail panel header now shows which repository the PR belongs to.
+
+### Changed
+
+- Branch checkout and the GitLens diff action no longer assume the currently open workspace folder is the right repository — they use the configured local path instead, and are disabled (rather than failing silently) when no path is configured.
+
 ## [0.4.0] - 2026-07-23
 
 ### Added
