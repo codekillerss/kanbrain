@@ -10,6 +10,6 @@ function findOrCreateTerminal(): vscode.Terminal {
 
 export function sendReadCommand(relativeContextFilePath: string): void {
   const terminal = findOrCreateTerminal();
-  terminal.show(true);
+  terminal.show();
   terminal.sendText(buildReadCommand(relativeContextFilePath));
 }
