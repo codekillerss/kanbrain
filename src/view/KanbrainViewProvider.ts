@@ -47,6 +47,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async message => {
       if (message.type === 'run-skill') {
         await this.runSkill(Number(message.id));
+      } else if (message.type === 'run-global-skill') {
+        await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
         await this.searchWorkItems(String(message.query ?? ''));
       } else if (message.type === 'pick-work-item') {
@@ -310,6 +312,45 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async runSkill(id: number): Promise<void> {
+    const found = await this.loadWorkItemForSkill(id);
+    if (!found) {
+      return;
+    }
+    const skill = resolveSkill(found.config, found.workItem);
+    if (!skill) {
+      return;
+    }
+    await this.executeSkill(found.workItem, skill);
+  }
+
+  private async runGlobalSkill(id: number, skillId: string): Promise<void> {
+    const found = await this.loadWorkItemForSkill(id);
+    if (!found) {
+      return;
+    }
+    const skill = found.config.globalSkills?.[skillId];
+    if (!skill) {
+      return;
+    }
+    await this.executeSkill(found.workItem, skill);
+  }
+
+  private async loadWorkItemForSkill(id: number): Promise<{ config: KanbrainConfig; workItem: WorkItem } | null> {
+    if (!this.workspaceRoot || !this.client) {
+      return null;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return null;
+    }
+    const [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
+    if (!workItem) {
+      return null;
+    }
+    return { config, workItem };
+  }
+
+  private async executeSkill(workItem: WorkItem, skill: SkillEntry): Promise<void> {
     if (!this.workspaceRoot || !this.client) {
       return;
     }
@@ -317,17 +358,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
-
-    const [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
-    if (!workItem) {
-      return;
-    }
-
-    const skill = resolveSkill(config, workItem);
-    if (!skill) {
-      return;
-    }
-
     const [parent] = workItem.parentId
       ? await this.client.getWorkItems(config.organization, config.project, [workItem.parentId])
       : [];
