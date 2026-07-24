@@ -75,6 +75,11 @@ export interface CardFieldSettings {
   assignedTo: boolean;
 }
 
+export interface RepositoryPathEntry {
+  name: string;
+  path: string;
+}
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
@@ -87,4 +92,5 @@ export interface KanbrainConfig {
   taskBacklogTypesByTeam?: Record<string, string[]>;
   showAssignedTo?: boolean;
   lastSyncedVersion?: string;
+  repositories?: Record<string, RepositoryPathEntry>;
 }
