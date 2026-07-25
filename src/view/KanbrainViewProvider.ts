@@ -846,7 +846,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-title { font-weight: 600; margin-left: 6px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-title-clickable { cursor: pointer; }
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
-      .kb-action-btn { margin-top: 6px; padding: 4px 8px; background-color: var(--vscode-button-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.08)); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-action-btn { margin-top: 6px; padding: 4px 8px; background-color: var(--vscode-button-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { filter: brightness(1.12); }
       .kb-action-group { position: relative; display: inline-block; margin-top: 6px; }
       .kb-action-pill { display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden; }
@@ -854,7 +854,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-global-skill-trigger { padding: 4px 8px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: none; border-left: 1px solid var(--vscode-panel-border); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-global-skill-trigger:hover { background: var(--vscode-list-hoverBackground); }
       .kb-global-skill-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 240px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
-      .kb-global-skill-option { width: 100%; flex-shrink: 0; text-align: left; padding: 6px 8px; background-color: var(--vscode-dropdown-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.08)); border: none; border-radius: 4px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
+      .kb-global-skill-option { width: 100%; flex-shrink: 0; text-align: left; padding: 6px 8px; background-color: var(--vscode-dropdown-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); border: none; border-radius: 4px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
       .kb-global-skill-option:hover { filter: brightness(1.12); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
@@ -906,8 +906,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
       .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-global-skill-header { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.08)); }
-      .kb-global-skill-header:hover { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.08)); filter: brightness(1.12); }
+      .kb-global-skill-header { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); }
+      .kb-global-skill-header:hover { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); filter: brightness(1.12); }
       .kb-config-level-body { padding: 6px 8px; }
       .kb-config-static-header { padding: 6px 8px; font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; color: var(--vscode-foreground); }
       .kb-chevron { display: inline-block; margin-right: 6px; transition: transform 0.15s ease; }
