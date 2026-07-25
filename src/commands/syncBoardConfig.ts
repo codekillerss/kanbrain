@@ -15,6 +15,7 @@ import {
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
+  isBootstrapContentMissing,
 } from '../skills/bootstrapContent';
 
 export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string, extensionVersion: string): vscode.Disposable {
@@ -51,7 +52,11 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     }
 
     const freshStatusColors = discoverStatusColors(types);
-    const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
+    const diff = diffBoardConfig(
+      result.config,
+      boardState.discoveredStatusesByType,
+      isBootstrapContentMissing(workspaceRoot, result.config),
+    );
 
     const azureRepos = await client.listRepositories(result.config.organization, result.config.project);
     const localRepos = await discoverLocalRepositories(workspaceRoot);

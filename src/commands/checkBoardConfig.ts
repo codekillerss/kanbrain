@@ -3,6 +3,7 @@ import type { AzureDevOpsClient } from '../azureDevOps/client';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { diffBoardConfig, isDiffEmpty, summarizeDiff, type BoardConfigDiff } from '../azureDevOps/checkBoardConfig';
 import { readConfigWithDiagnostics } from '../config/config';
+import { isBootstrapContentMissing } from '../skills/bootstrapContent';
 import type { KanbrainConfig } from '../types';
 
 export type CheckResult =
@@ -24,7 +25,11 @@ export async function checkBoardConfig(client: AzureDevOpsClient, workspaceRoot:
     return { status: 'discovery-failed', error: error instanceof Error ? error.message : String(error) };
   }
 
-  const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
+  const diff = diffBoardConfig(
+    result.config,
+    boardState.discoveredStatusesByType,
+    isBootstrapContentMissing(workspaceRoot, result.config),
+  );
 
   return { status: 'ok', diff, config: result.config };
 }
