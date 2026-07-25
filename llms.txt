@@ -1,0 +1,10 @@
+# Kanbrain
+
+> VS Code extension that shows the active Azure DevOps work item and its children in a side panel, with per-status "skill" buttons that hand context to a coding agent.
+
+Kanbrain connects a VS Code side panel to Azure DevOps boards. It surfaces the active work item (and its children), and lets each board status trigger a "skill" — a markdown file with placeholders resolved from the real work item's data, sent to an AI coding agent running in an integrated terminal. Skills can also be global (not tied to a status), for actions like explaining a card on demand.
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/codekillerss/kanbrain/main/README.md): Installation and setup walkthrough, skill/global skill configuration, skill placeholders, development commands, and the manual verification checklist.
+- [CHANGELOG](https://raw.githubusercontent.com/codekillerss/kanbrain/main/CHANGELOG.md): Version history and notable changes.
