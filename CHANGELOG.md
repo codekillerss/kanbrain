@@ -2,6 +2,24 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.6.0] - 2026-07-25
+
+### Added
+
+- Global skills — skills that aren't tied to any status. They show up as a small "▾" menu next to the status skill button on the active work item's card (or alone, if the current status has none), and run against whatever work item is active regardless of its status. Configured in a new "Global Skills" section on the Config screen, collapsed behind a colored preview header per skill, matching how work item types are already displayed.
+- `Kanbrain: Setup` (and `Kanbrain: Sync Board Configuration`, as a backfill if missing) now seed one real global skill, `explain-card`, and a new `.kanbrain/USAGE.md` — a single usage guide meant to be read by both your team and any coding agent working in the workspace, covering both kinds of skill and the fact that Kanbrain runs with the same Azure DevOps access your VS Code session already has.
+- `Kanbrain: Configure with AI`'s generated content now mentions global skills and points to `.kanbrain/USAGE.md`.
+- Card details and pull request details panels now show a distinct icon on their VS Code editor tab instead of the generic webview icon.
+
+### Changed
+
+- The silent board-configuration check that runs once per VS Code session (and `Kanbrain: Sync Board Configuration`'s "up to date" message) now also detects a missing `.kanbrain/USAGE.md` or `explain-card` global skill, and offers the same "Sync Now" action for it — so upgrading the extension alone surfaces the gap instead of requiring a manual Sync.
+
+### Fixed
+
+- Clicking a skill button's "Run" action no longer risks re-triggering it: focus now correctly moves to the terminal instead of staying on the button, where a follow-up Enter used to fire the button again.
+- The status dot next to each group header in the search dialog no longer gets pushed away from the status name by a layout rule meant for a different kind of header.
+
 ## [0.5.1] - 2026-07-24
 
 ### Fixed
