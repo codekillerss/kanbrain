@@ -745,6 +745,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           const isOpen = !menu.classList.contains('kb-hidden');
           closeAllGlobalSkillMenus();
           if (!isOpen) {
+            const rect = group.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.width = rect.width + 'px';
             menu.classList.remove('kb-hidden');
           }
         }
@@ -764,6 +768,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     function closeAllGlobalSkillMenus() {
       document.querySelectorAll('.kb-global-skill-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
+
+    window.addEventListener('scroll', closeAllGlobalSkillMenus, true);
 
     const searchInput = document.getElementById('kb-search-input');
     if (searchInput) {
@@ -847,7 +853,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-action-pill .kb-action-btn { margin-top: 0; border-radius: 0; }
       .kb-global-skill-trigger { padding: 4px 8px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: none; border-left: 1px solid var(--vscode-panel-border); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-global-skill-trigger:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-global-skill-menu { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; z-index: 20; display: flex; flex-direction: column; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-global-skill-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-global-skill-option { width: 100%; text-align: left; padding: 6px 8px; background: none; border: none; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
       .kb-global-skill-option:hover { background: var(--vscode-list-hoverBackground); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }

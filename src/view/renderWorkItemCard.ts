@@ -20,6 +20,14 @@ function renderGlobalSkillTrigger(id: number, hasEntries: boolean): string {
   return `<button type="button" class="kb-global-skill-trigger" data-action="toggle-global-skill-menu" data-id="${id}" title="Run a global skill">▾</button>`;
 }
 
+function renderSkillStyleAttr(skill: SkillEntry): string {
+  const textColor = skill.textColor && isValidHexColor(skill.textColor) ? normalizeHex(skill.textColor) : null;
+  const buttonColor = skill.buttonColor && isValidHexColor(skill.buttonColor) ? normalizeHex(skill.buttonColor) : null;
+  return buttonColor || textColor
+    ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
+    : '';
+}
+
 function renderGlobalSkillMenu(id: number, globalSkills: Record<string, SkillEntry>): string {
   const entries = Object.entries(globalSkills);
   if (entries.length === 0) {
@@ -28,7 +36,8 @@ function renderGlobalSkillMenu(id: number, globalSkills: Record<string, SkillEnt
   const options = entries
     .map(([skillId, entry]) => {
       const label = entry.label ?? entry.path.split('/').pop() ?? entry.path;
-      return `<button type="button" class="kb-global-skill-option" data-action="run-global-skill" data-id="${id}" data-skill-id="${escapeHtml(skillId)}">${escapeHtml(label)}</button>`;
+      const style = renderSkillStyleAttr(entry);
+      return `<button type="button" class="kb-global-skill-option" data-action="run-global-skill" data-id="${id}" data-skill-id="${escapeHtml(skillId)}"${style}>${escapeHtml(label)}</button>`;
     })
     .join('');
   return `<div class="kb-global-skill-menu kb-hidden">${options}</div>`;
@@ -36,12 +45,7 @@ function renderGlobalSkillMenu(id: number, globalSkills: Record<string, SkillEnt
 
 function renderSkillButton(id: number, skill: SkillEntry): string {
   const label = skill.label ?? skill.path.split('/').pop() ?? skill.path;
-  const textColor = skill.textColor && isValidHexColor(skill.textColor) ? normalizeHex(skill.textColor) : null;
-  const buttonColor = skill.buttonColor && isValidHexColor(skill.buttonColor) ? normalizeHex(skill.buttonColor) : null;
-  const style =
-    buttonColor || textColor
-      ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
-      : '';
+  const style = renderSkillStyleAttr(skill);
   return `<button class="kb-action-btn" data-action="run-skill" data-id="${id}"${style}>▶ ${escapeHtml(label)}</button>`;
 }
 
