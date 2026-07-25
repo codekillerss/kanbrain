@@ -9,6 +9,13 @@ import { buildPresetPlan } from '../skills/presetSkillFiles';
 import { writeConfig, ensureGitignoreEntry } from '../config/config';
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
+import {
+  EXPLAIN_CARD_SKILL_CONTENT,
+  EXPLAIN_CARD_SKILL_RELATIVE_PATH,
+  USAGE_GUIDE_CONTENT,
+  USAGE_GUIDE_RELATIVE_PATH,
+  ensureExplainCardGlobalSkill,
+} from '../skills/bootstrapContent';
 
 const EXAMPLE_SKILL = `# Example skill
 
@@ -120,6 +127,16 @@ export function registerSetupCommand(
       fs.writeFileSync(exampleSkillPath, EXAMPLE_SKILL, 'utf-8');
     }
 
+    const explainCardSkillPath = path.join(workspaceRoot, EXPLAIN_CARD_SKILL_RELATIVE_PATH);
+    if (!fs.existsSync(explainCardSkillPath)) {
+      fs.writeFileSync(explainCardSkillPath, EXPLAIN_CARD_SKILL_CONTENT, 'utf-8');
+    }
+
+    const usageGuidePath = path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH);
+    if (!fs.existsSync(usageGuidePath)) {
+      fs.writeFileSync(usageGuidePath, USAGE_GUIDE_CONTENT, 'utf-8');
+    }
+
     writeConfig(workspaceRoot, {
       organization: orgPick.org.name,
       project: projectPick.project.name,
@@ -131,6 +148,7 @@ export function registerSetupCommand(
       cardSettingsByTeam,
       taskBacklogTypesByTeam,
       repositories,
+      globalSkills: ensureExplainCardGlobalSkill(undefined),
       lastSyncedVersion: extensionVersion,
     });
 
