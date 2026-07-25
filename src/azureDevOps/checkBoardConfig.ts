@@ -5,9 +5,14 @@ export interface BoardConfigDiff {
   typesRemoved: string[];
   statusesAdded: { type: string; status: string }[];
   statusesRemoved: { type: string; status: string; skillPath: string | null }[];
+  missingBootstrapContent: boolean;
 }
 
-export function diffBoardConfig(config: KanbrainConfig, discovered: Record<string, Record<string, string>>): BoardConfigDiff {
+export function diffBoardConfig(
+  config: KanbrainConfig,
+  discovered: Record<string, Record<string, string>>,
+  missingBootstrapContent: boolean,
+): BoardConfigDiff {
   const typesAdded: string[] = [];
   const typesRemoved: string[] = [];
   const statusesAdded: { type: string; status: string }[] = [];
@@ -36,7 +41,7 @@ export function diffBoardConfig(config: KanbrainConfig, discovered: Record<strin
     }
   }
 
-  return { typesAdded, typesRemoved, statusesAdded, statusesRemoved };
+  return { typesAdded, typesRemoved, statusesAdded, statusesRemoved, missingBootstrapContent };
 }
 
 export function isDiffEmpty(diff: BoardConfigDiff): boolean {
@@ -44,7 +49,8 @@ export function isDiffEmpty(diff: BoardConfigDiff): boolean {
     diff.typesAdded.length === 0 &&
     diff.typesRemoved.length === 0 &&
     diff.statusesAdded.length === 0 &&
-    diff.statusesRemoved.length === 0
+    diff.statusesRemoved.length === 0 &&
+    !diff.missingBootstrapContent
   );
 }
 
@@ -54,5 +60,6 @@ export function summarizeDiff(diff: BoardConfigDiff): string {
   if (diff.typesRemoved.length) parts.push(`${diff.typesRemoved.length} work item type(s) no longer found`);
   if (diff.statusesAdded.length) parts.push(`${diff.statusesAdded.length} new status(es)`);
   if (diff.statusesRemoved.length) parts.push(`${diff.statusesRemoved.length} status(es) no longer found (skill mappings preserved)`);
+  if (diff.missingBootstrapContent) parts.push('missing global skill setup (explain-card skill / USAGE.md)');
   return parts.join(', ');
 }
