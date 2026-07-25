@@ -34,22 +34,38 @@ function renderSkillEntryRow(type: string, status: string, entry: SkillEntry | n
   `;
 }
 
+function renderGlobalSkillPreviewStyle(entry: SkillEntry): string {
+  const textColor = entry.textColor && isValidHexColor(entry.textColor) ? normalizeHex(entry.textColor) : null;
+  const buttonColor = entry.buttonColor && isValidHexColor(entry.buttonColor) ? normalizeHex(entry.buttonColor) : null;
+  return buttonColor || textColor
+    ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
+    : '';
+}
+
 function renderGlobalSkillRow(id: string, entry: SkillEntry): string {
   const path = entry.path ?? '';
   const label = entry.label ?? '';
   const textColor = entry.textColor ?? '';
   const buttonColor = entry.buttonColor ?? '';
+  const previewLabel = entry.label || (entry.path ? (entry.path.split('/').pop() ?? entry.path) : 'New global skill');
 
   return `
-    <div class="kb-config-row" data-global-skill-id="${escapeHtml(id)}">
-      <div class="kb-config-field-path">
-        <input type="text" class="kb-input" data-field="path" placeholder="Skill file path" value="${escapeHtml(path)}">
-        <button type="button" data-action="pick-skill-file" title="Browse for a file">…</button>
+    <div class="kb-config-level">
+      <button type="button" class="kb-config-level-header kb-global-skill-header" data-action="toggle-group"${renderGlobalSkillPreviewStyle(entry)}>
+        <span class="kb-chevron">▾</span>${escapeHtml(previewLabel)}
+      </button>
+      <div class="kb-config-level-body kb-hidden">
+        <div class="kb-config-row" data-global-skill-id="${escapeHtml(id)}">
+          <div class="kb-config-field-path">
+            <input type="text" class="kb-input" data-field="path" placeholder="Skill file path" value="${escapeHtml(path)}">
+            <button type="button" data-action="pick-skill-file" title="Browse for a file">…</button>
+          </div>
+          <input type="text" class="kb-input" data-field="label" placeholder="Label" value="${escapeHtml(label)}">
+          ${renderColorField('textColor', textColor, 'Text color hex')}
+          ${renderColorField('buttonColor', buttonColor, 'Button color hex')}
+          <button type="button" class="kb-icon-btn" data-action="remove-global-skill" data-global-skill-id="${escapeHtml(id)}" title="Remove">✕</button>
+        </div>
       </div>
-      <input type="text" class="kb-input" data-field="label" placeholder="Label" value="${escapeHtml(label)}">
-      ${renderColorField('textColor', textColor, 'Text color hex')}
-      ${renderColorField('buttonColor', buttonColor, 'Button color hex')}
-      <button type="button" class="kb-icon-btn" data-action="remove-global-skill" data-global-skill-id="${escapeHtml(id)}" title="Remove">✕</button>
     </div>
   `;
 }

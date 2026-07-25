@@ -155,4 +155,27 @@ describe('renderConfigEditor', () => {
     expect(html).toContain('data-action="remove-global-skill"');
     expect(html).toContain('data-global-skill-id="global-skill-1"');
   });
+
+  it('shows a collapsed, colored toggle header for each global skill, with fields hidden until expanded', () => {
+    const html = renderConfigEditor(
+      config({
+        globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort', buttonColor: '007acc', textColor: 'ffffff' } },
+      }),
+    );
+
+    expect(html).toContain('kb-global-skill-header');
+    expect(html).toContain('data-action="toggle-group"');
+    expect(html).toContain('background: #007acc');
+    expect(html).toContain('color: #ffffff');
+    expect(html).toContain('Avaliar Effort');
+    expect(html).toContain('kb-config-level-body kb-hidden');
+  });
+
+  it('falls back to the file name, or a placeholder when there is no path yet, as the collapsed header label', () => {
+    const withPathOnly = renderConfigEditor(config({ globalSkills: { 'global-skill-1': { path: '.kanbrain/skills/effort.md' } } }));
+    expect(withPathOnly).toContain('effort.md');
+
+    const empty = renderConfigEditor(config({ globalSkills: { 'global-skill-1': { path: '' } } }));
+    expect(empty).toContain('New global skill');
+  });
 });
