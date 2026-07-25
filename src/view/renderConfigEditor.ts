@@ -38,7 +38,7 @@ function renderGlobalSkillPreviewStyle(entry: SkillEntry): string {
   const textColor = entry.textColor && isValidHexColor(entry.textColor) ? normalizeHex(entry.textColor) : null;
   const buttonColor = entry.buttonColor && isValidHexColor(entry.buttonColor) ? normalizeHex(entry.buttonColor) : null;
   return buttonColor || textColor
-    ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
+    ? ` style="${buttonColor ? `background-color: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
     : '';
 }
 

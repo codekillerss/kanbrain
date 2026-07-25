@@ -165,7 +165,7 @@ describe('renderConfigEditor', () => {
 
     expect(html).toContain('kb-global-skill-header');
     expect(html).toContain('data-action="toggle-group"');
-    expect(html).toContain('background: #007acc');
+    expect(html).toContain('background-color: #007acc');
     expect(html).toContain('color: #ffffff');
     expect(html).toContain('Avaliar Effort');
     expect(html).toContain('kb-config-level-body kb-hidden');

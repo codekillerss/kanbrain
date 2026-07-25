@@ -267,7 +267,7 @@ describe('render', () => {
       subtasks: [],
       screen: 'flow',
     });
-    expect(html).toContain('background: #007acc;');
+    expect(html).toContain('background-color: #007acc;');
     expect(html).toContain('color: #ffffff;');
   });
 
