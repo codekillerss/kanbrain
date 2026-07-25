@@ -1,17 +1,19 @@
 import * as vscode from 'vscode';
 import type { WorkItem, KanbrainConfig, DevelopmentLink, PullRequestDetails } from '../types';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItemComment, WorkItemTypeLayout } from '../azureDevOps/workItemDetail';
+import type { WorkItemComment, WorkItemTypeLayout, DetailField } from '../azureDevOps/workItemDetail';
 import { resolveDetailFields } from '../azureDevOps/workItemDetail';
 import { readConfig } from '../config/config';
 import { renderWorkItemDetail } from './renderWorkItemDetail';
 import { detailPanelCss } from './detailPanelCss';
+import { extractImageUrls } from './inlineImages';
 
 const POLL_INTERVAL_MS = 5000;
 
 export class WorkItemDetailPanelManager {
   private panels = new Map<number, vscode.WebviewPanel>();
   private avatarCache = new Map<string, string | null>();
+  private inlineImageCache = new Map<string, string | null>();
   private prCache = new Map<string, PullRequestDetails | null>();
   private layoutCache = new Map<number, WorkItemTypeLayout | null>();
   private lastStateByPanel = new Map<number, string>();
@@ -110,28 +112,42 @@ export class WorkItemDetailPanelManager {
     }
     const parent = parentResult[0] ?? null;
 
-    const [avatars, prDetails] = await Promise.all([
+    const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
+    const description = typeof rawFields['System.Description'] === 'string' ? (rawFields['System.Description'] as string) : null;
+
+    const [avatars, prDetails, inlineImages] = await Promise.all([
       this.resolveAvatars(workItem, comments),
       this.resolvePullRequestDetails(workItem, config),
+      this.resolveInlineImages(description, htmlSections, comments, config.organization),
     ]);
 
-    const stateKey = JSON.stringify({ workItem, rawFields, comments, parent, children, avatars, prDetails, repositories: config.repositories });
+    const stateKey = JSON.stringify({
+      workItem,
+      rawFields,
+      comments,
+      parent,
+      children,
+      avatars,
+      prDetails,
+      inlineImages,
+      repositories: config.repositories,
+    });
     if (this.lastStateByPanel.get(id) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(id, stateKey);
 
-    const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
     panel.title = `#${workItem.id} ${workItem.title}`;
     panel.webview.html = this.wrapHtml(
       renderWorkItemDetail({
         workItem,
         config,
-        description: typeof rawFields['System.Description'] === 'string' ? (rawFields['System.Description'] as string) : null,
+        description,
         groups,
         htmlSections,
         comments,
         avatars,
+        inlineImages,
         prDetails,
         parent,
         children,
@@ -155,6 +171,29 @@ export class WorkItemDetailPanelManager {
       if (dataUri) {
         resolved[url] = dataUri;
       }
+    }
+    return resolved;
+  }
+
+  private async resolveInlineImages(
+    description: string | null,
+    htmlSections: DetailField[],
+    comments: WorkItemComment[],
+    organization: string,
+  ): Promise<Record<string, string | null>> {
+    const htmlBlobs = [description ?? '', ...htmlSections.map(f => String(f.value ?? '')), ...comments.map(c => c.text)];
+    const urls = [...new Set(htmlBlobs.flatMap(html => extractImageUrls(html, organization)))];
+
+    const uncached = urls.filter(u => !this.inlineImageCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.inlineImageCache.set(url, await this.client.getAuthenticatedImageDataUri(url));
+      }),
+    );
+
+    const resolved: Record<string, string | null> = {};
+    for (const url of urls) {
+      resolved[url] = this.inlineImageCache.get(url) ?? null;
     }
     return resolved;
   }
