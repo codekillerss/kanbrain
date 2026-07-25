@@ -147,7 +147,7 @@ export class AzureDevOpsClient {
     return this.getWorkItems(organization, project, workItem.childIds);
   }
 
-  async getAvatarDataUri(url: string): Promise<string | null> {
+  async getAuthenticatedImageDataUri(url: string): Promise<string | null> {
     try {
       const response = await this.fetchWithAuth(url);
       const contentType = response.headers.get('content-type') ?? 'image/png';

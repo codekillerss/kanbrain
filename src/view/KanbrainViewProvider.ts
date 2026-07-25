@@ -223,7 +223,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const uncached = urls.filter(u => !this.avatarCache.has(u));
     await Promise.all(
       uncached.map(async url => {
-        this.avatarCache.set(url, this.client ? await this.client.getAvatarDataUri(url) : null);
+        this.avatarCache.set(url, this.client ? await this.client.getAuthenticatedImageDataUri(url) : null);
       }),
     );
     const resolved: Record<string, string> = {};

@@ -220,13 +220,13 @@ describe('AzureDevOpsClient', () => {
   });
 });
 
-describe('AzureDevOpsClient.getAvatarDataUri', () => {
+describe('AzureDevOpsClient.getAuthenticatedImageDataUri', () => {
   it('fetches the avatar with auth and returns a base64 data URI using the response content-type', async () => {
     const bytes = new Uint8Array([1, 2, 3]);
     const fetchImpl = vi.fn().mockResolvedValueOnce(binaryResponse(bytes, 'image/png'));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const dataUri = await client.getAvatarDataUri('https://dev.azure.com/my-org/_apis/GraphProfile/MemberAvatars/abc');
+    const dataUri = await client.getAuthenticatedImageDataUri('https://dev.azure.com/my-org/_apis/GraphProfile/MemberAvatars/abc');
 
     expect(dataUri).toBe(`data:image/png;base64,${Buffer.from(bytes).toString('base64')}`);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -240,7 +240,7 @@ describe('AzureDevOpsClient.getAvatarDataUri', () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(binaryResponse(bytes, null));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const dataUri = await client.getAvatarDataUri('https://example.com/avatar');
+    const dataUri = await client.getAuthenticatedImageDataUri('https://example.com/avatar');
 
     expect(dataUri).toBe(`data:image/png;base64,${Buffer.from(bytes).toString('base64')}`);
   });
@@ -249,7 +249,7 @@ describe('AzureDevOpsClient.getAvatarDataUri', () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'nope' }, false, 404));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    const dataUri = await client.getAvatarDataUri('https://example.com/avatar');
+    const dataUri = await client.getAuthenticatedImageDataUri('https://example.com/avatar');
 
     expect(dataUri).toBeNull();
   });

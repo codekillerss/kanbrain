@@ -146,7 +146,7 @@ export class WorkItemDetailPanelManager {
     const uncached = urls.filter(u => !this.avatarCache.has(u));
     await Promise.all(
       uncached.map(async url => {
-        this.avatarCache.set(url, await this.client.getAvatarDataUri(url));
+        this.avatarCache.set(url, await this.client.getAuthenticatedImageDataUri(url));
       }),
     );
     const resolved: Record<string, string> = {};
