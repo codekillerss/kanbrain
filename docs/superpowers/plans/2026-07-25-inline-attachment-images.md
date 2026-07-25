@@ -578,3 +578,16 @@ git commit -m "feat: resolve and cache inline attachment images per detail panel
 
 - **Spec coverage:** "Dentro do escopo" (detail panel Description/htmlSections/comments, generalized auth fetch, per-panel cache, unavailable-image fallback) — Tasks 1–4. "Tratamento de erros" (null → placeholder, non-ADO URLs untouched, no new failure mode for the panel refresh) — covered by `rewriteImageSrcs`'s branching (Task 1) and `resolveInlineImages` never throwing (Task 4, same shape as `resolveAvatars`). "Testes" section of the spec — each listed test file has a corresponding task (`inlineImages.test.ts` in Task 1, `renderWorkItemDetail.test.ts` in Task 3, `client.test.ts` rename in Task 2, `resolveInlineImages` explicitly left untested with the same justification the spec gives).
 - **Type consistency:** `Record<string, string | null>` is used consistently for `inlineImages` across `inlineImages.ts`, `renderComment.ts`, `renderWorkItemDetail.ts`, and `WorkItemDetailPanelManager.ts`. `getAuthenticatedImageDataUri` name matches across Task 2 (definition) and Task 4 (call site).
+
+---
+
+## Addendum: Task 5 — Markdown images in the PR panel (2026-07-25)
+
+Manual testing after Tasks 1–4 shipped showed PR comment/description images (Markdown `![alt](url)` syntax, not HTML `<img>`) still rendered as raw text — the spec had explicitly scoped the PR panel out, but this turned out to be a real gap worth closing with the same architecture. Implemented as a fifth task, same TDD process as Tasks 1–4:
+
+- `src/view/inlineImages.ts`: added `extractMarkdownImageUrls(text, organization)`, a sibling to `extractImageUrls` that matches `![alt](url)` instead of `<img src>`.
+- `src/view/renderMarkdownText.ts` (new): `renderMarkdownText(text)` — escapes plain text like `escapeHtml`, but converts Markdown image syntax into `<img src="url" alt="...">` so it flows through the existing `rewriteImageSrcs`.
+- `src/view/renderPullRequestDetail.ts`: `PullRequestDetailInput` gained `inlineImages`; PR description and thread comment text (roots and replies) now go through `renderMarkdownText` + `rewriteImageSrcs`/`renderComment`'s third parameter instead of bare `escapeHtml`.
+- `src/view/PullRequestDetailPanelManager.ts`: added `inlineImageCache` and `resolveInlineImages(pr, threads, organization)`, mirroring `WorkItemDetailPanelManager`'s method of the same name, scanning the PR description and every thread comment.
+
+Verified: `npm run compile` clean, full suite green (533 tests). See the spec's 2026-07-25 addendum for the root-cause writeup.

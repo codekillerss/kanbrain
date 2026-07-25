@@ -16,10 +16,11 @@ O projeto já resolve exatamente esse problema de "recurso do ADO que precisa de
 
 **Fora do escopo:**
 - Card compacto da lista (`renderWorkItemCard.ts`, usado em Flow/Home/busca) — não renderiza HTML de Description/comentários hoje e continua sem essa seção.
-- Painel de Pull Request (`renderPullRequestDetail.ts`) — comentários de PR já passam por `escapeHtml` (texto puro/Markdown, não HTML rico do ADO) e não carregam `<img>` embutida hoje; fora do escopo desta spec.
 - Anexos formais listados na relação `AttachedFile` do work item (aba "Attachments" separada da Description no Azure Boards) — fonte de dados distinta, não abordada aqui.
 - Qualquer limite de tamanho/contagem de imagens ou lazy loading — segue o mesmo comportamento eager e sem limite que `resolveAvatars` já tem hoje.
 - Mudança de CSP — `img-src data: https:` já permite `data:` URIs, nenhuma alteração necessária.
+
+**Adendo (2026-07-25):** o painel de Pull Request (`renderPullRequestDetail.ts`) estava originalmente fora do escopo, mas foi trazido pra dentro depois de um teste manual mostrar que imagens coladas em comentários/descrição de PR ficavam visíveis como texto Markdown cru (`![image.png](url)`) em vez de carregar. Causa: PR description/comments são Markdown puro (não o HTML rico do ADO que work items usam), então a sintaxe `![alt](url)` nunca virava uma tag `<img>` e nunca entrava no pipeline de resolução já existente. Solução implementada: `extractMarkdownImageUrls` (mirror de `extractImageUrls` para sintaxe Markdown, em `inlineImages.ts`) e um novo módulo `renderMarkdownText.ts` que escapa o texto normalmente mas converte `![alt](url)` em `<img src="url" alt="...">`, permitindo reaproveitar o mesmo `rewriteImageSrcs`/`renderComment` já existentes. `PullRequestDetailPanelManager` ganhou um `resolveInlineImages` análogo ao do `WorkItemDetailPanelManager`, cobrindo a Description do PR e o texto de cada comentário de thread (incluindo replies).
 
 ## Design
 
