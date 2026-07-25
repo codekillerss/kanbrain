@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
-import type { PullRequestThreadComment } from '../types';
+import type { PullRequestDetail, PullRequestThread, PullRequestThreadComment } from '../types';
 import { readConfig } from '../config/config';
 import { renderPullRequestDetail } from './renderPullRequestDetail';
 import { detailPanelCss } from './detailPanelCss';
+import { extractMarkdownImageUrls } from './inlineImages';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -13,6 +14,7 @@ export class PullRequestDetailPanelManager {
   private panels = new Map<string, vscode.WebviewPanel>();
   private lastStateByPanel = new Map<string, string>();
   private avatarCache = new Map<string, string | null>();
+  private inlineImageCache = new Map<string, string | null>();
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private gitLensIconDataUriCache: string | null | undefined;
 
@@ -117,15 +119,16 @@ export class PullRequestDetailPanelManager {
       .catch(() => []);
     const avatars = await this.resolveAvatars(threads.flatMap(t => t.comments));
     const gitLensIconDataUri = await this.resolveGitLensIcon();
+    const inlineImages = await this.resolveInlineImages(pr, threads, config.organization);
 
-    const stateKey = JSON.stringify({ pr, workItems, threads, avatars, gitLensIconDataUri, repositories: config.repositories });
+    const stateKey = JSON.stringify({ pr, workItems, threads, avatars, inlineImages, gitLensIconDataUri, repositories: config.repositories });
     if (this.lastStateByPanel.get(key) === stateKey) {
       return;
     }
     this.lastStateByPanel.set(key, stateKey);
 
     panel.title = `PR #${pr.id} ${pr.title}`;
-    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars, gitLensIconDataUri }));
+    panel.webview.html = this.wrapHtml(renderPullRequestDetail({ pr, workItems, config, threads, avatars, inlineImages, gitLensIconDataUri }));
   }
 
   private async resolveAvatars(comments: PullRequestThreadComment[]): Promise<Record<string, string>> {
@@ -142,6 +145,28 @@ export class PullRequestDetailPanelManager {
       if (dataUri) {
         resolved[url] = dataUri;
       }
+    }
+    return resolved;
+  }
+
+  private async resolveInlineImages(
+    pr: PullRequestDetail,
+    threads: PullRequestThread[],
+    organization: string,
+  ): Promise<Record<string, string | null>> {
+    const texts = [pr.description, ...threads.flatMap(t => t.comments.map(c => c.text))];
+    const urls = [...new Set(texts.flatMap(text => extractMarkdownImageUrls(text, organization)))];
+
+    const uncached = urls.filter(u => !this.inlineImageCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.inlineImageCache.set(url, await this.client.getAuthenticatedImageDataUri(url));
+      }),
+    );
+
+    const resolved: Record<string, string | null> = {};
+    for (const url of urls) {
+      resolved[url] = this.inlineImageCache.get(url) ?? null;
     }
     return resolved;
   }

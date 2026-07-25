@@ -65,6 +65,7 @@ function input(overrides: Partial<PullRequestDetailInput> = {}): PullRequestDeta
     config,
     threads: [],
     avatars: {},
+    inlineImages: {},
     gitLensIconDataUri: null,
     ...overrides,
   };
@@ -150,6 +151,22 @@ describe('renderPullRequestDetail', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
+  it('resolves a markdown image in the description to its data URI', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/image.png';
+    const html = renderPullRequestDetail(
+      input({ pr: pullRequest({ description: `![image.png](${url})` }), inlineImages: { [url]: 'data:image/png;base64,ABC' } }),
+    );
+    expect(html).toContain('<img src="data:image/png;base64,ABC" alt="image.png">');
+  });
+
+  it('shows a placeholder when a markdown image in the description failed to resolve', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/image.png';
+    const html = renderPullRequestDetail(
+      input({ pr: pullRequest({ description: `![image.png](${url})` }), inlineImages: { [url]: null } }),
+    );
+    expect(html).toContain('kb-image-unavailable');
+  });
+
   it('links to the PR web URL', () => {
     const html = renderPullRequestDetail(input());
     expect(html).toContain('href="https://dev.azure.com/my-org/MyProject/_git/kanbrain/pullrequest/57"');
@@ -221,6 +238,27 @@ describe('renderPullRequestDetail', () => {
     expect(html).not.toContain('No comments.');
     expect(html).toContain('Bob');
     expect(html).toContain('&lt;b&gt;Looks good!&lt;/b&gt;');
+  });
+
+  it('resolves a markdown image in a comment body to its data URI', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/image.png';
+    const threads = [
+      thread({
+        comments: [{ id: 1, parentCommentId: 0, text: `![image.png](${url})`, createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' }],
+      }),
+    ];
+    const html = renderPullRequestDetail(input({ threads, inlineImages: { [url]: 'data:image/png;base64,ABC' } }));
+    expect(html).toContain('<img src="data:image/png;base64,ABC" alt="image.png">');
+  });
+
+  it('leaves a non-ADO markdown image as a normal working img tag', () => {
+    const threads = [
+      thread({
+        comments: [{ id: 1, parentCommentId: 0, text: '![x](https://example.com/pic.png)', createdBy: { displayName: 'Bob', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' }],
+      }),
+    ];
+    const html = renderPullRequestDetail(input({ threads }));
+    expect(html).toContain('<img src="https://example.com/pic.png" alt="x">');
   });
 
   it('shows a file/line badge for a code review thread', () => {

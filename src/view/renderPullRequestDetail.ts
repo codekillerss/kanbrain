@@ -4,6 +4,8 @@ import { renderTypeAccent } from './renderTypeAccent';
 import { capitalize } from './renderDevelopment';
 import { renderComment } from './renderComment';
 import { renderBranchTag, renderRepoTag } from './renderRepoBranchTags';
+import { rewriteImageSrcs } from './inlineImages';
+import { renderMarkdownText } from './renderMarkdownText';
 
 const VOTE_LABELS: Record<number, string> = {
   10: 'Approved',
@@ -44,7 +46,7 @@ const THREAD_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
 };
 
-function renderThread(thread: PullRequestThread, avatars: Record<string, string>): string {
+function renderThread(thread: PullRequestThread, avatars: Record<string, string>, inlineImages: Record<string, string | null>): string {
   const roots = thread.comments.filter(c => !c.parentCommentId);
   const repliesByParent = new Map<number, PullRequestThreadComment[]>();
   for (const c of thread.comments) {
@@ -63,14 +65,15 @@ function renderThread(thread: PullRequestThread, avatars: Record<string, string>
     : '';
 
   // PR thread comment content is plain text/Markdown, unlike work item comments (already-safe HTML
-  // from Azure DevOps' rich text editor) — escape it before handing it to renderComment, which only
-  // strips <script> tags and otherwise trusts its input as HTML.
+  // from Azure DevOps' rich text editor) — render it through renderMarkdownText, which escapes
+  // everything except Markdown image syntax (converted to <img> tags so pasted screenshots flow
+  // through the same rewriteImageSrcs resolution as work item comments).
   const commentsHtml = roots
     .map(root => {
       const replyHtml = (repliesByParent.get(root.id) ?? [])
-        .map(r => `<div class="kb-pr-reply">${renderComment({ ...r, text: escapeHtml(r.text) }, avatars)}</div>`)
+        .map(r => `<div class="kb-pr-reply">${renderComment({ ...r, text: renderMarkdownText(r.text) }, avatars, inlineImages)}</div>`)
         .join('');
-      return renderComment({ ...root, text: escapeHtml(root.text) }, avatars) + replyHtml;
+      return renderComment({ ...root, text: renderMarkdownText(root.text) }, avatars, inlineImages) + replyHtml;
     })
     .join('');
 
@@ -111,13 +114,16 @@ export interface PullRequestDetailInput {
   config: KanbrainConfig;
   threads: PullRequestThread[];
   avatars: Record<string, string>;
+  inlineImages: Record<string, string | null>;
   gitLensIconDataUri: string | null;
 }
 
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
-  const { pr, workItems, config, threads, avatars, gitLensIconDataUri } = input;
+  const { pr, workItems, config, threads, avatars, inlineImages, gitLensIconDataUri } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
-  const threadsHtml = threads.length ? threads.map(t => renderThread(t, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
+  const threadsHtml = threads.length
+    ? threads.map(t => renderThread(t, avatars, inlineImages)).join('')
+    : '<div class="kb-empty">No comments.</div>';
   const repoEntry = config.repositories?.[pr.repositoryId];
   const repoTagHtml = renderRepoTag(pr.repositoryId, repoEntry);
   const isRepoMapped = !!repoEntry?.path;
@@ -138,7 +144,7 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
       <div class="kb-detail-main">
         <div class="kb-detail-html-section">
           <div class="kb-detail-section-label">Description</div>
-          <div class="kb-detail-html-body kb-pr-description">${escapeHtml(pr.description)}</div>
+          <div class="kb-detail-html-body kb-pr-description">${rewriteImageSrcs(renderMarkdownText(pr.description), inlineImages)}</div>
         </div>
       </div>
       <div class="kb-detail-side">
