@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractImageUrls, rewriteImageSrcs } from './inlineImages';
+import { extractImageUrls, extractMarkdownImageUrls, rewriteImageSrcs } from './inlineImages';
 
 describe('extractImageUrls', () => {
   it('extracts img src URLs hosted on dev.azure.com', () => {
@@ -37,6 +37,37 @@ describe('extractImageUrls', () => {
   it('ignores an img tag with an unparseable src', () => {
     const html = '<img src="not a url">';
     expect(extractImageUrls(html, 'myorg')).toEqual([]);
+  });
+});
+
+describe('extractMarkdownImageUrls', () => {
+  it('extracts URLs from markdown image syntax hosted on dev.azure.com', () => {
+    const text = 'before ![image.png](https://dev.azure.com/codekillers/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/image.png) after';
+    expect(extractMarkdownImageUrls(text, 'codekillers')).toEqual([
+      'https://dev.azure.com/codekillers/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/image.png',
+    ]);
+  });
+
+  it('extracts URLs from markdown image syntax hosted on {organization}.visualstudio.com', () => {
+    const text = '![x](https://myorg.visualstudio.com/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/x.png)';
+    expect(extractMarkdownImageUrls(text, 'myorg')).toEqual([
+      'https://myorg.visualstudio.com/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/x.png',
+    ]);
+  });
+
+  it('ignores markdown images hosted on other domains', () => {
+    const text = '![x](https://example.com/pic.png)';
+    expect(extractMarkdownImageUrls(text, 'myorg')).toEqual([]);
+  });
+
+  it('dedupes repeated URLs', () => {
+    const url = 'https://dev.azure.com/myorg/proj/_apis/git/repositories/repo-1/pullRequests/2/attachments/x.png';
+    const text = `![x](${url}) and again ![x](${url})`;
+    expect(extractMarkdownImageUrls(text, 'myorg')).toEqual([url]);
+  });
+
+  it('returns an empty array when there is no markdown image syntax', () => {
+    expect(extractMarkdownImageUrls('just plain text', 'myorg')).toEqual([]);
   });
 });
 
