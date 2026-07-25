@@ -124,6 +124,17 @@ describe('syncConfig', () => {
     expect(result.showAssignedTo).toBeUndefined();
   });
 
+  it('preserves globalSkills unchanged across a sync', () => {
+    const withGlobal = config({ globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } } });
+    const result = syncConfig(withGlobal, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.globalSkills).toEqual({ 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } });
+  });
+
+  it('leaves globalSkills undefined when it was never set', () => {
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.globalSkills).toBeUndefined();
+  });
+
   it('replaces cardSettingsByTeam with the fresh value, discarding the previous one', () => {
     const withOldSettings = config({ cardSettingsByTeam: { 'Old Team': { Tasks: { Task: { parent: false, assignedTo: false } } } } });
     const result = syncConfig(

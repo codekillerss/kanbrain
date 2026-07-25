@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { AzureDevOpsClient } from '../azureDevOps/client';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { discoverWorkItemTypes, discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
@@ -7,6 +9,14 @@ import { syncConfig } from '../config/syncConfig';
 import { readConfigWithDiagnostics, writeConfig } from '../config/config';
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
+import {
+  EXPLAIN_CARD_SKILL_CONTENT,
+  EXPLAIN_CARD_SKILL_RELATIVE_PATH,
+  USAGE_GUIDE_CONTENT,
+  USAGE_GUIDE_RELATIVE_PATH,
+  ensureExplainCardGlobalSkill,
+  isBootstrapContentMissing,
+} from '../skills/bootstrapContent';
 
 export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string, extensionVersion: string): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.syncBoardConfig', async () => {
@@ -31,8 +41,22 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       );
       return;
     }
+    const explainCardSkillPath = path.join(workspaceRoot, EXPLAIN_CARD_SKILL_RELATIVE_PATH);
+    if (!fs.existsSync(explainCardSkillPath)) {
+      fs.writeFileSync(explainCardSkillPath, EXPLAIN_CARD_SKILL_CONTENT, 'utf-8');
+    }
+
+    const usageGuidePath = path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH);
+    if (!fs.existsSync(usageGuidePath)) {
+      fs.writeFileSync(usageGuidePath, USAGE_GUIDE_CONTENT, 'utf-8');
+    }
+
     const freshStatusColors = discoverStatusColors(types);
-    const diff = diffBoardConfig(result.config, boardState.discoveredStatusesByType);
+    const diff = diffBoardConfig(
+      result.config,
+      boardState.discoveredStatusesByType,
+      isBootstrapContentMissing(workspaceRoot, result.config),
+    );
 
     const azureRepos = await client.listRepositories(result.config.organization, result.config.project);
     const localRepos = await discoverLocalRepositories(workspaceRoot);
@@ -49,7 +73,11 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       boardState.taskBacklogTypesByTeam,
       freshRepositories,
     );
-    writeConfig(workspaceRoot, { ...updated, lastSyncedVersion: extensionVersion });
+    writeConfig(workspaceRoot, {
+      ...updated,
+      globalSkills: ensureExplainCardGlobalSkill(updated.globalSkills),
+      lastSyncedVersion: extensionVersion,
+    });
 
     if (isDiffEmpty(diff)) {
       vscode.window.showInformationMessage('Kanbrain board configuration was already up to date.');

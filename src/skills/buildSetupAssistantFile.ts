@@ -48,6 +48,10 @@ Kanbrain shows the active Azure DevOps work item in a VS Code side panel, with p
 
 Kanbrain only understands **status** (\`System.State\`) per work item type — \`skills\` maps exactly **one skill per status, per work item type**. There is no board-column mode to choose between; board columns aren't a real Kanbrain configuration option, they're listed below purely for your reference. Many teams still think and work in terms of **board columns** rather than raw statuses (common, and often the more natural mental model) — a column can group several statuses together, or have a name that doesn't match any status. When that's the case here, the way to honor it is to point every status that belongs to the same column at the *same* skill file — not to look for a column-level setting that doesn't exist.
 
+## Global skills
+
+Kanbrain also supports skills that aren't tied to any status — \`.kanbrain/config.json\`'s \`globalSkills\` map. They show up as a small "▾" menu next to the status skill button on the active work item's card, and run against whatever work item is active regardless of its status. \`Kanbrain: Setup\`/\`Kanbrain: Sync Board Configuration\` already seed one, \`explain-card\`, that explains the active work item in plain language. See \`.kanbrain/USAGE.md\` for the full guide — including why you (the agent) already have real access to this project's Azure DevOps board data, and can suggest board actions to the user when it makes sense.
+
 ## This project's real configuration
 
 ### Work item types and statuses

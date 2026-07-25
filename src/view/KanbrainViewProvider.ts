@@ -47,6 +47,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async message => {
       if (message.type === 'run-skill') {
         await this.runSkill(Number(message.id));
+      } else if (message.type === 'run-global-skill') {
+        await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
         await this.searchWorkItems(String(message.query ?? ''));
       } else if (message.type === 'pick-work-item') {
@@ -85,6 +87,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         );
       } else if (message.type === 'pick-skill-file') {
         await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
+      } else if (message.type === 'add-global-skill') {
+        this.addGlobalSkill();
+      } else if (message.type === 'save-global-skill-entry') {
+        this.saveGlobalSkillEntry(
+          String(message.id ?? ''),
+          String(message.path ?? ''),
+          String(message.label ?? ''),
+          String(message.textColor ?? ''),
+          String(message.buttonColor ?? ''),
+        );
+      } else if (message.type === 'remove-global-skill') {
+        this.removeGlobalSkill(String(message.id ?? ''));
+      } else if (message.type === 'pick-global-skill-file') {
+        await this.pickGlobalSkillFile(String(message.id ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
       } else if (message.type === 'set-selected-team') {
@@ -280,6 +296,74 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.view.webview.postMessage({ type: 'skill-file-picked', level, status, path: relativePath });
   }
 
+  private addGlobalSkill(): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    const id = `global-skill-${Date.now()}`;
+    config.globalSkills = { ...(config.globalSkills ?? {}), [id]: { path: '' } };
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private saveGlobalSkillEntry(id: string, filePath: string, label: string, textColor: string, buttonColor: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config?.globalSkills?.[id]) {
+      return;
+    }
+    const entry: SkillEntry = { path: filePath.trim() };
+    if (label.trim()) {
+      entry.label = label.trim();
+    }
+    if (textColor.trim()) {
+      entry.textColor = textColor.trim();
+    }
+    if (buttonColor.trim()) {
+      entry.buttonColor = buttonColor.trim();
+    }
+    config.globalSkills[id] = entry;
+    writeConfig(this.workspaceRoot, config);
+  }
+
+  private removeGlobalSkill(id: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config?.globalSkills?.[id]) {
+      return;
+    }
+    delete config.globalSkills[id];
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private async pickGlobalSkillFile(id: string): Promise<void> {
+    if (!this.workspaceRoot || !this.view) {
+      return;
+    }
+    const uris = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(this.workspaceRoot),
+      canSelectMany: false,
+      filters: { Markdown: ['md'] },
+    });
+    const picked = uris?.[0];
+    if (!picked) {
+      return;
+    }
+    const relativePath = path.relative(this.workspaceRoot, picked.fsPath).split(path.sep).join('/');
+    this.view.webview.postMessage({ type: 'global-skill-file-picked', id, path: relativePath });
+  }
+
   private saveRepositoryPath(repositoryId: string, newPath: string): void {
     if (!this.workspaceRoot) {
       return;
@@ -310,6 +394,45 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async runSkill(id: number): Promise<void> {
+    const found = await this.loadWorkItemForSkill(id);
+    if (!found) {
+      return;
+    }
+    const skill = resolveSkill(found.config, found.workItem);
+    if (!skill) {
+      return;
+    }
+    await this.executeSkill(found.workItem, skill);
+  }
+
+  private async runGlobalSkill(id: number, skillId: string): Promise<void> {
+    const found = await this.loadWorkItemForSkill(id);
+    if (!found) {
+      return;
+    }
+    const skill = found.config.globalSkills?.[skillId];
+    if (!skill) {
+      return;
+    }
+    await this.executeSkill(found.workItem, skill);
+  }
+
+  private async loadWorkItemForSkill(id: number): Promise<{ config: KanbrainConfig; workItem: WorkItem } | null> {
+    if (!this.workspaceRoot || !this.client) {
+      return null;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return null;
+    }
+    const [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
+    if (!workItem) {
+      return null;
+    }
+    return { config, workItem };
+  }
+
+  private async executeSkill(workItem: WorkItem, skill: SkillEntry): Promise<void> {
     if (!this.workspaceRoot || !this.client) {
       return;
     }
@@ -317,17 +440,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
-
-    const [workItem] = await this.client.getWorkItems(config.organization, config.project, [id]);
-    if (!workItem) {
-      return;
-    }
-
-    const skill = resolveSkill(config, workItem);
-    if (!skill) {
-      return;
-    }
-
     const [parent] = workItem.parentId
       ? await this.client.getWorkItems(config.organization, config.project, [workItem.parentId])
       : [];
@@ -479,15 +591,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     function saveSkillRow(row) {
-      vscode.postMessage({
-        type: 'save-skill-entry',
-        level: row.dataset.level,
-        status: row.dataset.status,
-        path: row.querySelector('[data-field="path"]').value,
-        label: row.querySelector('[data-field="label"]').value,
-        textColor: row.querySelector('[data-field="textColor"]').value,
-        buttonColor: row.querySelector('[data-field="buttonColor"]').value,
-      });
+      const path = row.querySelector('[data-field="path"]').value;
+      const label = row.querySelector('[data-field="label"]').value;
+      const textColor = row.querySelector('[data-field="textColor"]').value;
+      const buttonColor = row.querySelector('[data-field="buttonColor"]').value;
+      if (row.dataset.globalSkillId) {
+        vscode.postMessage({ type: 'save-global-skill-entry', id: row.dataset.globalSkillId, path, label, textColor, buttonColor });
+      } else {
+        vscode.postMessage({
+          type: 'save-skill-entry',
+          level: row.dataset.level,
+          status: row.dataset.status,
+          path,
+          label,
+          textColor,
+          buttonColor,
+        });
+      }
     }
 
     document.querySelectorAll('.kb-config-row input').forEach((input) => {
@@ -608,10 +728,48 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.dataset && target.dataset.action === 'pick-skill-file') {
         const row = target.closest('.kb-config-row');
         if (row) {
-          vscode.postMessage({ type: 'pick-skill-file', level: row.dataset.level, status: row.dataset.status });
+          if (row.dataset.globalSkillId) {
+            vscode.postMessage({ type: 'pick-global-skill-file', id: row.dataset.globalSkillId });
+          } else {
+            vscode.postMessage({ type: 'pick-skill-file', level: row.dataset.level, status: row.dataset.status });
+          }
         }
+      } else if (target.dataset && target.dataset.action === 'add-global-skill') {
+        vscode.postMessage({ type: 'add-global-skill' });
+      } else if (target.dataset && target.dataset.action === 'remove-global-skill') {
+        vscode.postMessage({ type: 'remove-global-skill', id: target.dataset.globalSkillId });
+      } else if (target.dataset && target.dataset.action === 'toggle-global-skill-menu') {
+        const group = target.closest('.kb-action-group');
+        const menu = group ? group.querySelector('.kb-global-skill-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllGlobalSkillMenus();
+          if (!isOpen) {
+            const rect = group.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.width = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.dataset && target.dataset.action === 'run-global-skill') {
+        vscode.postMessage({ type: 'run-global-skill', workItemId: target.dataset.id, skillId: target.dataset.skillId });
+        closeAllGlobalSkillMenus();
+      }
+
+      if (
+        (!target.closest || !target.closest('[data-action="toggle-global-skill-menu"]')) &&
+        (!target.closest || !target.closest('.kb-global-skill-menu'))
+      ) {
+        closeAllGlobalSkillMenus();
       }
     });
+
+    function closeAllGlobalSkillMenus() {
+      document.querySelectorAll('.kb-global-skill-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
+
+    window.addEventListener('scroll', closeAllGlobalSkillMenus, true);
 
     const searchInput = document.getElementById('kb-search-input');
     if (searchInput) {
@@ -631,6 +789,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
           if (row.dataset.level === event.data.level && row.dataset.status === event.data.status) {
+            const pathInput = row.querySelector('[data-field="path"]');
+            pathInput.value = event.data.path;
+            saveSkillRow(row);
+            break;
+          }
+        }
+      } else if (event.data.type === 'global-skill-file-picked') {
+        const rows = document.querySelectorAll('.kb-config-row');
+        for (const row of rows) {
+          if (row.dataset.globalSkillId === event.data.id) {
             const pathInput = row.querySelector('[data-field="path"]');
             pathInput.value = event.data.path;
             saveSkillRow(row);
@@ -678,8 +846,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-title { font-weight: 600; margin-left: 6px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-title-clickable { cursor: pointer; }
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
-      .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
-      .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
+      .kb-action-btn { margin-top: 6px; padding: 4px 8px; background-color: var(--vscode-button-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-action-btn:hover { filter: brightness(1.12); }
+      .kb-action-group { position: relative; display: inline-block; margin-top: 6px; }
+      .kb-action-pill { display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden; }
+      .kb-action-pill .kb-action-btn { margin-top: 0; border-radius: 0; }
+      .kb-global-skill-trigger { padding: 4px 8px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: none; border-left: 1px solid var(--vscode-panel-border); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-global-skill-trigger:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-global-skill-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 240px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-global-skill-option { width: 100%; flex-shrink: 0; text-align: left; padding: 6px 8px; background-color: var(--vscode-dropdown-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); border: none; border-radius: 4px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
+      .kb-global-skill-option:hover { filter: brightness(1.12); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
       .kb-section-actions { display: flex; gap: 2px; }
@@ -697,7 +873,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-header .kb-secondary-btn { flex: 1; }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
-      .kb-group-toggle { display: flex; align-items: center; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 0; margin: 12px 0 0; font-size: 11px; font-weight: 400; text-transform: uppercase; opacity: 0.7; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
+      .kb-group-toggle { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 0; margin: 12px 0 0; font-size: 11px; font-weight: 400; text-transform: uppercase; opacity: 0.7; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
@@ -730,7 +906,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
       .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-global-skill-header { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); }
+      .kb-global-skill-header:hover { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); filter: brightness(1.12); }
       .kb-config-level-body { padding: 6px 8px; }
+      .kb-config-static-header { padding: 6px 8px; font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; color: var(--vscode-foreground); }
       .kb-chevron { display: inline-block; margin-right: 6px; transition: transform 0.15s ease; }
       .kb-config-level-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-config-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
