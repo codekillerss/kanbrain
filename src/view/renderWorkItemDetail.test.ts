@@ -38,6 +38,7 @@ function input(overrides: Partial<WorkItemDetailInput> = {}): WorkItemDetailInpu
     htmlSections: [],
     comments: [],
     avatars: {},
+    inlineImages: {},
     prDetails: {},
     parent: null,
     children: [],
@@ -203,6 +204,48 @@ describe('renderWorkItemDetail', () => {
     );
     expect(html).toContain('kb-dev-label');
     expect(html).toContain('#57 Fix login bug (Active)');
+  });
+
+  it('resolves an inline image in the description to its data URI', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/wit/attachments/abc';
+    const html = renderWorkItemDetail(
+      input({ description: `<p>See:</p><img src="${url}">`, inlineImages: { [url]: 'data:image/png;base64,ABC' } }),
+    );
+    expect(html).toContain('<img src="data:image/png;base64,ABC">');
+  });
+
+  it('shows a placeholder when an inline description image failed to resolve', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/wit/attachments/abc';
+    const html = renderWorkItemDetail(input({ description: `<img src="${url}">`, inlineImages: { [url]: null } }));
+    expect(html).toContain('kb-image-unavailable');
+    expect(html).not.toContain(`src="${url}"`);
+  });
+
+  it('leaves an external (non-ADO) image in the description untouched', () => {
+    const html = renderWorkItemDetail(
+      input({ description: '<img src="https://example.com/pic.png">', inlineImages: {} }),
+    );
+    expect(html).toContain('<img src="https://example.com/pic.png">');
+  });
+
+  it('resolves an inline image in an extra HTML section', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/wit/attachments/xyz';
+    const html = renderWorkItemDetail(
+      input({
+        htmlSections: [{ refName: 'Microsoft.VSTS.TCM.ReproSteps', label: 'Repro Steps', value: `<img src="${url}">` }],
+        inlineImages: { [url]: 'data:image/png;base64,XYZ' },
+      }),
+    );
+    expect(html).toContain('<img src="data:image/png;base64,XYZ">');
+  });
+
+  it('resolves an inline image in a comment body', () => {
+    const url = 'https://dev.azure.com/org/proj/_apis/wit/attachments/qrs';
+    const comments: WorkItemComment[] = [
+      { id: 1, text: `<img src="${url}">`, createdBy: { displayName: 'Jane', imageUrl: null }, createdDate: '2026-01-01T00:00:00Z' },
+    ];
+    const html = renderWorkItemDetail(input({ comments, inlineImages: { [url]: 'data:image/png;base64,QRS' } }));
+    expect(html).toContain('<img src="data:image/png;base64,QRS">');
   });
 });
 

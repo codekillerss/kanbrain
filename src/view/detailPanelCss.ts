@@ -18,6 +18,8 @@ export function detailPanelCss(): string {
     .kb-detail-section-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; font-weight: 600; margin-bottom: 8px; }
     .kb-detail-html-body { line-height: 1.5; }
     .kb-detail-html-body img { max-width: 100%; }
+    .kb-comment-body img { max-width: 100%; }
+    .kb-image-unavailable { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px dashed var(--vscode-panel-border); border-radius: 4px; font-size: 12px; opacity: 0.7; }
     .kb-detail-group { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; margin-bottom: 12px; }
     .kb-detail-group-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; font-weight: 600; margin-bottom: 8px; }
     .kb-detail-field { margin-bottom: 8px; }

@@ -1,12 +1,17 @@
 import type { WorkItemComment } from '../azureDevOps/workItemDetail';
 import { escapeHtml } from './escapeHtml';
 import { renderAvatarOrInitial } from './renderAssignee';
+import { rewriteImageSrcs } from './inlineImages';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
 }
 
-export function renderComment(comment: WorkItemComment, avatars: Record<string, string>): string {
+export function renderComment(
+  comment: WorkItemComment,
+  avatars: Record<string, string>,
+  inlineImages: Record<string, string | null> = {},
+): string {
   const avatarHtml = renderAvatarOrInitial(comment.createdBy.displayName, comment.createdBy.imageUrl, avatars);
   const date = new Date(comment.createdDate);
   const dateLabel = Number.isNaN(date.getTime()) ? comment.createdDate : date.toLocaleString();
@@ -17,7 +22,7 @@ export function renderComment(comment: WorkItemComment, avatars: Record<string, 
         <span class="kb-comment-author">${escapeHtml(comment.createdBy.displayName)}</span>
         <span class="kb-comment-date">${escapeHtml(dateLabel)}</span>
       </div>
-      <div class="kb-comment-body">${stripScriptTags(comment.text)}</div>
+      <div class="kb-comment-body">${rewriteImageSrcs(stripScriptTags(comment.text), inlineImages)}</div>
     </div>
   `;
 }

@@ -8,6 +8,7 @@ import { renderDevelopmentSection } from './renderDevelopment';
 import { renderRelatedWorkSection } from './renderRelatedWork';
 import { isValidHexColor, normalizeHex } from './badgeColor';
 import { renderComment } from './renderComment';
+import { rewriteImageSrcs } from './inlineImages';
 
 function stripScriptTags(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, '');
@@ -55,8 +56,8 @@ function renderDetailGroup(group: DetailGroup): string {
   `;
 }
 
-function renderHtmlSection(field: DetailField): string {
-  const value = typeof field.value === 'string' ? stripScriptTags(field.value) : '';
+function renderHtmlSection(field: DetailField, inlineImages: Record<string, string | null>): string {
+  const value = typeof field.value === 'string' ? rewriteImageSrcs(stripScriptTags(field.value), inlineImages) : '';
   return `
     <div class="kb-detail-html-section">
       <div class="kb-detail-section-label">${escapeHtml(field.label)}</div>
@@ -73,13 +74,14 @@ export interface WorkItemDetailInput {
   htmlSections: DetailField[];
   comments: WorkItemComment[];
   avatars: Record<string, string>;
+  inlineImages: Record<string, string | null>;
   prDetails: Record<string, PullRequestDetails>;
   parent: WorkItem | null;
   children: WorkItem[];
 }
 
 export function renderWorkItemDetail(input: WorkItemDetailInput): string {
-  const { workItem, config, description, groups, htmlSections, comments, avatars, prDetails, parent, children } = input;
+  const { workItem, config, description, groups, htmlSections, comments, avatars, inlineImages, prDetails, parent, children } = input;
   const { iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = renderAssigneeRow(workItem.assignedTo, avatars, 'kb-detail-assignee');
 
@@ -94,10 +96,12 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
   const headerStyle = borderDeclarations ? ` style="${borderDeclarations}"` : '';
 
   const descriptionHtml = description
-    ? `<div class="kb-detail-html-section"><div class="kb-detail-section-label">Description</div><div class="kb-detail-html-body">${stripScriptTags(description)}</div></div>`
+    ? `<div class="kb-detail-html-section"><div class="kb-detail-section-label">Description</div><div class="kb-detail-html-body">${rewriteImageSrcs(stripScriptTags(description), inlineImages)}</div></div>`
     : '';
 
-  const commentsHtml = comments.length ? comments.map(c => renderComment(c, avatars)).join('') : '<div class="kb-empty">No comments.</div>';
+  const commentsHtml = comments.length
+    ? comments.map(c => renderComment(c, avatars, inlineImages)).join('')
+    : '<div class="kb-empty">No comments.</div>';
 
   return `
     <div class="kb-detail-header"${headerStyle}>
@@ -112,7 +116,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
     <div class="kb-detail-body">
       <div class="kb-detail-main">
         ${descriptionHtml}
-        ${htmlSections.map(renderHtmlSection).join('')}
+        ${htmlSections.map(f => renderHtmlSection(f, inlineImages)).join('')}
       </div>
       <div class="kb-detail-side">
         ${groups.map(renderDetailGroup).join('')}
