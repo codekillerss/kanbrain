@@ -13,7 +13,14 @@ function renderPickButton(id: number): string {
   return `<button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${id}" title="Set as current work item">⇄</button>`;
 }
 
-function renderGlobalSkillSelect(id: number, globalSkills: Record<string, SkillEntry>): string {
+function renderGlobalSkillTrigger(id: number, hasEntries: boolean): string {
+  if (!hasEntries) {
+    return '';
+  }
+  return `<button type="button" class="kb-global-skill-trigger" data-action="toggle-global-skill-menu" data-id="${id}" title="Run a global skill">▾</button>`;
+}
+
+function renderGlobalSkillMenu(id: number, globalSkills: Record<string, SkillEntry>): string {
   const entries = Object.entries(globalSkills);
   if (entries.length === 0) {
     return '';
@@ -21,15 +28,10 @@ function renderGlobalSkillSelect(id: number, globalSkills: Record<string, SkillE
   const options = entries
     .map(([skillId, entry]) => {
       const label = entry.label ?? entry.path.split('/').pop() ?? entry.path;
-      return `<option value="${escapeHtml(skillId)}">${escapeHtml(label)}</option>`;
+      return `<button type="button" class="kb-global-skill-option" data-action="run-global-skill" data-id="${id}" data-skill-id="${escapeHtml(skillId)}">${escapeHtml(label)}</button>`;
     })
     .join('');
-  return `
-    <select class="kb-global-skill-select" data-action="run-global-skill" data-id="${id}">
-      <option value="" selected disabled>▾</option>
-      ${options}
-    </select>
-  `;
+  return `<div class="kb-global-skill-menu kb-hidden">${options}</div>`;
 }
 
 function renderSkillButton(id: number, skill: SkillEntry): string {
@@ -46,11 +48,18 @@ function renderSkillButton(id: number, skill: SkillEntry): string {
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skill = resolveSkill(config, workItem);
   const buttonHtml = skill ? renderSkillButton(workItem.id, skill) : '';
-  const globalSkillHtml = renderGlobalSkillSelect(workItem.id, config.globalSkills ?? {});
-  if (!buttonHtml && !globalSkillHtml) {
+  const globalSkills = config.globalSkills ?? {};
+  const triggerHtml = renderGlobalSkillTrigger(workItem.id, Object.keys(globalSkills).length > 0);
+  if (!buttonHtml && !triggerHtml) {
     return '';
   }
-  return `<div class="kb-action-group">${buttonHtml}${globalSkillHtml}</div>`;
+  const menuHtml = renderGlobalSkillMenu(workItem.id, globalSkills);
+  return `
+    <div class="kb-action-group">
+      <div class="kb-action-pill">${buttonHtml}${triggerHtml}</div>
+      ${menuHtml}
+    </div>
+  `;
 }
 
 export function renderWorkItemCard(

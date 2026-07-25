@@ -195,24 +195,27 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('>2<');
   });
 
-  it('does not show the global skill select when no global skills are configured', () => {
+  it('does not show the global skill trigger when no global skills are configured', () => {
     const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
-    expect(html).not.toContain('kb-global-skill-select');
+    expect(html).not.toContain('kb-global-skill-trigger');
+    expect(html).not.toContain('kb-global-skill-menu');
   });
 
-  it('shows the global skill select with an option per entry when global skills are configured', () => {
+  it('shows the global skill trigger and menu with an option per entry when global skills are configured', () => {
     const withGlobal: KanbrainConfig = {
       ...config,
       globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
     };
     const html = renderWorkItemCard(workItem(), withGlobal, 'kb-main-card');
-    expect(html).toContain('kb-global-skill-select');
+    expect(html).toContain('kb-global-skill-trigger');
+    expect(html).toContain('data-action="toggle-global-skill-menu"');
     expect(html).toContain('data-action="run-global-skill"');
+    expect(html).toContain('data-skill-id="global-skill-1"');
     expect(html).toContain('data-id="482"');
     expect(html).toContain('Avaliar Effort');
   });
 
-  it('shows the global skill select even when the card has no status skill', () => {
+  it('shows the global skill trigger even when the card has no status skill', () => {
     const noStatusSkill: KanbrainConfig = {
       ...config,
       skills: { Task: { Active: null } },

@@ -738,16 +738,32 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'add-global-skill' });
       } else if (target.dataset && target.dataset.action === 'remove-global-skill') {
         vscode.postMessage({ type: 'remove-global-skill', id: target.dataset.globalSkillId });
+      } else if (target.dataset && target.dataset.action === 'toggle-global-skill-menu') {
+        const group = target.closest('.kb-action-group');
+        const menu = group ? group.querySelector('.kb-global-skill-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllGlobalSkillMenus();
+          if (!isOpen) {
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.dataset && target.dataset.action === 'run-global-skill') {
+        vscode.postMessage({ type: 'run-global-skill', workItemId: target.dataset.id, skillId: target.dataset.skillId });
+        closeAllGlobalSkillMenus();
+      }
+
+      if (
+        (!target.closest || !target.closest('[data-action="toggle-global-skill-menu"]')) &&
+        (!target.closest || !target.closest('.kb-global-skill-menu'))
+      ) {
+        closeAllGlobalSkillMenus();
       }
     });
 
-    document.addEventListener('change', (e) => {
-      const target = e.target;
-      if (target.dataset && target.dataset.action === 'run-global-skill' && target.value) {
-        vscode.postMessage({ type: 'run-global-skill', workItemId: target.dataset.id, skillId: target.value });
-        target.value = '';
-      }
-    });
+    function closeAllGlobalSkillMenus() {
+      document.querySelectorAll('.kb-global-skill-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
 
     const searchInput = document.getElementById('kb-search-input');
     if (searchInput) {
@@ -826,10 +842,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
       .kb-action-btn { margin-top: 6px; padding: 4px 8px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-action-btn:hover { background: var(--vscode-button-hoverBackground); }
-      .kb-global-skill-select { margin-top: 6px; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
-      .kb-action-group { display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden; }
-      .kb-action-group .kb-action-btn, .kb-action-group .kb-global-skill-select { margin-top: 0; border-radius: 0; }
-      .kb-action-group .kb-global-skill-select { border-top: none; border-right: none; border-bottom: none; border-left: 1px solid rgba(128, 128, 128, 0.4); }
+      .kb-action-group { position: relative; display: inline-block; margin-top: 6px; }
+      .kb-action-pill { display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden; }
+      .kb-action-pill .kb-action-btn { margin-top: 0; border-radius: 0; }
+      .kb-global-skill-trigger { padding: 4px 8px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: none; border-left: 1px solid var(--vscode-panel-border); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-global-skill-trigger:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-global-skill-menu { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; z-index: 20; display: flex; flex-direction: column; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-global-skill-option { width: 100%; text-align: left; padding: 6px 8px; background: none; border: none; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
+      .kb-global-skill-option:hover { background: var(--vscode-list-hoverBackground); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
       .kb-section-actions { display: flex; gap: 2px; }
