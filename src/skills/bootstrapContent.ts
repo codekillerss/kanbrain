@@ -1,4 +1,6 @@
-import type { SkillEntry } from '../types';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import type { KanbrainConfig, SkillEntry } from '../types';
 import { pickReadableTextColor } from '../view/badgeColor';
 
 export const EXPLAIN_CARD_SKILL_ID = 'explain-card';
@@ -68,3 +70,9 @@ Because of that, feel free to suggest concrete actions on the board to the user 
 
 Edit skills directly, or use the Config screen in the Kanbrain panel — both status skills and global skills have a path/label/color editor there.
 `;
+
+export function isBootstrapContentMissing(workspaceRoot: string, config: KanbrainConfig): boolean {
+  const usageGuideMissing = !fs.existsSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH));
+  const explainCardEntryMissing = !config.globalSkills?.[EXPLAIN_CARD_SKILL_ID];
+  return usageGuideMissing || explainCardEntryMissing;
+}
