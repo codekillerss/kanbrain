@@ -32,12 +32,7 @@ function renderGlobalSkillSelect(id: number, globalSkills: Record<string, SkillE
   `;
 }
 
-function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
-  const skill = resolveSkill(config, workItem);
-  const globalSkillHtml = renderGlobalSkillSelect(workItem.id, config.globalSkills ?? {});
-  if (!skill) {
-    return globalSkillHtml;
-  }
+function renderSkillButton(id: number, skill: SkillEntry): string {
   const label = skill.label ?? skill.path.split('/').pop() ?? skill.path;
   const textColor = skill.textColor && isValidHexColor(skill.textColor) ? normalizeHex(skill.textColor) : null;
   const buttonColor = skill.buttonColor && isValidHexColor(skill.buttonColor) ? normalizeHex(skill.buttonColor) : null;
@@ -45,7 +40,17 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
     buttonColor || textColor
       ? ` style="${buttonColor ? `background: ${buttonColor};` : ''}${textColor ? ` color: ${textColor};` : ''}"`
       : '';
-  return `<button class="kb-action-btn" data-action="run-skill" data-id="${workItem.id}"${style}>▶ ${escapeHtml(label)}</button>${globalSkillHtml}`;
+  return `<button class="kb-action-btn" data-action="run-skill" data-id="${id}"${style}>▶ ${escapeHtml(label)}</button>`;
+}
+
+function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
+  const skill = resolveSkill(config, workItem);
+  const buttonHtml = skill ? renderSkillButton(workItem.id, skill) : '';
+  const globalSkillHtml = renderGlobalSkillSelect(workItem.id, config.globalSkills ?? {});
+  if (!buttonHtml && !globalSkillHtml) {
+    return '';
+  }
+  return `<div class="kb-action-group">${buttonHtml}${globalSkillHtml}</div>`;
 }
 
 export function renderWorkItemCard(
