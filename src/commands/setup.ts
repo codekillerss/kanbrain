@@ -153,6 +153,7 @@ export function registerSetupCommand(
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');
+    ensureGitignoreEntry(workspaceRoot, '.kanbrain/config.local.json');
 
     onSetupComplete();
 
