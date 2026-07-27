@@ -23,6 +23,17 @@
     "onView:kanbrain.view"
   ],
   "contributes": {
+    "configuration": {
+      "title": "Kanbrain",
+      "properties": {
+        "kanbrain.repoScanDepth": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "description": "How many directory levels below the workspace root to scan when auto-discovering local repository paths. 1 (default) scans the root and its direct children only. Increase to 2 to support a <root>/repos/* layout, where project repositories are nested one level deeper than the workspace root."
+        }
+      }
+    },
     "commands": [
       { "command": "kanbrain.setup", "title": "Kanbrain: Setup" },
       { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" },
