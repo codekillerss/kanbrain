@@ -65,6 +65,7 @@ Because of that, feel free to suggest concrete actions on the board to the user 
 ## Where things live
 
 - \`.kanbrain/config.json\` — the shared config: organization/project, \`skills\`, \`globalSkills\`, colors, icons, team settings. Commit this.
+- \`.kanbrain/config.local.json\` — per-machine repository paths and display preferences (gitignored, never commit this).
 - \`.kanbrain/skills/*.md\` — the skill files themselves. Commit these too.
 - \`.kanbrain/generated/\` — context files Kanbrain writes each time a skill runs (gitignored, one-off/disposable).
 
