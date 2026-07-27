@@ -1,10 +1,43 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { KanbrainConfig } from '../types';
+import type { KanbrainConfig, RepositoryPathEntry } from '../types';
 import { runMigrations } from './migrations';
+
+interface LocalConfig {
+  repositories?: Record<string, RepositoryPathEntry>;
+  showAssignedTo?: boolean;
+}
 
 export function getConfigPath(workspaceRoot: string): string {
   return path.join(workspaceRoot, '.kanbrain', 'config.json');
+}
+
+export function getConfigLocalPath(workspaceRoot: string): string {
+  return path.join(workspaceRoot, '.kanbrain', 'config.local.json');
+}
+
+function readLocalConfig(workspaceRoot: string): LocalConfig {
+  const localPath = getConfigLocalPath(workspaceRoot);
+  if (!fs.existsSync(localPath)) {
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(localPath, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): KanbrainConfig {
+  const local = readLocalConfig(workspaceRoot);
+  const result = { ...config };
+  if ('repositories' in local) {
+    result.repositories = local.repositories;
+  }
+  if ('showAssignedTo' in local) {
+    result.showAssignedTo = local.showAssignedTo;
+  }
+  return result;
 }
 
 export function readConfig(workspaceRoot: string): KanbrainConfig | null {
@@ -14,7 +47,7 @@ export function readConfig(workspaceRoot: string): KanbrainConfig | null {
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    return runMigrations(JSON.parse(raw));
+    return applyLocalOverlay(runMigrations(JSON.parse(raw)), workspaceRoot);
   } catch {
     return null;
   }
@@ -29,7 +62,8 @@ export function readConfigWithDiagnostics(workspaceRoot: string): ConfigReadResu
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    return { status: 'ok', config: runMigrations(JSON.parse(raw)) };
+    const config = applyLocalOverlay(runMigrations(JSON.parse(raw)), workspaceRoot);
+    return { status: 'ok', config };
   } catch (error) {
     return { status: 'invalid', error: error instanceof Error ? error.message : String(error) };
   }
@@ -38,7 +72,20 @@ export function readConfigWithDiagnostics(workspaceRoot: string): ConfigReadResu
 export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void {
   const configPath = getConfigPath(workspaceRoot);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
+
+  const { repositories, showAssignedTo, ...shared } = config;
+  fs.writeFileSync(configPath, `${JSON.stringify(shared, null, 2)}\n`, 'utf-8');
+
+  const local: LocalConfig = {};
+  if (repositories !== undefined) {
+    local.repositories = repositories;
+  }
+  if (showAssignedTo !== undefined) {
+    local.showAssignedTo = showAssignedTo;
+  }
+  if (Object.keys(local).length > 0) {
+    fs.writeFileSync(getConfigLocalPath(workspaceRoot), `${JSON.stringify(local, null, 2)}\n`, 'utf-8');
+  }
 }
 
 export function ensureGitignoreEntry(workspaceRoot: string, entry: string): void {
