@@ -94,4 +94,5 @@ export interface KanbrainConfig {
   lastSyncedVersion?: string;
   repositories?: Record<string, RepositoryPathEntry>;
   globalSkills?: Record<string, SkillEntry>;
+  repoScanDepth?: number;
 }

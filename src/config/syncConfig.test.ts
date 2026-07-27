@@ -135,6 +135,16 @@ describe('syncConfig', () => {
     expect(result.globalSkills).toBeUndefined();
   });
 
+  it('preserves repoScanDepth unchanged across a sync', () => {
+    const result = syncConfig(config({ repoScanDepth: 2 }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.repoScanDepth).toBe(2);
+  });
+
+  it('leaves repoScanDepth undefined when it was never set', () => {
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.repoScanDepth).toBeUndefined();
+  });
+
   it('replaces cardSettingsByTeam with the fresh value, discarding the previous one', () => {
     const withOldSettings = config({ cardSettingsByTeam: { 'Old Team': { Tasks: { Task: { parent: false, assignedTo: false } } } } });
     const result = syncConfig(

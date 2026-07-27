@@ -2,7 +2,7 @@
   "name": "kanbrain-vscode",
   "displayName": "Kanbrain — Azure DevOps",
   "description": "Azure DevOps work item flow panel for VS Code",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "publisher": "CodeKillers",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -23,17 +23,6 @@
     "onView:kanbrain.view"
   ],
   "contributes": {
-    "configuration": {
-      "title": "Kanbrain",
-      "properties": {
-        "kanbrain.repoScanDepth": {
-          "type": "number",
-          "default": 1,
-          "minimum": 1,
-          "description": "How many directory levels below the workspace root to scan when auto-discovering local repository paths. 1 (default) scans the root and its direct children only. Increase to 2 to support a <root>/repos/* layout, where project repositories are nested one level deeper than the workspace root."
-        }
-      }
-    },
     "commands": [
       { "command": "kanbrain.setup", "title": "Kanbrain: Setup" },
       { "command": "kanbrain.selectWorkItem", "title": "Kanbrain: Select Work Item" },

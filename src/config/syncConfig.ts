@@ -64,5 +64,6 @@ export function syncConfig(
     showAssignedTo: config.showAssignedTo,
     repositories: mergeRepositories(config.repositories, freshRepositories),
     globalSkills: config.globalSkills,
+    repoScanDepth: config.repoScanDepth,
   };
 }

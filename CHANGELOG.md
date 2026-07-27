@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.3] - 2026-07-27
+
+### Changed
+
+- `kanbrain.repoScanDepth` is no longer a VS Code setting — it's now a `repoScanDepth` field in `.kanbrain/config.json`, shared and committed like the rest of the project's configuration instead of set per-machine. Existing VS Code settings values are no longer read; set the value directly in `config.json` (defaults to `1` if absent, same as before).
+
 ## [0.7.2] - 2026-07-27
 
 ### Fixed
