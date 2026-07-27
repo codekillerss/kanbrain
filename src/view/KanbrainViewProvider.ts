@@ -4,6 +4,7 @@ import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/cli
 import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
+import { cloneRepository } from '../git/cloneRepository';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
 import { filterSearchResults } from './filterSearchResults';
@@ -111,6 +112,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.saveRepositoryPath(String(message.repositoryId ?? ''), String(message.path ?? ''));
       } else if (message.type === 'pick-repository-folder') {
         await this.pickRepositoryFolder(String(message.repositoryId ?? ''));
+      } else if (message.type === 'clone-repository') {
+        await this.cloneRepositoryFromView(String(message.repositoryId ?? ''));
       } else if (message.type === 'open-work-item-detail') {
         await this.openWorkItemDetail(Number(message.id));
       }
@@ -391,6 +394,46 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.view.webview.postMessage({ type: 'repository-folder-picked', repositoryId, path: picked.fsPath });
+  }
+
+  private async cloneRepositoryFromView(repositoryId: string): Promise<void> {
+    if (!this.workspaceRoot || !this.view) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    const entry = config?.repositories?.[repositoryId];
+    if (!config || !entry) {
+      return;
+    }
+
+    const parentUris = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(this.workspaceRoot),
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Select destination folder',
+    });
+    const parentDir = parentUris?.[0]?.fsPath;
+    if (!parentDir) {
+      return;
+    }
+
+    const cloneUrl = `https://dev.azure.com/${config.organization}/${encodeURIComponent(config.project)}/_git/${encodeURIComponent(entry.name)}`;
+
+    try {
+      const clonedPath = await cloneRepository(parentDir, cloneUrl, entry.name);
+      const freshConfig = readConfig(this.workspaceRoot);
+      if (freshConfig?.repositories?.[repositoryId]) {
+        freshConfig.repositories[repositoryId].path = clonedPath;
+        writeConfig(this.workspaceRoot, freshConfig);
+      }
+      vscode.window.showInformationMessage(`Cloned "${entry.name}" to ${clonedPath}.`);
+      this.lastState = '';
+      void this.refresh();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Clone failed: ${detail}`);
+    }
   }
 
   private async runSkill(id: number): Promise<void> {
@@ -702,6 +745,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const row = target.closest('.kb-repo-row');
         if (row) {
           vscode.postMessage({ type: 'pick-repository-folder', repositoryId: row.dataset.repositoryId });
+        }
+      } else if (target.dataset && target.dataset.action === 'clone-repository') {
+        const row = target.closest('.kb-repo-row');
+        if (row) {
+          vscode.postMessage({ type: 'clone-repository', repositoryId: row.dataset.repositoryId });
         }
       } else if (target.id === 'kb-search-close-btn') {
         const section = document.getElementById('kb-search-section');
