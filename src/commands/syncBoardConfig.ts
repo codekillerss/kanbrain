@@ -59,7 +59,8 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     );
 
     const azureRepos = await client.listRepositories(result.config.organization, result.config.project);
-    const localRepos = await discoverLocalRepositories(workspaceRoot);
+    const repoScanDepth = Math.max(1, vscode.workspace.getConfiguration('kanbrain').get<number>('repoScanDepth', 1));
+    const localRepos = await discoverLocalRepositories(workspaceRoot, repoScanDepth);
     const freshRepositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
 
     const updated = syncConfig(

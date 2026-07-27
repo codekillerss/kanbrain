@@ -108,7 +108,8 @@ export function registerSetupCommand(
     }
 
     const azureRepos = await client.listRepositories(orgPick.org.name, projectPick.project.name);
-    const localRepos = mapReposPick.map ? await discoverLocalRepositories(workspaceRoot) : new Map<string, string>();
+    const repoScanDepth = Math.max(1, vscode.workspace.getConfiguration('kanbrain').get<number>('repoScanDepth', 1));
+    const localRepos = mapReposPick.map ? await discoverLocalRepositories(workspaceRoot, repoScanDepth) : new Map<string, string>();
     const repositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
 
     const preset = buildPresetPlan(discoveredStatusesByType, generateFilesPick.generate, statusColors);

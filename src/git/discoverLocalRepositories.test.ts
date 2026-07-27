@@ -63,4 +63,34 @@ describe('discoverLocalRepositories', () => {
 
     expect(result.get('kanbrain')).toBe(workspaceRoot);
   });
+
+  it('finds repositories nested two levels deep when maxDepth is 2', async () => {
+    const nestedDir = path.join(workspaceRoot, 'repos', 'ProjectA');
+    initRepo(nestedDir, 'https://dev.azure.com/org/proj/_git/ProjectA');
+
+    const result = await discoverLocalRepositories(workspaceRoot, 2);
+
+    expect(result.get('projecta')).toBe(nestedDir);
+  });
+
+  it('does not report a repository nested inside an already-found repository', async () => {
+    const outerDir = path.join(workspaceRoot, 'outer-repo');
+    initRepo(outerDir, 'https://dev.azure.com/org/proj/_git/outer-repo');
+    const vendoredDir = path.join(outerDir, 'vendored');
+    initRepo(vendoredDir, 'https://dev.azure.com/org/proj/_git/vendored');
+
+    const result = await discoverLocalRepositories(workspaceRoot, 3);
+
+    expect(result.has('outer-repo')).toBe(true);
+    expect(result.has('vendored')).toBe(false);
+  });
+
+  it('does not find a repository three levels deep when maxDepth is 2', async () => {
+    const tooDeepDir = path.join(workspaceRoot, 'repos', 'nested', 'TooDeep');
+    initRepo(tooDeepDir, 'https://dev.azure.com/org/proj/_git/TooDeep');
+
+    const result = await discoverLocalRepositories(workspaceRoot, 2);
+
+    expect(result.has('toodeep')).toBe(false);
+  });
 });
