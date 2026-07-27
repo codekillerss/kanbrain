@@ -2,6 +2,17 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.0] - 2026-07-27
+
+### Added
+
+- `kanbrain.repoScanDepth` setting to scan deeper than the workspace root's direct children when auto-discovering local repository paths — supports a `<root>/repos/*` layout without needing a multi-root workspace.
+- `.kanbrain/config.local.json` — repository paths and the "show assigned to" preference now live in a new, gitignored, per-machine file instead of the shared `config.json`, so `config.json` is safe to commit as-is. Existing projects are migrated automatically the first time the extension activates after upgrading, with a notification confirming what moved.
+
+### Fixed
+
+- Long global skill labels in the card's skill-selection menu are now truncated with an ellipsis instead of being clipped abruptly.
+
 ## [0.6.0] - 2026-07-25
 
 ### Added
