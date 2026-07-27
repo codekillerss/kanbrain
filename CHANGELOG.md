@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.1] - 2026-07-27
+
+### Fixed
+
+- `kanbrain-feature-request.md` (a stray local file, not part of the extension) was accidentally bundled into the 0.7.0 package because `.vscodeignore` didn't exclude it. Excluded now.
+
 ## [0.7.0] - 2026-07-27
 
 ### Added
