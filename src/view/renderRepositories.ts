@@ -14,6 +14,7 @@ export function renderRepositories(state: RenderState): string {
         <div class="kb-config-field-path">
           <input type="text" class="kb-input" data-field="path" placeholder="Local folder path" value="${escapeHtml(entry.path)}">
           <button type="button" data-action="pick-repository-folder" title="Browse for a folder">…</button>
+          ${!entry.path ? '<button type="button" class="kb-secondary-btn" data-action="clone-repository" title="Clone this repository">Clone</button>' : ''}
         </div>
       </div>
     `,

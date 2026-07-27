@@ -52,4 +52,16 @@ describe('renderRepositories', () => {
     const html = renderRepositories(state({ config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '' } } }) }));
     expect(html).toContain('data-action="pick-repository-folder"');
   });
+
+  it('includes a clone button for a repository with no local path', () => {
+    const html = renderRepositories(state({ config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '' } } }) }));
+    expect(html).toContain('data-action="clone-repository"');
+  });
+
+  it('does not include a clone button for a repository that already has a local path', () => {
+    const html = renderRepositories(
+      state({ config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } } }) }),
+    );
+    expect(html).not.toContain('data-action="clone-repository"');
+  });
 });
