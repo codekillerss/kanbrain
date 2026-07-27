@@ -154,9 +154,11 @@ All in `src/config/config.test.ts` (new `describe` blocks alongside the existing
   `config.json` still has `showAssignedTo: true` inline returns `false` — local always wins.
 - Reading a workspace with a malformed `config.local.json` (invalid JSON) falls back to
   `config.json`'s values instead of failing the whole read.
-- `ensureGitignoreEntry` calls in `setup.ts` and `syncBoardConfig.ts` are covered by existing
-  patterns for `.kanbrain/generated/` — extend those command-level tests (`setup.test.ts` /
-  wherever `syncBoardConfig.ts` is tested) to assert the new entry is also added.
+- `setup.ts` and `syncBoardConfig.ts` have no existing unit tests (they register `vscode.commands`
+  directly and aren't covered by the current test setup — consistent with every other file in
+  `src/commands/`), so the new `ensureGitignoreEntry` calls there aren't unit tested either;
+  verify them manually by running `Kanbrain: Setup` / `Kanbrain: Sync Board Configuration` in the
+  Extension Development Host and checking `.gitignore`.
 
 ## Out of scope, deliberately
 
