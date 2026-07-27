@@ -6,7 +6,7 @@ import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { discoverWorkItemTypes, discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
 import { diffBoardConfig, isDiffEmpty, summarizeDiff } from '../azureDevOps/checkBoardConfig';
 import { syncConfig } from '../config/syncConfig';
-import { readConfigWithDiagnostics, writeConfig } from '../config/config';
+import { readConfigWithDiagnostics, writeConfig, DEFAULT_REPO_SCAN_DEPTH } from '../config/config';
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 import {
@@ -59,7 +59,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     );
 
     const azureRepos = await client.listRepositories(result.config.organization, result.config.project);
-    const repoScanDepth = Math.max(1, result.config.repoScanDepth ?? 1);
+    const repoScanDepth = Math.max(1, result.config.repoScanDepth ?? DEFAULT_REPO_SCAN_DEPTH);
     const localRepos = await discoverLocalRepositories(workspaceRoot, repoScanDepth);
     const freshRepositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
 

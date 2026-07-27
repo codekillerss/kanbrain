@@ -1,4 +1,5 @@
 import type { KanbrainConfig, SkillEntry, CardFieldSettings, RepositoryPathEntry } from '../types';
+import { DEFAULT_REPO_SCAN_DEPTH } from './config';
 
 function mergeRepositories(
   existing: Record<string, RepositoryPathEntry> | undefined,
@@ -64,6 +65,6 @@ export function syncConfig(
     showAssignedTo: config.showAssignedTo,
     repositories: mergeRepositories(config.repositories, freshRepositories),
     globalSkills: config.globalSkills,
-    repoScanDepth: config.repoScanDepth,
+    repoScanDepth: config.repoScanDepth ?? DEFAULT_REPO_SCAN_DEPTH,
   };
 }

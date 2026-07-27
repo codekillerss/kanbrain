@@ -6,7 +6,7 @@ import { discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
 import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { discoverWorkItemTypes } from '../azureDevOps/discoverWorkItemTypes';
 import { buildPresetPlan } from '../skills/presetSkillFiles';
-import { writeConfig, ensureGitignoreEntry } from '../config/config';
+import { writeConfig, ensureGitignoreEntry, DEFAULT_REPO_SCAN_DEPTH } from '../config/config';
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 import {
@@ -108,7 +108,7 @@ export function registerSetupCommand(
     }
 
     const azureRepos = await client.listRepositories(orgPick.org.name, projectPick.project.name);
-    const localRepos = mapReposPick.map ? await discoverLocalRepositories(workspaceRoot) : new Map<string, string>();
+    const localRepos = mapReposPick.map ? await discoverLocalRepositories(workspaceRoot, DEFAULT_REPO_SCAN_DEPTH) : new Map<string, string>();
     const repositories = matchRepositoriesToLocalPaths(azureRepos, localRepos);
 
     const preset = buildPresetPlan(discoveredStatusesByType, generateFilesPick.generate, statusColors);
@@ -150,6 +150,7 @@ export function registerSetupCommand(
       repositories,
       globalSkills: ensureExplainCardGlobalSkill(undefined),
       lastSyncedVersion: extensionVersion,
+      repoScanDepth: DEFAULT_REPO_SCAN_DEPTH,
     });
 
     ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/');

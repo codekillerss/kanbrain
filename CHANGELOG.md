@@ -6,7 +6,11 @@ All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 wer
 
 ### Changed
 
-- `kanbrain.repoScanDepth` is no longer a VS Code setting — it's now a `repoScanDepth` field in `.kanbrain/config.json`, shared and committed like the rest of the project's configuration instead of set per-machine. Existing VS Code settings values are no longer read; set the value directly in `config.json` (defaults to `1` if absent, same as before).
+- `kanbrain.repoScanDepth` is no longer a VS Code setting — it's now a `repoScanDepth` field in `.kanbrain/config.json`, shared and committed like the rest of the project's configuration instead of set per-machine. `Kanbrain: Setup` and `Kanbrain: Sync Board Configuration` now write it automatically (default `2`) if it isn't already present, so it's discoverable in the committed config without anyone having to hand-edit the file.
+
+### Fixed
+
+- Local repository auto-discovery (`Kanbrain: Setup` / `Kanbrain: Sync Board Configuration`) stopped scanning as soon as it found a `.git` folder, so a workspace root that is itself a git repository (e.g. a shared "skills" repo with other repositories cloned into a `repos/` subfolder) never had its subfolders scanned at all, regardless of `repoScanDepth`. It now keeps scanning down to the configured depth even after finding a repository.
 
 ## [0.7.2] - 2026-07-27
 

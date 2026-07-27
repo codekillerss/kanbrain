@@ -3,6 +3,8 @@ import * as path from 'node:path';
 import type { KanbrainConfig, RepositoryPathEntry } from '../types';
 import { runMigrations } from './migrations';
 
+export const DEFAULT_REPO_SCAN_DEPTH = 2;
+
 interface LocalConfig {
   repositories?: Record<string, RepositoryPathEntry>;
   showAssignedTo?: boolean;

@@ -13,7 +13,6 @@ export async function discoverLocalRepositories(workspaceRoot: string, maxDepth:
       if (repoName && !result.has(repoName.toLowerCase())) {
         result.set(repoName.toLowerCase(), dir);
       }
-      return;
     }
     if (depth >= maxDepth) {
       return;

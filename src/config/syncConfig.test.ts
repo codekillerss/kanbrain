@@ -135,14 +135,14 @@ describe('syncConfig', () => {
     expect(result.globalSkills).toBeUndefined();
   });
 
-  it('preserves repoScanDepth unchanged across a sync', () => {
-    const result = syncConfig(config({ repoScanDepth: 2 }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.repoScanDepth).toBe(2);
+  it('preserves a custom repoScanDepth unchanged across a sync', () => {
+    const result = syncConfig(config({ repoScanDepth: 3 }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.repoScanDepth).toBe(3);
   });
 
-  it('leaves repoScanDepth undefined when it was never set', () => {
+  it('backfills repoScanDepth with the default when it was never set', () => {
     const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.repoScanDepth).toBeUndefined();
+    expect(result.repoScanDepth).toBe(2);
   });
 
   it('replaces cardSettingsByTeam with the fresh value, discarding the previous one', () => {

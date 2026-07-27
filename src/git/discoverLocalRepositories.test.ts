@@ -73,7 +73,7 @@ describe('discoverLocalRepositories', () => {
     expect(result.get('projecta')).toBe(nestedDir);
   });
 
-  it('does not report a repository nested inside an already-found repository', async () => {
+  it('also reports a repository nested inside an already-found repository, within maxDepth', async () => {
     const outerDir = path.join(workspaceRoot, 'outer-repo');
     initRepo(outerDir, 'https://dev.azure.com/org/proj/_git/outer-repo');
     const vendoredDir = path.join(outerDir, 'vendored');
@@ -82,7 +82,18 @@ describe('discoverLocalRepositories', () => {
     const result = await discoverLocalRepositories(workspaceRoot, 3);
 
     expect(result.has('outer-repo')).toBe(true);
-    expect(result.has('vendored')).toBe(false);
+    expect(result.has('vendored')).toBe(true);
+  });
+
+  it('finds repositories nested under a workspace root that is itself a git repository', async () => {
+    initRepo(workspaceRoot, 'https://dev.azure.com/org/proj/_git/team_skills');
+    const nestedDir = path.join(workspaceRoot, 'repos', 'ProjectA');
+    initRepo(nestedDir, 'https://dev.azure.com/org/proj/_git/ProjectA');
+
+    const result = await discoverLocalRepositories(workspaceRoot, 2);
+
+    expect(result.get('team_skills')).toBe(workspaceRoot);
+    expect(result.get('projecta')).toBe(nestedDir);
   });
 
   it('does not find a repository three levels deep when maxDepth is 2', async () => {
