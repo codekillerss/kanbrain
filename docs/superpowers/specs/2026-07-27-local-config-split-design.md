@@ -112,24 +112,43 @@ there is no longer a foreign existing path for it to wrongly prefer.
 
 ## Migration / backward compatibility
 
-No explicit migration function is added to `src/config/migrations.ts`. The read-side fallback
-(step 3 above) means an old `config.json` with `repositories`/`showAssignedTo` still inline keeps
-working exactly as before, with no user action required. The first time `writeConfig` runs
-afterward — a sync, a settings toggle, a repository path edit — those two fields move to
-`config.local.json` and disappear from the next `config.json` write. This is a passive,
-self-completing migration; there is no moment where the user has to run a command or see a
-prompt about it.
+This is not modeled as an entry in `src/config/migrations.ts`, because that module's contract is a
+pure `(raw: unknown) => unknown` shape transform — no `workspaceRoot`, no filesystem access — and
+this change needs to write a second file and touch `.gitignore`, not just reshape the parsed
+object. Folding it in would either break that purity for every migration or require threading
+`workspaceRoot` through a module that has never needed it.
+
+Instead, `applyLocalOverlay` runs a one-time **eager migration** the first time `readConfig`/
+`readConfigWithDiagnostics` reads a workspace: if `config.local.json` doesn't exist yet and the
+config has `repositories` and/or `showAssignedTo` (from an old `config.json` that still carries
+them inline), it writes those fields straight to a new `config.local.json` and calls
+`ensureGitignoreEntry` — immediately, on that read, before returning. No user action, command, or
+subsequent write is required to trigger it.
+
+The gate is **presence of `config.local.json`, not `lastSyncedVersion`**. `lastSyncedVersion` is
+only bumped by `Kanbrain: Setup` and `Kanbrain: Sync Board Configuration` (see `setup.ts`/
+`syncBoardConfig.ts`) — a plain settings toggle or a repository path edit writes `config.json`
+without touching it. A version-gated migration could therefore re-trigger indefinitely (if the
+user's first post-upgrade action isn't Setup/Sync) or fail to trigger at all in the opposite case.
+Gating on the local file's own existence is self-correcting regardless of which command runs
+first, and naturally never re-runs once the file is there.
+
+This eager migration is a separate concern from the read-side overlay in "Read path" above, which
+stays in place permanently (not just during a transition window): it's what makes a `config.local.json`
+value win over a stale foreign value a teammate's shared `config.json` might carry, which is the
+mechanism described in "Why this fixes the stale-path bug".
 
 ## Setup and gitignore
 
 `src/commands/setup.ts` already calls `ensureGitignoreEntry(workspaceRoot, '.kanbrain/generated/')`
 (line 155). It gains a second call: `ensureGitignoreEntry(workspaceRoot, '.kanbrain/config.local.json')`.
+This one isn't covered by the eager migration above, because `setup.ts` writes a brand-new config
+without ever reading an existing one first — there's nothing to migrate on a fresh project, but the
+entry should still be there proactively for when repositories are first discovered.
 
-`src/commands/syncBoardConfig.ts` already lazily backfills missing bootstrap files for workspaces
-set up before a given feature shipped (the `EXPLAIN_CARD_SKILL_CONTENT`/`USAGE_GUIDE_CONTENT`
-writes at lines 44-52). It gains the same `ensureGitignoreEntry` call, so a workspace that ran
-`Kanbrain: Setup` before this change gets the `.gitignore` entry added the next time it runs
-`Kanbrain: Sync Board Configuration`, with no need to re-run setup.
+`src/commands/syncBoardConfig.ts` needs no equivalent call: it calls `readConfigWithDiagnostics` as
+its very first step, so the eager migration (and its `ensureGitignoreEntry` call) has already run
+by the time any later line in that command executes.
 
 ## Docs
 
@@ -154,11 +173,15 @@ All in `src/config/config.test.ts` (new `describe` blocks alongside the existing
   `config.json` still has `showAssignedTo: true` inline returns `false` — local always wins.
 - Reading a workspace with a malformed `config.local.json` (invalid JSON) falls back to
   `config.json`'s values instead of failing the whole read.
-- `setup.ts` and `syncBoardConfig.ts` have no existing unit tests (they register `vscode.commands`
-  directly and aren't covered by the current test setup — consistent with every other file in
-  `src/commands/`), so the new `ensureGitignoreEntry` calls there aren't unit tested either;
-  verify them manually by running `Kanbrain: Setup` / `Kanbrain: Sync Board Configuration` in the
-  Extension Development Host and checking `.gitignore`.
+- Reading a legacy `config.json` (inline `repositories`/`showAssignedTo`, no `config.local.json`)
+  eagerly creates `config.local.json` with those values and adds the `.gitignore` entry, in that
+  same read call.
+- Reading that same kind of legacy `config.json` a second time, once `config.local.json` already
+  exists, does not re-run the migration (the existing local file's values are used as-is).
+- `setup.ts` has no existing unit tests (it registers `vscode.commands` directly and isn't covered
+  by the current test setup — consistent with every other file in `src/commands/`), so its new
+  `ensureGitignoreEntry` call isn't unit tested either; verify it manually by running
+  `Kanbrain: Setup` in the Extension Development Host and checking `.gitignore`.
 
 ## Out of scope, deliberately
 
