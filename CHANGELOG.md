@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.2] - 2026-07-27
+
+### Fixed
+
+- When a work item's status had no skill mapped but global skills were configured, the card's action pill showed only the "▾" trigger with no button, and the global skills dropdown could collapse to almost no width. A disabled placeholder button (styled to match the trigger) now always fills that spot, and the dropdown has a minimum width regardless of the pill's size.
+
 ## [0.7.1] - 2026-07-27
 
 ### Fixed
