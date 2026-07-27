@@ -175,7 +175,7 @@ describe('machine-local config split', () => {
     expect(readConfig(workspaceRoot)).toEqual(baseConfig);
   });
 
-  it('falls back to legacy inline values when config.local.json does not exist', () => {
+  it('returns legacy inline values when config.local.json does not exist yet', () => {
     fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
     fs.writeFileSync(
       getConfigPath(workspaceRoot),
@@ -190,6 +190,51 @@ describe('machine-local config split', () => {
     const config = readConfig(workspaceRoot);
     expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
     expect(config?.showAssignedTo).toBe(true);
+  });
+
+  it('eagerly migrates legacy inline values into config.local.json and .gitignore on first read', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(
+      getConfigPath(workspaceRoot),
+      JSON.stringify({
+        ...baseConfig,
+        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+        showAssignedTo: true,
+      }),
+      'utf-8',
+    );
+
+    readConfig(workspaceRoot);
+
+    expect(fs.existsSync(getConfigLocalPath(workspaceRoot))).toBe(true);
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({
+      repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+      showAssignedTo: true,
+    });
+
+    const gitignore = fs.readFileSync(path.join(workspaceRoot, '.gitignore'), 'utf-8');
+    expect(gitignore.split(/\r?\n/)).toContain('.kanbrain/config.local.json');
+  });
+
+  it('does not re-run the legacy migration once config.local.json already exists', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(
+      getConfigPath(workspaceRoot),
+      JSON.stringify({
+        ...baseConfig,
+        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+        showAssignedTo: true,
+      }),
+      'utf-8',
+    );
+    fs.mkdirSync(path.dirname(getConfigLocalPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigLocalPath(workspaceRoot), JSON.stringify({ showAssignedTo: false }), 'utf-8');
+
+    const config = readConfig(workspaceRoot);
+
+    expect(config?.showAssignedTo).toBe(false);
+    expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
   });
 
   it('prefers config.local.json over a stale value still inline in config.json', () => {

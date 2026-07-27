@@ -28,7 +28,41 @@ function readLocalConfig(workspaceRoot: string): LocalConfig {
   }
 }
 
+function extractLocalFields(config: KanbrainConfig): LocalConfig {
+  const local: LocalConfig = {};
+  if (config.repositories !== undefined) {
+    local.repositories = config.repositories;
+  }
+  if (config.showAssignedTo !== undefined) {
+    local.showAssignedTo = config.showAssignedTo;
+  }
+  return local;
+}
+
+function writeLocalConfig(workspaceRoot: string, local: LocalConfig): void {
+  const localPath = getConfigLocalPath(workspaceRoot);
+  fs.mkdirSync(path.dirname(localPath), { recursive: true });
+  fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`, 'utf-8');
+  ensureGitignoreEntry(workspaceRoot, '.kanbrain/config.local.json');
+}
+
+// One-time migration for configs written before config.local.json existed: repositories/showAssignedTo
+// were still inline in config.json. Gated on the local file's absence (not on lastSyncedVersion, which
+// isn't bumped by every write path) so it runs exactly once per workspace, regardless of which command
+// triggers the first read after upgrading.
+function migrateLegacyLocalFields(config: KanbrainConfig, workspaceRoot: string): void {
+  if (fs.existsSync(getConfigLocalPath(workspaceRoot))) {
+    return;
+  }
+  const local = extractLocalFields(config);
+  if (Object.keys(local).length === 0) {
+    return;
+  }
+  writeLocalConfig(workspaceRoot, local);
+}
+
 function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): KanbrainConfig {
+  migrateLegacyLocalFields(config, workspaceRoot);
   const local = readLocalConfig(workspaceRoot);
   const result = { ...config };
   if ('repositories' in local) {
@@ -76,15 +110,9 @@ export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void
   const { repositories, showAssignedTo, ...shared } = config;
   fs.writeFileSync(configPath, `${JSON.stringify(shared, null, 2)}\n`, 'utf-8');
 
-  const local: LocalConfig = {};
-  if (repositories !== undefined) {
-    local.repositories = repositories;
-  }
-  if (showAssignedTo !== undefined) {
-    local.showAssignedTo = showAssignedTo;
-  }
+  const local = extractLocalFields(config);
   if (Object.keys(local).length > 0) {
-    fs.writeFileSync(getConfigLocalPath(workspaceRoot), `${JSON.stringify(local, null, 2)}\n`, 'utf-8');
+    writeLocalConfig(workspaceRoot, local);
   }
 }
 

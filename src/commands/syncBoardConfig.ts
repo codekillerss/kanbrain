@@ -6,7 +6,7 @@ import { discoverBoardState } from '../azureDevOps/discoverBoardState';
 import { discoverWorkItemTypes, discoverStatusColors } from '../azureDevOps/discoverWorkItemTypes';
 import { diffBoardConfig, isDiffEmpty, summarizeDiff } from '../azureDevOps/checkBoardConfig';
 import { syncConfig } from '../config/syncConfig';
-import { readConfigWithDiagnostics, writeConfig, ensureGitignoreEntry } from '../config/config';
+import { readConfigWithDiagnostics, writeConfig } from '../config/config';
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 import {
@@ -50,8 +50,6 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     if (!fs.existsSync(usageGuidePath)) {
       fs.writeFileSync(usageGuidePath, USAGE_GUIDE_CONTENT, 'utf-8');
     }
-
-    ensureGitignoreEntry(workspaceRoot, '.kanbrain/config.local.json');
 
     const freshStatusColors = discoverStatusColors(types);
     const diff = diffBoardConfig(
