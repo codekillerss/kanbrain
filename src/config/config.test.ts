@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { getConfigLocalPath, getConfigPath, readConfig, writeConfig, ensureGitignoreEntry, readConfigWithDiagnostics } from './config';
+import {
+  getConfigLocalPath,
+  getConfigPath,
+  migrateLegacyLocalConfigIfNeeded,
+  readConfig,
+  writeConfig,
+  ensureGitignoreEntry,
+  readConfigWithDiagnostics,
+} from './config';
 
 let workspaceRoot: string;
 
@@ -192,59 +200,6 @@ describe('machine-local config split', () => {
     expect(config?.showAssignedTo).toBe(true);
   });
 
-  it('eagerly migrates legacy inline values into config.local.json and .gitignore on first read', () => {
-    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
-    fs.writeFileSync(
-      getConfigPath(workspaceRoot),
-      JSON.stringify({
-        ...baseConfig,
-        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
-        showAssignedTo: true,
-      }),
-      'utf-8',
-    );
-
-    const config = readConfig(workspaceRoot);
-
-    expect(fs.existsSync(getConfigLocalPath(workspaceRoot))).toBe(true);
-    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
-    expect(localRaw).toEqual({
-      repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
-      showAssignedTo: true,
-    });
-
-    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
-    expect(sharedRaw.repositories).toBeUndefined();
-    expect(sharedRaw.showAssignedTo).toBeUndefined();
-    expect(sharedRaw.organization).toBe('my-org');
-
-    const gitignore = fs.readFileSync(path.join(workspaceRoot, '.gitignore'), 'utf-8');
-    expect(gitignore.split(/\r?\n/)).toContain('.kanbrain/config.local.json');
-
-    expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
-    expect(config?.showAssignedTo).toBe(true);
-  });
-
-  it('does not re-run the legacy migration once config.local.json already exists', () => {
-    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
-    fs.writeFileSync(
-      getConfigPath(workspaceRoot),
-      JSON.stringify({
-        ...baseConfig,
-        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
-        showAssignedTo: true,
-      }),
-      'utf-8',
-    );
-    fs.mkdirSync(path.dirname(getConfigLocalPath(workspaceRoot)), { recursive: true });
-    fs.writeFileSync(getConfigLocalPath(workspaceRoot), JSON.stringify({ showAssignedTo: false }), 'utf-8');
-
-    const config = readConfig(workspaceRoot);
-
-    expect(config?.showAssignedTo).toBe(false);
-    expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
-  });
-
   it('prefers config.local.json over a stale value still inline in config.json', () => {
     fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
     fs.writeFileSync(getConfigPath(workspaceRoot), JSON.stringify({ ...baseConfig, showAssignedTo: true }), 'utf-8');
@@ -259,5 +214,82 @@ describe('machine-local config split', () => {
     fs.writeFileSync(getConfigLocalPath(workspaceRoot), '{ not valid json', 'utf-8');
 
     expect(readConfig(workspaceRoot)?.showAssignedTo).toBe(true);
+  });
+});
+
+describe('migrateLegacyLocalConfigIfNeeded', () => {
+  const baseConfig = {
+    organization: 'my-org',
+    project: 'MyProject',
+    defaultTeam: 'MyProject Team',
+    skills: {},
+    statusColors: {},
+    typeColors: {},
+    typeIcons: {},
+  };
+
+  it('migrates legacy inline values into config.local.json, strips config.json, and returns true', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(
+      getConfigPath(workspaceRoot),
+      JSON.stringify({
+        ...baseConfig,
+        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+        showAssignedTo: true,
+      }),
+      'utf-8',
+    );
+
+    const migrated = migrateLegacyLocalConfigIfNeeded(workspaceRoot);
+
+    expect(migrated).toBe(true);
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({
+      repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+      showAssignedTo: true,
+    });
+
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.repositories).toBeUndefined();
+    expect(sharedRaw.showAssignedTo).toBeUndefined();
+    expect(sharedRaw.organization).toBe('my-org');
+
+    const gitignore = fs.readFileSync(path.join(workspaceRoot, '.gitignore'), 'utf-8');
+    expect(gitignore.split(/\r?\n/)).toContain('.kanbrain/config.local.json');
+
+    const config = readConfig(workspaceRoot);
+    expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
+    expect(config?.showAssignedTo).toBe(true);
+  });
+
+  it('returns false and changes nothing once config.local.json already exists', () => {
+    fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(
+      getConfigPath(workspaceRoot),
+      JSON.stringify({
+        ...baseConfig,
+        repositories: { 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } },
+        showAssignedTo: true,
+      }),
+      'utf-8',
+    );
+    fs.mkdirSync(path.dirname(getConfigLocalPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigLocalPath(workspaceRoot), JSON.stringify({ showAssignedTo: false }), 'utf-8');
+
+    const migrated = migrateLegacyLocalConfigIfNeeded(workspaceRoot);
+
+    expect(migrated).toBe(false);
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
+  });
+
+  it('returns false when config.json has neither repositories nor showAssignedTo', () => {
+    writeConfig(workspaceRoot, baseConfig);
+    expect(migrateLegacyLocalConfigIfNeeded(workspaceRoot)).toBe(false);
+    expect(fs.existsSync(getConfigLocalPath(workspaceRoot))).toBe(false);
+  });
+
+  it('returns false when there is no config.json at all', () => {
+    expect(migrateLegacyLocalConfigIfNeeded(workspaceRoot)).toBe(false);
   });
 });

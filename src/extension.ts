@@ -18,6 +18,7 @@ import { registerOpenPullRequestDetailCommand } from './commands/openPullRequest
 import { registerPickWorkItemCommand } from './commands/pickWorkItem';
 import { registerViewPullRequestDiffCommand } from './commands/viewPullRequestDiff';
 import { registerResolveRepositoryTagCommand } from './commands/resolveRepositoryTag';
+import { migrateLegacyLocalConfigIfNeeded } from './config/config';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
@@ -54,6 +55,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   if (!workspaceRoot || !client || !detailPanelManager || !prDetailPanelManager) {
     return;
+  }
+
+  if (migrateLegacyLocalConfigIfNeeded(workspaceRoot)) {
+    vscode.window.showInformationMessage(
+      'Kanbrain moved repository paths and display preferences out of .kanbrain/config.json into a new, gitignored .kanbrain/config.local.json. config.json no longer contains machine-specific data.',
+    );
   }
 
   context.subscriptions.push(
