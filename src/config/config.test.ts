@@ -204,7 +204,7 @@ describe('machine-local config split', () => {
       'utf-8',
     );
 
-    readConfig(workspaceRoot);
+    const config = readConfig(workspaceRoot);
 
     expect(fs.existsSync(getConfigLocalPath(workspaceRoot))).toBe(true);
     const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
@@ -213,8 +213,16 @@ describe('machine-local config split', () => {
       showAssignedTo: true,
     });
 
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.repositories).toBeUndefined();
+    expect(sharedRaw.showAssignedTo).toBeUndefined();
+    expect(sharedRaw.organization).toBe('my-org');
+
     const gitignore = fs.readFileSync(path.join(workspaceRoot, '.gitignore'), 'utf-8');
     expect(gitignore.split(/\r?\n/)).toContain('.kanbrain/config.local.json');
+
+    expect(config?.repositories).toEqual({ 'repo-1': { name: 'kanbrain', path: 'D:\\legacy\\path' } });
+    expect(config?.showAssignedTo).toBe(true);
   });
 
   it('does not re-run the legacy migration once config.local.json already exists', () => {

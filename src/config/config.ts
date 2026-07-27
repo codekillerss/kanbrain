@@ -49,20 +49,32 @@ function writeLocalConfig(workspaceRoot: string, local: LocalConfig): void {
 // One-time migration for configs written before config.local.json existed: repositories/showAssignedTo
 // were still inline in config.json. Gated on the local file's absence (not on lastSyncedVersion, which
 // isn't bumped by every write path) so it runs exactly once per workspace, regardless of which command
-// triggers the first read after upgrading.
-function migrateLegacyLocalFields(config: KanbrainConfig, workspaceRoot: string): void {
+// triggers the first read after upgrading. Operates on the raw parsed JSON, before runMigrations, so it
+// only ever touches these two keys and leaves the rest of config.json's shape exactly as found - it
+// doesn't force any other pending shape migration to persist early.
+function migrateLegacyLocalFields(parsedRaw: unknown, workspaceRoot: string): void {
   if (fs.existsSync(getConfigLocalPath(workspaceRoot))) {
     return;
   }
-  const local = extractLocalFields(config);
-  if (Object.keys(local).length === 0) {
+  if (!parsedRaw || typeof parsedRaw !== 'object') {
     return;
   }
+  const { repositories, showAssignedTo, ...rest } = parsedRaw as Record<string, unknown>;
+  if (repositories === undefined && showAssignedTo === undefined) {
+    return;
+  }
+  const local: LocalConfig = {};
+  if (repositories !== undefined) {
+    local.repositories = repositories as Record<string, RepositoryPathEntry>;
+  }
+  if (showAssignedTo !== undefined) {
+    local.showAssignedTo = showAssignedTo as boolean;
+  }
   writeLocalConfig(workspaceRoot, local);
+  fs.writeFileSync(getConfigPath(workspaceRoot), `${JSON.stringify(rest, null, 2)}\n`, 'utf-8');
 }
 
 function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): KanbrainConfig {
-  migrateLegacyLocalFields(config, workspaceRoot);
   const local = readLocalConfig(workspaceRoot);
   const result = { ...config };
   if ('repositories' in local) {
@@ -81,7 +93,9 @@ export function readConfig(workspaceRoot: string): KanbrainConfig | null {
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    return applyLocalOverlay(runMigrations(JSON.parse(raw)), workspaceRoot);
+    const parsed = JSON.parse(raw);
+    migrateLegacyLocalFields(parsed, workspaceRoot);
+    return applyLocalOverlay(runMigrations(parsed), workspaceRoot);
   } catch {
     return null;
   }
@@ -96,7 +110,9 @@ export function readConfigWithDiagnostics(workspaceRoot: string): ConfigReadResu
   }
   const raw = fs.readFileSync(configPath, 'utf-8');
   try {
-    const config = applyLocalOverlay(runMigrations(JSON.parse(raw)), workspaceRoot);
+    const parsed = JSON.parse(raw);
+    migrateLegacyLocalFields(parsed, workspaceRoot);
+    const config = applyLocalOverlay(runMigrations(parsed), workspaceRoot);
     return { status: 'ok', config };
   } catch (error) {
     return { status: 'invalid', error: error instanceof Error ? error.message : String(error) };
