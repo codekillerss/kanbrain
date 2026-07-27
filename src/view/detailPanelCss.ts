@@ -78,6 +78,8 @@ export function detailPanelCss(): string {
     .kb-pr-thread { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; margin-bottom: 12px; }
     .kb-pr-thread-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 12px; opacity: 0.75; }
     .kb-pr-thread-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    a.kb-pr-thread-file { color: var(--vscode-textLink-foreground); text-decoration: none; }
+    a.kb-pr-thread-file:hover { text-decoration: underline; }
     .kb-pr-thread-status { flex-shrink: 0; text-transform: uppercase; font-size: 10px; opacity: 0.7; }
     .kb-pr-reply { margin-left: 24px; margin-top: 8px; }
     .kb-pr-thread .kb-comment { border: none; padding: 0; }

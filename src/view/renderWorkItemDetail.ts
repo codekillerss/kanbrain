@@ -110,8 +110,8 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
         <span class="kb-detail-id">#${workItem.id}</span>
         <h1 class="kb-detail-title">${escapeHtml(workItem.title)}</h1>
       </div>
-      ${assigneeHtml}
       <div class="kb-detail-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${assigneeHtml}
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

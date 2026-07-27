@@ -46,7 +46,13 @@ const THREAD_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
 };
 
-function renderThread(thread: PullRequestThread, avatars: Record<string, string>, inlineImages: Record<string, string | null>): string {
+function renderThread(
+  thread: PullRequestThread,
+  avatars: Record<string, string>,
+  inlineImages: Record<string, string | null>,
+  pr: PullRequestDetail,
+  canOpenDiff: boolean,
+): string {
   const roots = thread.comments.filter(c => !c.parentCommentId);
   const repliesByParent = new Map<number, PullRequestThreadComment[]>();
   for (const c of thread.comments) {
@@ -57,9 +63,14 @@ function renderThread(thread: PullRequestThread, avatars: Record<string, string>
     }
   }
 
-  const fileLabel = thread.filePath
-    ? `<div class="kb-pr-thread-file">📄 ${escapeHtml(thread.filePath)}${thread.line ? `:${thread.line}` : ''}</div>`
-    : '';
+  const fileLabelText = thread.filePath ? `📄 ${escapeHtml(thread.filePath)}${thread.line ? `:${thread.line}` : ''}` : '';
+  const fileLabel = !thread.filePath
+    ? ''
+    : canOpenDiff
+      ? `<a class="kb-pr-thread-file" href="command:kanbrain.viewPullRequestDiffAtLine?${encodeURIComponent(
+          JSON.stringify([pr.repositoryId, pr.sourceBranch, pr.targetBranch, thread.filePath, thread.line]),
+        )}">${fileLabelText}</a>`
+      : `<div class="kb-pr-thread-file">${fileLabelText}</div>`;
   const statusLabel = THREAD_STATUS_LABELS[thread.status]
     ? `<span class="kb-pr-thread-status">${THREAD_STATUS_LABELS[thread.status]}</span>`
     : '';
@@ -121,12 +132,13 @@ export interface PullRequestDetailInput {
 export function renderPullRequestDetail(input: PullRequestDetailInput): string {
   const { pr, workItems, config, threads, avatars, inlineImages, gitLensIconDataUri } = input;
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
-  const threadsHtml = threads.length
-    ? threads.map(t => renderThread(t, avatars, inlineImages)).join('')
-    : '<div class="kb-empty">No comments.</div>';
   const repoEntry = config.repositories?.[pr.repositoryId];
   const repoTagHtml = renderRepoTag(pr.repositoryId, repoEntry);
   const isRepoMapped = !!repoEntry?.path;
+  const canOpenDiff = isRepoMapped && !!gitLensIconDataUri;
+  const threadsHtml = threads.length
+    ? threads.map(t => renderThread(t, avatars, inlineImages, pr, canOpenDiff)).join('')
+    : '<div class="kb-empty">No comments.</div>';
   const sourceBranchTag = renderBranchTag(pr.sourceBranch, isRepoMapped ? [pr.repositoryId, pr.sourceBranch] : null);
   const targetBranchTag = renderBranchTag(pr.targetBranch, isRepoMapped ? [pr.repositoryId, pr.targetBranch] : null);
 

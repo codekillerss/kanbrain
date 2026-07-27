@@ -2,6 +2,16 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.4] - 2026-07-27
+
+### Added
+
+- Clicking a file/line badge on a PR comment thread now opens that file's diff at the exact line in GitLens (when GitLens is installed and the repository has a local path configured). Otherwise the badge stays plain text.
+
+### Changed
+
+- The work item detail panel now shows the status row before the assignee row.
+
 ## [0.7.3] - 2026-07-27
 
 ### Changed

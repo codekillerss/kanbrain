@@ -64,6 +64,7 @@ export class PullRequestDetailPanelManager {
         'kanbrain.pickWorkItem',
         'kanbrain.checkoutBranch',
         'kanbrain.viewPullRequestDiff',
+        'kanbrain.viewPullRequestDiffAtLine',
         'kanbrain.resolveRepositoryTag',
         'workbench.extensions.search',
       ],

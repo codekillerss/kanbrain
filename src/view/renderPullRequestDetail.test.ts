@@ -273,6 +273,45 @@ describe('renderPullRequestDetail', () => {
     expect(html).not.toContain('kb-pr-thread-file');
   });
 
+  it('makes the file/line badge a link to viewPullRequestDiffAtLine when GitLens is installed and the repo is mapped', () => {
+    const threads = [thread({ filePath: 'src/foo.ts', line: 42 })];
+    const html = renderPullRequestDetail(input({ threads, gitLensIconDataUri: 'data:image/png;base64,ABC' }));
+
+    const match = html.match(/href="(command:kanbrain\.viewPullRequestDiffAtLine\?[^"]+)"/);
+    expect(match).not.toBeNull();
+    const [, href] = match!;
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['repo-1', 'feature/login-fix', 'main', 'src/foo.ts', 42]);
+    expect(html).toContain('src/foo.ts:42');
+  });
+
+  it('passes a null line in the link args when the thread has no line number', () => {
+    const threads = [thread({ filePath: 'src/foo.ts', line: null })];
+    const html = renderPullRequestDetail(input({ threads, gitLensIconDataUri: 'data:image/png;base64,ABC' }));
+
+    const match = html.match(/href="(command:kanbrain\.viewPullRequestDiffAtLine\?[^"]+)"/);
+    expect(match).not.toBeNull();
+    const [, href] = match!;
+    expect(JSON.parse(decodeURIComponent(href.split('?')[1]))).toEqual(['repo-1', 'feature/login-fix', 'main', 'src/foo.ts', null]);
+  });
+
+  it('keeps the file/line badge as plain text (no link) when GitLens is not installed', () => {
+    const threads = [thread({ filePath: 'src/foo.ts', line: 42 })];
+    const html = renderPullRequestDetail(input({ threads, gitLensIconDataUri: null }));
+
+    expect(html).not.toContain('command:kanbrain.viewPullRequestDiffAtLine');
+    expect(html).toContain('src/foo.ts:42');
+  });
+
+  it('keeps the file/line badge as plain text (no link) when the repository has no configured path', () => {
+    const threads = [thread({ filePath: 'src/foo.ts', line: 42 })];
+    const html = renderPullRequestDetail(
+      input({ threads, gitLensIconDataUri: 'data:image/png;base64,ABC', config: { ...config, repositories: { 'repo-1': { name: 'kanbrain', path: '' } } } }),
+    );
+
+    expect(html).not.toContain('command:kanbrain.viewPullRequestDiffAtLine');
+    expect(html).toContain('src/foo.ts:42');
+  });
+
   it.each([
     ['fixed', 'Fixed'],
     ['wontFix', "Won't Fix"],

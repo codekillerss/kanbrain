@@ -68,14 +68,14 @@ describe('renderWorkItemDetail', () => {
     expect(row).toContain('Fix bug');
   });
 
-  it('shows the status row after the assignee', () => {
+  it('shows the assignee row after the status', () => {
     const html = renderWorkItemDetail(input());
 
     const assigneeIndex = html.indexOf('kb-detail-assignee');
     const statusIndex = html.indexOf('kb-detail-status-row');
 
-    expect(assigneeIndex).toBeGreaterThanOrEqual(0);
-    expect(statusIndex).toBeGreaterThan(assigneeIndex);
+    expect(statusIndex).toBeGreaterThanOrEqual(0);
+    expect(assigneeIndex).toBeGreaterThan(statusIndex);
   });
 
   it('colors the header border with the type color on the right and the status color on the bottom', () => {

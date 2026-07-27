@@ -17,6 +17,7 @@ import { registerCheckoutBranchCommand } from './commands/checkoutBranch';
 import { registerOpenPullRequestDetailCommand } from './commands/openPullRequestDetail';
 import { registerPickWorkItemCommand } from './commands/pickWorkItem';
 import { registerViewPullRequestDiffCommand } from './commands/viewPullRequestDiff';
+import { registerViewPullRequestDiffAtLineCommand } from './commands/viewPullRequestDiffAtLine';
 import { registerResolveRepositoryTagCommand } from './commands/resolveRepositoryTag';
 import { migrateLegacyLocalConfigIfNeeded } from './config/config';
 
@@ -75,6 +76,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerOpenPullRequestDetailCommand(prDetailPanelManager),
     registerPickWorkItemCommand(provider),
     registerViewPullRequestDiffCommand(workspaceRoot),
+    registerViewPullRequestDiffAtLineCommand(workspaceRoot),
     registerResolveRepositoryTagCommand(workspaceRoot, provider),
   );
 
