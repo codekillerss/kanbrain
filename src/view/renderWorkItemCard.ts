@@ -49,14 +49,19 @@ function renderSkillButton(id: number, skill: SkillEntry): string {
   return `<button class="kb-action-btn" data-action="run-skill" data-id="${id}"${style}>▶ ${escapeHtml(label)}</button>`;
 }
 
+function renderSkillPlaceholderButton(): string {
+  return `<button class="kb-action-btn kb-action-btn-placeholder" disabled title="No skill configured for this status">▶</button>`;
+}
+
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skill = resolveSkill(config, workItem);
-  const buttonHtml = skill ? renderSkillButton(workItem.id, skill) : '';
   const globalSkills = config.globalSkills ?? {};
-  const triggerHtml = renderGlobalSkillTrigger(workItem.id, Object.keys(globalSkills).length > 0);
-  if (!buttonHtml && !triggerHtml) {
+  const hasGlobalSkills = Object.keys(globalSkills).length > 0;
+  if (!skill && !hasGlobalSkills) {
     return '';
   }
+  const buttonHtml = skill ? renderSkillButton(workItem.id, skill) : renderSkillPlaceholderButton();
+  const triggerHtml = renderGlobalSkillTrigger(workItem.id, hasGlobalSkills);
   const menuHtml = renderGlobalSkillMenu(workItem.id, globalSkills);
   return `
     <div class="kb-action-group">

@@ -851,9 +851,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-action-group { position: relative; display: inline-block; margin-top: 6px; }
       .kb-action-pill { display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden; }
       .kb-action-pill .kb-action-btn { margin-top: 0; border-radius: 0; }
+      .kb-action-btn-placeholder { background-color: var(--vscode-dropdown-background); background-image: none; color: var(--vscode-dropdown-foreground); opacity: 0.7; cursor: default; }
+      .kb-action-btn-placeholder:hover { filter: none; }
       .kb-global-skill-trigger { padding: 4px 8px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: none; border-left: 1px solid var(--vscode-panel-border); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-global-skill-trigger:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-global-skill-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 240px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-global-skill-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; min-width: 160px; max-height: 240px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-global-skill-option { width: 100%; max-width: 100%; box-sizing: border-box; flex-shrink: 0; text-align: left; padding: 6px 8px; background-color: var(--vscode-dropdown-background); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); border: none; border-radius: 4px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-global-skill-option:hover { filter: brightness(1.12); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }

@@ -225,4 +225,22 @@ describe('renderWorkItemCard', () => {
     expect(html).not.toContain('data-action="run-skill"');
     expect(html).toContain('data-action="run-global-skill"');
   });
+
+  it('shows a disabled placeholder button when the status has no skill but global skills exist', () => {
+    const noStatusSkill: KanbrainConfig = {
+      ...config,
+      skills: { Task: { Active: null } },
+      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+    };
+    const html = renderWorkItemCard(workItem(), noStatusSkill, 'kb-main-card');
+    expect(html).toContain('kb-action-btn-placeholder');
+    expect(html).toContain('disabled');
+  });
+
+  it('renders no action group at all when there is neither a status skill nor global skills', () => {
+    const noSkillsAtAll: KanbrainConfig = { ...config, skills: { Task: { Active: null } }, globalSkills: {} };
+    const html = renderWorkItemCard(workItem(), noSkillsAtAll, 'kb-main-card');
+    expect(html).not.toContain('kb-action-group');
+    expect(html).not.toContain('kb-action-btn-placeholder');
+  });
 });
