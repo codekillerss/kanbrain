@@ -118,12 +118,28 @@ this change needs to write a second file and touch `.gitignore`, not just reshap
 object. Folding it in would either break that purity for every migration or require threading
 `workspaceRoot` through a module that has never needed it.
 
-Instead, `applyLocalOverlay` runs a one-time **eager migration** the first time `readConfig`/
-`readConfigWithDiagnostics` reads a workspace: if `config.local.json` doesn't exist yet and the
-config has `repositories` and/or `showAssignedTo` (from an old `config.json` that still carries
-them inline), it writes those fields straight to a new `config.local.json` and calls
-`ensureGitignoreEntry` — immediately, on that read, before returning. No user action, command, or
-subsequent write is required to trigger it.
+Instead, `readConfig`/`readConfigWithDiagnostics` run a one-time **eager migration** on the raw
+parsed JSON, before `runMigrations` and before the local overlay: if `config.local.json` doesn't
+exist yet and the raw config has `repositories` and/or `showAssignedTo` (from an old `config.json`
+that still carries them inline), it writes those fields straight to a new `config.local.json`,
+calls `ensureGitignoreEntry`, **and rewrites `config.json` on disk to remove those two keys** —
+all immediately, on that same read, before returning. No user action, command, or subsequent write
+is required to trigger it or to complete it; `config.json` comes out clean on the very read that
+detects the legacy shape, not on some later write.
+
+Operating on the raw parsed object (rather than the post-`runMigrations` `KanbrainConfig`) is
+deliberate: a destructure that pulls out just `repositories`/`showAssignedTo` doesn't need to know
+or care about the rest of the file's shape, so it doesn't force any other pending shape migration
+(e.g. the legacy `typeToBacklogLevel`/`backlogLevels` one) to also persist early as a side effect —
+this migration's blast radius stays limited to exactly the two keys it's responsible for.
+
+This does mean a read can now rewrite the shared, git-tracked `config.json` — a bigger side effect
+than only ever creating the gitignored local file. `readConfig` runs very often (every panel poll,
+every 5 seconds per `KanbrainViewProvider.ts`'s `POLL_INTERVAL_MS`, not just on user action), so
+this was a deliberate trade-off, chosen so that `config.json` is fully cleaned the moment a legacy
+project is opened, rather than staying dirty-in-spirit until some unrelated later write. Because
+the migration is presence-gated, it still only ever fires once per workspace — after the first
+rewrite, `config.json` no longer has the keys, so every subsequent read's `detect` step is a no-op.
 
 The gate is **presence of `config.local.json`, not `lastSyncedVersion`**. `lastSyncedVersion` is
 only bumped by `Kanbrain: Setup` and `Kanbrain: Sync Board Configuration` (see `setup.ts`/
@@ -174,8 +190,9 @@ All in `src/config/config.test.ts` (new `describe` blocks alongside the existing
 - Reading a workspace with a malformed `config.local.json` (invalid JSON) falls back to
   `config.json`'s values instead of failing the whole read.
 - Reading a legacy `config.json` (inline `repositories`/`showAssignedTo`, no `config.local.json`)
-  eagerly creates `config.local.json` with those values and adds the `.gitignore` entry, in that
-  same read call.
+  eagerly creates `config.local.json` with those values, adds the `.gitignore` entry, and rewrites
+  `config.json` on disk with those two keys removed (other fields untouched) — all in that same
+  read call, and the returned `KanbrainConfig` still has the correct values.
 - Reading that same kind of legacy `config.json` a second time, once `config.local.json` already
   exists, does not re-run the migration (the existing local file's values are used as-is).
 - `setup.ts` has no existing unit tests (it registers `vscode.commands` directly and isn't covered
