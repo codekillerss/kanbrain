@@ -10,7 +10,7 @@ Requisito adicional do usuário: cada pessoa do time deve poder ter seu próprio
 
 **Dentro do escopo:**
 - Novo campo `profiles` em `.kanbrain/config.json`: mapa `id → { label, description }` (mesmo padrão de `globalSkills`/`repositories` — mapa por id, não array).
-- Dois perfis default (`developer`, `qa`) criados via backfill idempotente (mesmo mecanismo já usado pro `explain-card` skill e `USAGE.md`): rodam tanto no `Kanbrain: Setup` quanto no `Kanbrain: Sync Board Configuration`, sem sobrescrever perfis já customizados pelo time.
+- Quatro perfis default (`developer`, `qa`, `designer`, `po`) criados via backfill idempotente (mesmo mecanismo já usado pro `explain-card` skill e `USAGE.md`): rodam tanto no `Kanbrain: Setup` quanto no `Kanbrain: Sync Board Configuration`, sem sobrescrever perfis já customizados pelo time. Conteúdo (`label`/`description`) em inglês, mesmo idioma do resto do conteúdo default do produto (USAGE.md, skill `explain-card`, labels da UI) — só o texto desta spec é em português.
 - Novo campo `selectedProfileId` em `.kanbrain/config.local.json` (arquivo por workspace, gitignored) — qual perfil é o de cada pessoa, no mesmo mecanismo já usado por `repositories[].path` e `showAssignedTo`.
 - Novo dropdown "Profile" na tela Home, ao lado do dropdown de Team, pra escolher/trocar o próprio perfil. Pode ficar sem nenhum selecionado indefinidamente.
 - Ao rodar uma skill (status ou global), se houver perfil selecionado, o conteúdo gerado ganha um bloco `## Requester profile` no topo, antes do conteúdo resolvido do template.
@@ -41,15 +41,26 @@ selectedProfileId?: string; // mesclado de config.local.json via applyLocalOverl
 ```ts
 export const DEFAULT_PROFILES: Record<string, ProfileEntry> = {
   developer: {
-    label: 'Desenvolvedor',
+    label: 'Developer',
     description:
-      'Sou um desenvolvedor de software. Foco em qualidade de código, testes automatizados e arquitetura. ' +
-      'Priorize instruções técnicas claras, com contexto de código e trade-offs de implementação.',
+      'I am a software developer. I focus on code quality, automated tests, and architecture. ' +
+      'Prioritize clear technical instructions, with code context and implementation trade-offs.',
   },
   qa: {
     label: 'QA',
+    description: 'I am responsible for quality and testing. Prioritize test scenarios, edge cases, and clear acceptance criteria.',
+  },
+  designer: {
+    label: 'Designer',
     description:
-      'Sou responsável por qualidade e testes. Priorize cenários de teste, casos de borda e critérios de aceite claros.',
+      'I am a product/UX designer. I focus on usability, visual consistency, and user flows. ' +
+      'Prioritize the user-facing impact of any change, and call out UX implications I should weigh in on.',
+  },
+  po: {
+    label: 'Product Owner',
+    description:
+      'I am a Product Owner. I focus on business value, priorities, and acceptance criteria rather than implementation details. ' +
+      'Prioritize plain-language explanations and trade-offs framed in terms of user/business impact.',
   },
 };
 
@@ -64,7 +75,7 @@ export function ensureDefaultProfiles(existing: Record<string, ProfileEntry> | u
 }
 ```
 
-Chamado em `setup.ts` (junto com `ensureExplainCardGlobalSkill`, ao montar o config inicial) e em `syncBoardConfig.ts` (junto com o resto do backfill, ao regravar `updated`). Idempotente: nunca sobrescreve uma entrada já existente (customizada ou não) — só adiciona `developer`/`qa` se estiverem ausentes.
+Chamado em `setup.ts` (junto com `ensureExplainCardGlobalSkill`, ao montar o config inicial) e em `syncBoardConfig.ts` (junto com o resto do backfill, ao regravar `updated`). Idempotente: nunca sobrescreve uma entrada já existente (customizada ou não) — só adiciona os quatro ids acima se estiverem ausentes.
 
 `isBootstrapContentMissing` (mesmo arquivo) passa a checar também os perfis default, pro mesmo sinal que já alimenta a mensagem do `Kanbrain: Sync Board Configuration` (`diffBoardConfig`/`summarizeDiff`) cobrir esse backfill — quem já tinha o Kanbrain configurado vê "perfis default adicionados" no resumo do sync, igual já acontece hoje com o `explain-card`/`USAGE.md`:
 
@@ -140,7 +151,7 @@ Exemplo de saída, com perfil selecionado:
 
 ```
 ## Requester profile
-**Desenvolvedor** — Sou um desenvolvedor de software. Foco em qualidade de código...
+**Developer** — I am a software developer. I focus on code quality, automated tests, and architecture...
 
 ---
 
@@ -215,7 +226,7 @@ private setSelectedProfile(profileId: string | undefined): void {
 
 - `resolveActiveProfile.test.ts` (novo): sem `selectedProfileId` → `null`; id presente em `profiles` → retorna a entrada; id ausente de `profiles` → `null`.
 - `generateContextFile.test.ts` (estende o existente): com perfil → bloco `## Requester profile` no topo do arquivo gerado, com `label`/`description` corretos, seguido do `---` e do conteúdo resolvido; sem perfil (`null`) → saída idêntica à atual, sem o bloco.
-- `bootstrapContent.test.ts` (estende o existente): `ensureDefaultProfiles(undefined)` cria `developer`+`qa`; `ensureDefaultProfiles({ developer: {...customizado} })` preserva a customização e só adiciona `qa`; chamada com os dois já presentes não muda nada.
+- `bootstrapContent.test.ts` (estende o existente): `ensureDefaultProfiles(undefined)` cria os quatro defaults; `ensureDefaultProfiles({ developer: {...customizado} })` preserva a customização e só adiciona os demais; chamada com os quatro já presentes não muda nada; um perfil não-default (fora da lista) permanece intocado.
 - `config.test.ts` (estende o existente): `writeConfig` com `selectedProfileId` grava em `config.local.json`, não em `config.json`; `readConfig` aplica o overlay e devolve `selectedProfileId` mesclado; ausência do campo no local não quebra a leitura.
 - `renderHome.test.ts` (estende o existente): sem `profiles` → seção ausente; com `profiles` e nenhum `selectedProfileId` → "— None —" selecionado; com `selectedProfileId` válido → opção correspondente selecionada; `label` com HTML é escapado.
 - Sem teste automatizado para o listener do webview / handler de mensagem em `KanbrainViewProvider.ts` (mesma observação já aceita nos outros pontos de glue de vscode/webview do projeto — verificado manualmente via F5).
