@@ -2,6 +2,13 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.7.5] - 2026-07-28
+
+### Added
+
+- Team profiles: `.kanbrain/config.json` now has a `profiles` map (defaults to Developer, QA, Designer, and Product Owner, backfilled automatically by `Kanbrain: Setup` and `Kanbrain: Sync Board Configuration`). Pick which profile is yours from a new "Profile" dropdown on the Home screen — the choice is saved locally, per machine, in `.kanbrain/config.local.json`. When a profile is selected, every generated skill file (status or global) gets a "Requester profile" block prepended, so the agent knows who's asking.
+- A new "Profiles" section on the Configuration screen lets you create, edit, and remove profiles directly, the same way Global Skills already work.
+
 ## [0.7.4] - 2026-07-27
 
 ### Added
