@@ -68,6 +68,26 @@ describe('renderConfig', () => {
     expect(levelIndex).toBeGreaterThan(headerIndex);
   });
 
+  it('wraps Profiles in its own parent section, before Skill Configuration', () => {
+    const html = renderConfig(
+      state({ config: config({ profiles: { developer: { label: 'Developer', description: 'x' } }, skills: { Task: { 'To Do': null } } }) }),
+    );
+
+    const profilesHeaderIndex = html.indexOf('>Profiles<');
+    const profilesRowIndex = html.indexOf('data-profile-id="developer"');
+    const skillHeaderIndex = html.indexOf('Skill Configuration');
+
+    expect(profilesHeaderIndex).toBeGreaterThanOrEqual(0);
+    expect(profilesRowIndex).toBeGreaterThan(profilesHeaderIndex);
+    expect(skillHeaderIndex).toBeGreaterThan(profilesRowIndex);
+  });
+
+  it('shows the Profiles section even when there are no profiles configured', () => {
+    const html = renderConfig(state());
+    expect(html).toContain('>Profiles<');
+    expect(html).toContain('data-action="add-profile"');
+  });
+
   it('wraps the Display label and assignee checkbox in a bordered section card', () => {
     const html = renderConfig(state());
 
