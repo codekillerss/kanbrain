@@ -55,11 +55,11 @@ describe('generateContextFile', () => {
   });
 
   it('prepends a Requester profile block when a profile is given', () => {
-    const profile: ProfileEntry = { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' };
+    const profile: ProfileEntry = { label: 'Developer', description: 'I am a developer.' };
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, profile, new Date('2026-07-14T10:00:00.000Z'));
 
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
-    expect(written).toBe('## Requester profile\n**Desenvolvedor** — Sou um desenvolvedor.\n\n---\n\nTitle: Fix bug (#482)');
+    expect(written).toBe('## Requester profile\n**Developer** — I am a developer.\n\n---\n\nTitle: Fix bug (#482)');
   });
 
   it('does not add a Requester profile block when profile is null', () => {

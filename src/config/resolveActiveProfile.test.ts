@@ -23,17 +23,17 @@ describe('resolveActiveProfile', () => {
   it('returns the matching profile entry when selectedProfileId resolves', () => {
     const result = resolveActiveProfile(
       config({
-        profiles: { developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } },
+        profiles: { developer: { label: 'Developer', description: 'I am a developer.' } },
         selectedProfileId: 'developer',
       }),
     );
-    expect(result).toEqual({ label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' });
+    expect(result).toEqual({ label: 'Developer', description: 'I am a developer.' });
   });
 
   it('returns null when selectedProfileId does not match any entry in profiles', () => {
     const result = resolveActiveProfile(
       config({
-        profiles: { developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } },
+        profiles: { developer: { label: 'Developer', description: 'I am a developer.' } },
         selectedProfileId: 'removed-profile',
       }),
     );

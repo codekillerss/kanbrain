@@ -136,9 +136,9 @@ describe('syncConfig', () => {
   });
 
   it('preserves profiles unchanged across a sync', () => {
-    const withProfiles = config({ profiles: { developer: { label: 'Desenvolvedor', description: 'Custom.' } } });
+    const withProfiles = config({ profiles: { developer: { label: 'Developer', description: 'Custom.' } } });
     const result = syncConfig(withProfiles, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.profiles).toEqual({ developer: { label: 'Desenvolvedor', description: 'Custom.' } });
+    expect(result.profiles).toEqual({ developer: { label: 'Developer', description: 'Custom.' } });
   });
 
   it('leaves profiles undefined when it was never set', () => {

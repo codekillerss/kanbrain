@@ -245,8 +245,8 @@ describe('renderHome', () => {
       state({
         config: config({
           profiles: {
-            developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' },
-            qa: { label: 'QA', description: 'Sou responsável por qualidade.' },
+            developer: { label: 'Developer', description: 'I am a developer.' },
+            qa: { label: 'QA', description: 'I am responsible for quality.' },
           },
         }),
       }),
@@ -255,14 +255,14 @@ describe('renderHome', () => {
     expect(html).toContain('id="kb-profile-select"');
     expect(html).toContain('<option value=""');
     expect(html).toContain('<option value="developer"');
-    expect(html).toContain('>Desenvolvedor<');
+    expect(html).toContain('>Developer<');
     expect(html).toContain('<option value="qa"');
     expect(html).toContain('>QA<');
   });
 
   it('marks the "None" option as selected when no profile is selected', () => {
     const html = renderHome(
-      state({ config: config({ profiles: { developer: { label: 'Desenvolvedor', description: 'x' } } }) }),
+      state({ config: config({ profiles: { developer: { label: 'Developer', description: 'x' } } }) }),
     );
     expect(html).toMatch(/<option value="" selected>/);
   });
@@ -272,7 +272,7 @@ describe('renderHome', () => {
       state({
         config: config({
           profiles: {
-            developer: { label: 'Desenvolvedor', description: 'x' },
+            developer: { label: 'Developer', description: 'x' },
             qa: { label: 'QA', description: 'y' },
           },
           selectedProfileId: 'qa',
@@ -295,7 +295,7 @@ describe('renderHome', () => {
       state({
         config: config({
           cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } },
-          profiles: { developer: { label: 'Desenvolvedor', description: 'x' } },
+          profiles: { developer: { label: 'Developer', description: 'x' } },
         }),
       }),
     );

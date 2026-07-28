@@ -54,10 +54,10 @@ describe('ensureDefaultProfiles', () => {
   it('keeps a custom, non-default profile untouched', () => {
     const existing: Record<string, ProfileEntry> = {
       ...DEFAULT_PROFILES,
-      designer: { label: 'Designer', description: 'Sou um designer.' },
+      intern: { label: 'Intern', description: 'I am an intern.' },
     };
     const result = ensureDefaultProfiles(existing);
-    expect(result.designer).toEqual({ label: 'Designer', description: 'Sou um designer.' });
+    expect(result.intern).toEqual({ label: 'Intern', description: 'I am an intern.' });
   });
 
   it('changes nothing when both defaults are already present', () => {

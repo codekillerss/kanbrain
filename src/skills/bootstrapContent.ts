@@ -41,14 +41,26 @@ export function ensureExplainCardGlobalSkill(existing: Record<string, SkillEntry
 
 export const DEFAULT_PROFILES: Record<string, ProfileEntry> = {
   developer: {
-    label: 'Desenvolvedor',
+    label: 'Developer',
     description:
-      'Sou um desenvolvedor de software. Foco em qualidade de código, testes automatizados e arquitetura. ' +
-      'Priorize instruções técnicas claras, com contexto de código e trade-offs de implementação.',
+      'I am a software developer. I focus on code quality, automated tests, and architecture. ' +
+      'Prioritize clear technical instructions, with code context and implementation trade-offs.',
   },
   qa: {
     label: 'QA',
-    description: 'Sou responsável por qualidade e testes. Priorize cenários de teste, casos de borda e critérios de aceite claros.',
+    description: 'I am responsible for quality and testing. Prioritize test scenarios, edge cases, and clear acceptance criteria.',
+  },
+  designer: {
+    label: 'Designer',
+    description:
+      'I am a product/UX designer. I focus on usability, visual consistency, and user flows. ' +
+      'Prioritize the user-facing impact of any change, and call out UX implications I should weigh in on.',
+  },
+  po: {
+    label: 'Product Owner',
+    description:
+      'I am a Product Owner. I focus on business value, priorities, and acceptance criteria rather than implementation details. ' +
+      'Prioritize plain-language explanations and trade-offs framed in terms of user/business impact.',
   },
 };
 

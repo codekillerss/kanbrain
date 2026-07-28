@@ -243,13 +243,13 @@ describe('profiles (shared field)', () => {
       statusColors: {},
       typeColors: {},
       typeIcons: {},
-      profiles: { developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } },
+      profiles: { developer: { label: 'Developer', description: 'I am a developer.' } },
     };
     writeConfig(workspaceRoot, config);
 
     expect(readConfig(workspaceRoot)).toEqual(config);
     const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
-    expect(sharedRaw.profiles).toEqual({ developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } });
+    expect(sharedRaw.profiles).toEqual({ developer: { label: 'Developer', description: 'I am a developer.' } });
   });
 });
 
