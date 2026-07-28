@@ -234,4 +234,75 @@ describe('renderHome', () => {
     expect(teamIndex).toBeGreaterThan(flowIndex);
     expect(commandsIndex).toBeGreaterThan(teamIndex);
   });
+
+  it('does not show a Profile section when there are 0 profiles configured', () => {
+    const html = renderHome(state());
+    expect(html).not.toContain('id="kb-profile-select"');
+  });
+
+  it('shows a Profile section with a "None" option plus one option per profile', () => {
+    const html = renderHome(
+      state({
+        config: config({
+          profiles: {
+            developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' },
+            qa: { label: 'QA', description: 'Sou responsável por qualidade.' },
+          },
+        }),
+      }),
+    );
+
+    expect(html).toContain('id="kb-profile-select"');
+    expect(html).toContain('<option value=""');
+    expect(html).toContain('<option value="developer"');
+    expect(html).toContain('>Desenvolvedor<');
+    expect(html).toContain('<option value="qa"');
+    expect(html).toContain('>QA<');
+  });
+
+  it('marks the "None" option as selected when no profile is selected', () => {
+    const html = renderHome(
+      state({ config: config({ profiles: { developer: { label: 'Desenvolvedor', description: 'x' } } }) }),
+    );
+    expect(html).toMatch(/<option value="" selected>/);
+  });
+
+  it('marks the matching profile option as selected when selectedProfileId is set', () => {
+    const html = renderHome(
+      state({
+        config: config({
+          profiles: {
+            developer: { label: 'Desenvolvedor', description: 'x' },
+            qa: { label: 'QA', description: 'y' },
+          },
+          selectedProfileId: 'qa',
+        }),
+      }),
+    );
+    expect(html).toMatch(/<option value="qa" selected>/);
+  });
+
+  it('escapes HTML in a profile label', () => {
+    const html = renderHome(
+      state({ config: config({ profiles: { developer: { label: 'Dev <script>', description: 'x' } } }) }),
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('Dev &lt;script&gt;');
+  });
+
+  it('places the Profile section after the Team section', () => {
+    const html = renderHome(
+      state({
+        config: config({
+          cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } },
+          profiles: { developer: { label: 'Desenvolvedor', description: 'x' } },
+        }),
+      }),
+    );
+
+    const teamIndex = html.indexOf('>Team<');
+    const profileIndex = html.indexOf('>Profile<');
+    expect(teamIndex).toBeGreaterThanOrEqual(0);
+    expect(profileIndex).toBeGreaterThan(teamIndex);
+  });
 });

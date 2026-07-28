@@ -70,6 +70,29 @@ function renderHomeTeamSection(state: RenderState): string {
   `;
 }
 
+function renderHomeProfileSection(state: RenderState): string {
+  const config = state.config!;
+  const profileIds = Object.keys(config.profiles ?? {});
+  if (profileIds.length === 0) {
+    return '';
+  }
+  const selected = config.selectedProfileId ?? '';
+
+  return `
+    <div class="kb-section-card">
+      <div class="kb-section-label">Profile</div>
+      <div class="kb-team-card">
+        <select id="kb-profile-select">
+          <option value=""${selected === '' ? ' selected' : ''}>— None —</option>
+          ${profileIds
+            .map(id => `<option value="${escapeHtml(id)}"${id === selected ? ' selected' : ''}>${escapeHtml(config.profiles![id].label)}</option>`)
+            .join('')}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
 export function renderHome(state: RenderState): string {
   return `
     <div class="kb-section-card">
@@ -80,6 +103,7 @@ export function renderHome(state: RenderState): string {
       ${renderHomeWorkItemSection(state)}
     </div>
     ${renderHomeTeamSection(state)}
+    ${renderHomeProfileSection(state)}
     <div class="kb-section-card">
       <div class="kb-section-label">Commands</div>
       <div class="kb-home-commands">
