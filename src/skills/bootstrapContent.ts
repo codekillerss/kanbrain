@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { KanbrainConfig, SkillEntry } from '../types';
+import type { KanbrainConfig, SkillEntry, ProfileEntry } from '../types';
 import { pickReadableTextColor } from '../view/badgeColor';
 
 export const EXPLAIN_CARD_SKILL_ID = 'explain-card';
@@ -39,6 +39,29 @@ export function ensureExplainCardGlobalSkill(existing: Record<string, SkillEntry
   return { ...(existing ?? {}), [EXPLAIN_CARD_SKILL_ID]: buildExplainCardSkillEntry() };
 }
 
+export const DEFAULT_PROFILES: Record<string, ProfileEntry> = {
+  developer: {
+    label: 'Desenvolvedor',
+    description:
+      'Sou um desenvolvedor de software. Foco em qualidade de código, testes automatizados e arquitetura. ' +
+      'Priorize instruções técnicas claras, com contexto de código e trade-offs de implementação.',
+  },
+  qa: {
+    label: 'QA',
+    description: 'Sou responsável por qualidade e testes. Priorize cenários de teste, casos de borda e critérios de aceite claros.',
+  },
+};
+
+export function ensureDefaultProfiles(existing: Record<string, ProfileEntry> | undefined): Record<string, ProfileEntry> {
+  const merged = { ...(existing ?? {}) };
+  for (const [id, entry] of Object.entries(DEFAULT_PROFILES)) {
+    if (!(id in merged)) {
+      merged[id] = entry;
+    }
+  }
+  return merged;
+}
+
 export const USAGE_GUIDE_RELATIVE_PATH = '.kanbrain/USAGE.md';
 
 export const USAGE_GUIDE_CONTENT = `# Kanbrain Usage Guide
@@ -75,5 +98,6 @@ Edit skills directly, or use the Config screen in the Kanbrain panel — both st
 export function isBootstrapContentMissing(workspaceRoot: string, config: KanbrainConfig): boolean {
   const usageGuideMissing = !fs.existsSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH));
   const explainCardEntryMissing = !config.globalSkills?.[EXPLAIN_CARD_SKILL_ID];
-  return usageGuideMissing || explainCardEntryMissing;
+  const defaultProfilesMissing = Object.keys(DEFAULT_PROFILES).some(id => !config.profiles?.[id]);
+  return usageGuideMissing || explainCardEntryMissing || defaultProfilesMissing;
 }

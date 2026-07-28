@@ -8,8 +8,10 @@ import {
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
   isBootstrapContentMissing,
+  DEFAULT_PROFILES,
+  ensureDefaultProfiles,
 } from './bootstrapContent';
-import type { KanbrainConfig, SkillEntry } from '../types';
+import type { KanbrainConfig, SkillEntry, ProfileEntry } from '../types';
 
 describe('ensureExplainCardGlobalSkill', () => {
   it('adds the explain-card entry when there is no existing map', () => {
@@ -35,7 +37,36 @@ describe('ensureExplainCardGlobalSkill', () => {
   });
 });
 
-function config(globalSkills?: Record<string, SkillEntry>): KanbrainConfig {
+describe('ensureDefaultProfiles', () => {
+  it('creates developer and qa when there is no existing map', () => {
+    const result = ensureDefaultProfiles(undefined);
+    expect(result).toEqual(DEFAULT_PROFILES);
+  });
+
+  it('preserves a customized default entry and adds only the missing one', () => {
+    const existing: Record<string, ProfileEntry> = { developer: { label: 'Dev Custom', description: 'Customized.' } };
+    const result = ensureDefaultProfiles(existing);
+
+    expect(result.developer).toEqual({ label: 'Dev Custom', description: 'Customized.' });
+    expect(result.qa).toEqual(DEFAULT_PROFILES.qa);
+  });
+
+  it('keeps a custom, non-default profile untouched', () => {
+    const existing: Record<string, ProfileEntry> = {
+      ...DEFAULT_PROFILES,
+      designer: { label: 'Designer', description: 'Sou um designer.' },
+    };
+    const result = ensureDefaultProfiles(existing);
+    expect(result.designer).toEqual({ label: 'Designer', description: 'Sou um designer.' });
+  });
+
+  it('changes nothing when both defaults are already present', () => {
+    const result = ensureDefaultProfiles({ ...DEFAULT_PROFILES });
+    expect(result).toEqual(DEFAULT_PROFILES);
+  });
+});
+
+function config(globalSkills?: Record<string, SkillEntry>, profiles?: Record<string, ProfileEntry>): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
@@ -45,6 +76,7 @@ function config(globalSkills?: Record<string, SkillEntry>): KanbrainConfig {
     typeColors: {},
     typeIcons: {},
     globalSkills,
+    profiles,
   };
 }
 
@@ -76,11 +108,19 @@ describe('isBootstrapContentMissing', () => {
     expect(isBootstrapContentMissing(workspaceRoot, withEntry)).toBe(true);
   });
 
-  it('is false once both USAGE.md exists and the explain-card entry is configured', () => {
+  it('is false once USAGE.md exists, the explain-card entry, and the default profiles are all configured', () => {
     fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
-    const withEntry = config(ensureExplainCardGlobalSkill(undefined));
+    const withEntry = config(ensureExplainCardGlobalSkill(undefined), ensureDefaultProfiles(undefined));
 
     expect(isBootstrapContentMissing(workspaceRoot, withEntry)).toBe(false);
+  });
+
+  it('is true when USAGE.md and the explain-card entry are present but a default profile is missing', () => {
+    fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
+    const withPartialProfiles = config(ensureExplainCardGlobalSkill(undefined), { developer: DEFAULT_PROFILES.developer });
+
+    expect(isBootstrapContentMissing(workspaceRoot, withPartialProfiles)).toBe(true);
   });
 });
