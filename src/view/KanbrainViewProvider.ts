@@ -103,6 +103,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.removeGlobalSkill(String(message.id ?? ''));
       } else if (message.type === 'pick-global-skill-file') {
         await this.pickGlobalSkillFile(String(message.id ?? ''));
+      } else if (message.type === 'add-profile') {
+        this.addProfile();
+      } else if (message.type === 'save-profile-entry') {
+        this.saveProfileEntry(String(message.id ?? ''), String(message.label ?? ''), String(message.description ?? ''));
+      } else if (message.type === 'remove-profile') {
+        this.removeProfile(String(message.id ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
       } else if (message.type === 'set-selected-team') {
@@ -362,6 +368,47 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     delete config.globalSkills[id];
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private addProfile(): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    const id = `profile-${Date.now()}`;
+    config.profiles = { ...(config.profiles ?? {}), [id]: { label: '', description: '' } };
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private saveProfileEntry(id: string, label: string, description: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config?.profiles?.[id]) {
+      return;
+    }
+    config.profiles[id] = { label: label.trim(), description: description.trim() };
+    writeConfig(this.workspaceRoot, config);
+  }
+
+  private removeProfile(id: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config?.profiles?.[id]) {
+      return;
+    }
+    delete config.profiles[id];
     writeConfig(this.workspaceRoot, config);
     this.lastState = '';
     void this.refresh();
@@ -652,26 +699,37 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     function saveSkillRow(row) {
-      const path = row.querySelector('[data-field="path"]').value;
       const label = row.querySelector('[data-field="label"]').value;
-      const textColor = row.querySelector('[data-field="textColor"]').value;
-      const buttonColor = row.querySelector('[data-field="buttonColor"]').value;
       if (row.dataset.globalSkillId) {
-        vscode.postMessage({ type: 'save-global-skill-entry', id: row.dataset.globalSkillId, path, label, textColor, buttonColor });
+        vscode.postMessage({
+          type: 'save-global-skill-entry',
+          id: row.dataset.globalSkillId,
+          path: row.querySelector('[data-field="path"]').value,
+          label,
+          textColor: row.querySelector('[data-field="textColor"]').value,
+          buttonColor: row.querySelector('[data-field="buttonColor"]').value,
+        });
+      } else if (row.dataset.profileId) {
+        vscode.postMessage({
+          type: 'save-profile-entry',
+          id: row.dataset.profileId,
+          label,
+          description: row.querySelector('[data-field="description"]').value,
+        });
       } else {
         vscode.postMessage({
           type: 'save-skill-entry',
           level: row.dataset.level,
           status: row.dataset.status,
-          path,
+          path: row.querySelector('[data-field="path"]').value,
           label,
-          textColor,
-          buttonColor,
+          textColor: row.querySelector('[data-field="textColor"]').value,
+          buttonColor: row.querySelector('[data-field="buttonColor"]').value,
         });
       }
     }
 
-    document.querySelectorAll('.kb-config-row input').forEach((input) => {
+    document.querySelectorAll('.kb-config-row input, .kb-config-row textarea').forEach((input) => {
       input.addEventListener('blur', () => {
         const row = input.closest('.kb-config-row');
         if (row) {
@@ -811,6 +869,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'add-global-skill' });
       } else if (target.dataset && target.dataset.action === 'remove-global-skill') {
         vscode.postMessage({ type: 'remove-global-skill', id: target.dataset.globalSkillId });
+      } else if (target.dataset && target.dataset.action === 'add-profile') {
+        vscode.postMessage({ type: 'add-profile' });
+      } else if (target.dataset && target.dataset.action === 'remove-profile') {
+        vscode.postMessage({ type: 'remove-profile', id: target.dataset.profileId });
       } else if (target.dataset && target.dataset.action === 'toggle-global-skill-menu') {
         const group = target.closest('.kb-action-group');
         const menu = group ? group.querySelector('.kb-global-skill-menu') : null;
@@ -975,6 +1037,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
       .kb-icon-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-textarea { min-height: 60px; resize: vertical; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
       .kb-config-parent-header { font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
