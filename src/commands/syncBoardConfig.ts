@@ -15,6 +15,7 @@ import {
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
+  ensureDefaultProfiles,
   isBootstrapContentMissing,
 } from '../skills/bootstrapContent';
 
@@ -77,6 +78,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     writeConfig(workspaceRoot, {
       ...updated,
       globalSkills: ensureExplainCardGlobalSkill(updated.globalSkills),
+      profiles: ensureDefaultProfiles(updated.profiles),
       lastSyncedVersion: extensionVersion,
     });
 

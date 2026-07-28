@@ -15,6 +15,7 @@ import {
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
+  ensureDefaultProfiles,
 } from '../skills/bootstrapContent';
 
 const EXAMPLE_SKILL = `# Example skill
@@ -149,6 +150,7 @@ export function registerSetupCommand(
       taskBacklogTypesByTeam,
       repositories,
       globalSkills: ensureExplainCardGlobalSkill(undefined),
+      profiles: ensureDefaultProfiles(undefined),
       lastSyncedVersion: extensionVersion,
       repoScanDepth: DEFAULT_REPO_SCAN_DEPTH,
     });
