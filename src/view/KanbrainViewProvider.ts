@@ -4,6 +4,7 @@ import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/cli
 import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
+import { resolveActiveProfile } from '../config/resolveActiveProfile';
 import { cloneRepository } from '../git/cloneRepository';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
@@ -106,6 +107,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setShowAssignedTo(Boolean(message.value));
       } else if (message.type === 'set-selected-team') {
         this.setSelectedTeam(message.team || undefined);
+      } else if (message.type === 'set-selected-profile') {
+        this.setSelectedProfile(message.profileId || undefined);
       } else if (message.type === 'show-repositories') {
         this.showRepositoriesScreen();
       } else if (message.type === 'save-repository-path') {
@@ -152,6 +155,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   setSelectedTeam(team: string | undefined): void {
     this.selectedTeam = team;
     this.persistSelectedTeam(team);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private setSelectedProfile(profileId: string | undefined): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.selectedProfileId = profileId;
+    writeConfig(this.workspaceRoot, config);
     this.lastState = '';
     void this.refresh();
   }
@@ -489,11 +506,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const subtasks = await this.client.getChildren(config.organization, config.project, workItem);
     const branch = await this.getCurrentBranch();
 
+    const profile = resolveActiveProfile(config);
     const relativePath = generateContextFile(
       this.workspaceRoot,
       skill.path,
       { workItem, parent: parent ?? null, subtasks, branch },
-      null,
+      profile,
     );
 
     sendReadCommand(relativePath);
@@ -702,6 +720,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (teamSelect) {
       teamSelect.addEventListener('change', () => {
         vscode.postMessage({ type: 'set-selected-team', team: teamSelect.value });
+      });
+    }
+
+    const profileSelect = document.getElementById('kb-profile-select');
+    if (profileSelect) {
+      profileSelect.addEventListener('change', () => {
+        vscode.postMessage({ type: 'set-selected-profile', profileId: profileSelect.value });
       });
     }
 
