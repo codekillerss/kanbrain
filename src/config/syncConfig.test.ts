@@ -135,6 +135,27 @@ describe('syncConfig', () => {
     expect(result.globalSkills).toBeUndefined();
   });
 
+  it('preserves profiles unchanged across a sync', () => {
+    const withProfiles = config({ profiles: { developer: { label: 'Desenvolvedor', description: 'Custom.' } } });
+    const result = syncConfig(withProfiles, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.profiles).toEqual({ developer: { label: 'Desenvolvedor', description: 'Custom.' } });
+  });
+
+  it('leaves profiles undefined when it was never set', () => {
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.profiles).toBeUndefined();
+  });
+
+  it('preserves selectedProfileId across a sync', () => {
+    const result = syncConfig(config({ selectedProfileId: 'qa' }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.selectedProfileId).toBe('qa');
+  });
+
+  it('leaves selectedProfileId undefined when it was never set', () => {
+    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.selectedProfileId).toBeUndefined();
+  });
+
   it('preserves a custom repoScanDepth unchanged across a sync', () => {
     const result = syncConfig(config({ repoScanDepth: 3 }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
     expect(result.repoScanDepth).toBe(3);
