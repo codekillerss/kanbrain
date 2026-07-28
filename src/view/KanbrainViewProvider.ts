@@ -489,12 +489,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const subtasks = await this.client.getChildren(config.organization, config.project, workItem);
     const branch = await this.getCurrentBranch();
 
-    const relativePath = generateContextFile(this.workspaceRoot, skill.path, {
-      workItem,
-      parent: parent ?? null,
-      subtasks,
-      branch,
-    });
+    const relativePath = generateContextFile(
+      this.workspaceRoot,
+      skill.path,
+      { workItem, parent: parent ?? null, subtasks, branch },
+      null,
+    );
 
     sendReadCommand(relativePath);
   }
