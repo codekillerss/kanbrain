@@ -80,6 +80,11 @@ export interface RepositoryPathEntry {
   path: string;
 }
 
+export interface ProfileEntry {
+  label: string;
+  description: string;
+}
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
@@ -95,4 +100,6 @@ export interface KanbrainConfig {
   repositories?: Record<string, RepositoryPathEntry>;
   globalSkills?: Record<string, SkillEntry>;
   repoScanDepth?: number;
+  profiles?: Record<string, ProfileEntry>;
+  selectedProfileId?: string;
 }

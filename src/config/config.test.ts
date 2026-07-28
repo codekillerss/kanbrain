@@ -183,6 +183,22 @@ describe('machine-local config split', () => {
     expect(readConfig(workspaceRoot)).toEqual(baseConfig);
   });
 
+  it('writes selectedProfileId to config.local.json, not config.json', () => {
+    writeConfig(workspaceRoot, { ...baseConfig, selectedProfileId: 'developer' });
+
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.selectedProfileId).toBeUndefined();
+
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({ selectedProfileId: 'developer' });
+  });
+
+  it('round-trips selectedProfileId through readConfig', () => {
+    const config = { ...baseConfig, selectedProfileId: 'qa' };
+    writeConfig(workspaceRoot, config);
+    expect(readConfig(workspaceRoot)).toEqual(config);
+  });
+
   it('returns legacy inline values when config.local.json does not exist yet', () => {
     fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
     fs.writeFileSync(
@@ -214,6 +230,26 @@ describe('machine-local config split', () => {
     fs.writeFileSync(getConfigLocalPath(workspaceRoot), '{ not valid json', 'utf-8');
 
     expect(readConfig(workspaceRoot)?.showAssignedTo).toBe(true);
+  });
+});
+
+describe('profiles (shared field)', () => {
+  it('round-trips profiles through readConfig, written to config.json not config.local.json', () => {
+    const config = {
+      organization: 'my-org',
+      project: 'MyProject',
+      defaultTeam: 'MyProject Team',
+      skills: {},
+      statusColors: {},
+      typeColors: {},
+      typeIcons: {},
+      profiles: { developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } },
+    };
+    writeConfig(workspaceRoot, config);
+
+    expect(readConfig(workspaceRoot)).toEqual(config);
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.profiles).toEqual({ developer: { label: 'Desenvolvedor', description: 'Sou um desenvolvedor.' } });
   });
 });
 
