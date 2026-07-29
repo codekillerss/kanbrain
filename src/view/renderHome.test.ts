@@ -53,7 +53,7 @@ describe('renderHome', () => {
     expect(html).not.toContain('id="kb-run-sync-board-config-btn"');
     expect(html).not.toContain('id="kb-run-configure-ai-btn"');
     expect(html).not.toContain('id="kb-show-config-btn"');
-    expect(html).not.toContain('id="kb-show-repositories-btn"');
+    expect(html).not.toContain('id="kb-show-brain-btn"');
   });
 
   it('does not make its own work item header sticky (only the Flow/Config screens get that)', () => {

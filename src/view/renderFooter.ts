@@ -21,7 +21,7 @@ export function renderFooter(state: RenderState): string {
     <div class="kb-footer">
       <button id="kb-home-btn" class="${footerBtnClass(state.screen === 'home')}" title="Home">🏠</button>
       ${workItemBtn}
-      <button id="kb-show-repositories-btn" class="${footerBtnClass(state.screen === 'repositories')}" title="Repositories">📁</button>
+      <button id="kb-show-brain-btn" class="${footerBtnClass(state.screen === 'brain')}" title="Brain">🧠</button>
       <div class="kb-footer-divider"></div>
       <button id="kb-run-check-board-config-btn" class="kb-footer-btn" title="Check Board Configuration">✅</button>
       <button id="kb-run-sync-board-config-btn" class="kb-footer-btn" title="Sync Board Configuration">🔄</button>

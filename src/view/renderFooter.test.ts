@@ -61,38 +61,38 @@ describe('renderFooter', () => {
     expect(html).not.toContain('id="kb-run-configure-ai-btn"');
   });
 
-  it('shows a Repositories button and a Configuration button', () => {
+  it('shows a Brain button and a Configuration button', () => {
     const html = renderFooter(state());
-    expect(html).toContain('id="kb-show-repositories-btn"');
+    expect(html).toContain('id="kb-show-brain-btn"');
     expect(html).toContain('id="kb-show-config-btn"');
   });
 
-  it('orders icons as: home, work item, repositories, check, sync, then configuration at the end', () => {
+  it('orders icons as: home, work item, brain, check, sync, then configuration at the end', () => {
     const html = renderFooter(state({ workItem: workItem() }));
 
     const homeIndex = html.indexOf('id="kb-home-btn"');
     const workItemIndex = html.indexOf('id="kb-footer-work-item-btn"');
-    const repositoriesIndex = html.indexOf('id="kb-show-repositories-btn"');
+    const brainIndex = html.indexOf('id="kb-show-brain-btn"');
     const checkIndex = html.indexOf('id="kb-run-check-board-config-btn"');
     const syncIndex = html.indexOf('id="kb-run-sync-board-config-btn"');
     const configIndex = html.indexOf('id="kb-show-config-btn"');
 
     expect(homeIndex).toBeGreaterThanOrEqual(0);
     expect(workItemIndex).toBeGreaterThan(homeIndex);
-    expect(repositoriesIndex).toBeGreaterThan(workItemIndex);
-    expect(checkIndex).toBeGreaterThan(repositoriesIndex);
+    expect(brainIndex).toBeGreaterThan(workItemIndex);
+    expect(checkIndex).toBeGreaterThan(brainIndex);
     expect(syncIndex).toBeGreaterThan(checkIndex);
     expect(configIndex).toBeGreaterThan(syncIndex);
   });
 
-  it('puts a divider between the navigation icons (work item, repositories) and the command icons (check, sync)', () => {
+  it('puts a divider between the navigation icons (work item, brain) and the command icons (check, sync)', () => {
     const html = renderFooter(state({ workItem: workItem() }));
 
-    const repositoriesIndex = html.indexOf('id="kb-show-repositories-btn"');
+    const brainIndex = html.indexOf('id="kb-show-brain-btn"');
     const dividerIndex = html.indexOf('kb-footer-divider');
     const checkIndex = html.indexOf('id="kb-run-check-board-config-btn"');
 
-    expect(dividerIndex).toBeGreaterThan(repositoriesIndex);
+    expect(dividerIndex).toBeGreaterThan(brainIndex);
     expect(checkIndex).toBeGreaterThan(dividerIndex);
   });
 
@@ -120,9 +120,9 @@ describe('renderFooter', () => {
     expect(tag).toContain('kb-footer-btn-active');
   });
 
-  it('marks the repositories icon as active on the Repositories screen', () => {
-    const html = renderFooter(state({ screen: 'repositories' }));
-    const btnStart = html.indexOf('id="kb-show-repositories-btn"');
+  it('marks the brain icon as active on the Brain screen', () => {
+    const html = renderFooter(state({ screen: 'brain' }));
+    const btnStart = html.indexOf('id="kb-show-brain-btn"');
     const tagStart = html.lastIndexOf('<button', btnStart);
     const tag = html.slice(tagStart, html.indexOf('>', btnStart));
     expect(tag).toContain('kb-footer-btn-active');

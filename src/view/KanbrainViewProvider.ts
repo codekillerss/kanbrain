@@ -28,7 +28,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private selectedTeam: string | undefined;
   private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
-  private currentScreen: 'home' | 'flow' | 'config' | 'repositories' = 'home';
+  private currentScreen: 'home' | 'flow' | 'config' | 'brain' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
   private parentCollapsed = false;
@@ -117,8 +117,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setSelectedTeam(message.team || undefined);
       } else if (message.type === 'set-selected-profile') {
         this.setSelectedProfile(message.profileId || undefined);
-      } else if (message.type === 'show-repositories') {
-        this.showRepositoriesScreen();
+      } else if (message.type === 'show-brain') {
+        this.showBrainScreen();
       } else if (message.type === 'save-repository-path') {
         this.saveRepositoryPath(String(message.repositoryId ?? ''), String(message.path ?? ''));
       } else if (message.type === 'pick-repository-folder') {
@@ -209,8 +209,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  showRepositoriesScreen(): void {
-    this.currentScreen = 'repositories';
+  showBrainScreen(): void {
+    this.currentScreen = 'brain';
     this.lastState = '';
     void this.refresh();
   }
@@ -836,8 +836,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-flow' });
       } else if (target.id === 'kb-show-config-btn') {
         vscode.postMessage({ type: 'show-config' });
-      } else if (target.id === 'kb-show-repositories-btn') {
-        vscode.postMessage({ type: 'show-repositories' });
+      } else if (target.id === 'kb-show-brain-btn') {
+        vscode.postMessage({ type: 'show-brain' });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
@@ -863,7 +863,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
         const toggle = target.closest('[data-action="toggle-group"]');
-        const items = toggle.nextElementSibling;
+        const container = toggle.closest('.kb-config-parent-header') || toggle;
+        const items = container.nextElementSibling;
         if (items) {
           items.classList.toggle('kb-hidden');
         }
@@ -1065,7 +1066,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-textarea { min-height: 60px; resize: vertical; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
-      .kb-config-parent-header { font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
+      .kb-config-parent-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
+      .kb-parent-header-toggle { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; font: inherit; color: inherit; }
+      .kb-config-parent-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
       .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }

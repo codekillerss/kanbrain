@@ -71,7 +71,7 @@ describe('render', () => {
   });
 
   it('appends the footer on every configured screen', () => {
-    for (const screen of ['home', 'flow', 'config', 'repositories'] as const) {
+    for (const screen of ['home', 'flow', 'config', 'brain'] as const) {
       const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen });
       expect(html).toContain('kb-footer');
     }
@@ -80,6 +80,11 @@ describe('render', () => {
   it('delegates to the config screen when screen is "config"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'config' });
     expect(html).toContain('kb-config-level');
+  });
+
+  it('delegates to the brain screen when screen is "brain"', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'brain' });
+    expect(html).toContain('data-action="run-segment-ai"');
   });
 
   it('shows a Home button in the footer on the flow screen (there is no per-screen header anymore)', () => {

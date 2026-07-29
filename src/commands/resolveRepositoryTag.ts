@@ -35,7 +35,7 @@ export function registerResolveRepositoryTagCommand(workspaceRoot: string, provi
 
     if (actionPick.action === 'configure') {
       await vscode.commands.executeCommand('kanbrain.view.focus');
-      provider.showRepositoriesScreen();
+      provider.showBrainScreen();
       return;
     }
 
