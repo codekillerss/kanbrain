@@ -879,9 +879,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
         const toggle = target.closest('[data-action="toggle-group"]');
-        const container = toggle.closest('.kb-config-parent-header') || toggle;
+        const parentHeader = toggle.closest('.kb-config-parent-header');
+        const container = parentHeader || toggle;
         const items = container.nextElementSibling;
         if (items) {
+          const wasHidden = items.classList.contains('kb-hidden');
+          if (parentHeader && wasHidden) {
+            document.querySelectorAll('.kb-config-parent-section > .kb-collapsible-body').forEach((body) => {
+              if (body !== items) {
+                body.classList.add('kb-hidden');
+              }
+            });
+          }
           items.classList.toggle('kb-hidden');
         }
         if (toggle.dataset.section) {
@@ -1088,6 +1097,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-parent-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
       .kb-parent-header-toggle { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; font: inherit; color: inherit; }
       .kb-config-parent-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
+      .kb-config-parent-section > .kb-collapsible-body { max-height: 50vh; overflow-y: auto; }
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
       .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }

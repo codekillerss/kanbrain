@@ -3,7 +3,7 @@ import { renderRepositoriesBody } from './renderRepositories';
 import { renderConfigEditor } from './renderConfigEditor';
 import { renderProfilesEditor } from './renderProfilesEditor';
 
-function renderSegment(title: string, segment: string, body: string): string {
+function renderSegment(title: string, segment: string, body: string, collapsed: boolean): string {
   return `
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">
@@ -12,7 +12,7 @@ function renderSegment(title: string, segment: string, body: string): string {
         </button>
         <button type="button" class="kb-secondary-btn" data-action="run-segment-ai" data-segment="${segment}">✨ Configure with AI</button>
       </div>
-      <div class="kb-collapsible-body">
+      <div class="kb-collapsible-body${collapsed ? ' kb-hidden' : ''}">
         ${body}
       </div>
     </div>
@@ -22,8 +22,8 @@ function renderSegment(title: string, segment: string, body: string): string {
 export function renderBrain(state: RenderState): string {
   const config = state.config!;
   return [
-    renderSegment('Repositories', 'repositories', renderRepositoriesBody(config)),
-    renderSegment('Skills', 'skills', renderConfigEditor(config)),
-    renderSegment('Profiles', 'profiles', renderProfilesEditor(config.profiles ?? {})),
+    renderSegment('Repositories', 'repositories', renderRepositoriesBody(config), false),
+    renderSegment('Skills', 'skills', renderConfigEditor(config), true),
+    renderSegment('Profiles', 'profiles', renderProfilesEditor(config.profiles ?? {}), true),
   ].join('');
 }

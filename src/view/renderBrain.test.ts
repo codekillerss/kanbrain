@@ -72,4 +72,23 @@ describe('renderBrain', () => {
     const html = renderBrain(state({ config: config({ profiles: { developer: { label: 'Developer', description: 'x' } } }) }));
     expect(html).toContain('data-profile-id="developer"');
   });
+
+  it('starts with only the Repositories segment expanded', () => {
+    const html = renderBrain(state());
+    const repositoriesBodyStart = html.indexOf('kb-collapsible-body');
+    const repositoriesBodyTag = html.slice(html.lastIndexOf('<div', repositoriesBodyStart), html.indexOf('>', repositoriesBodyStart) + 1);
+    expect(repositoriesBodyTag).not.toContain('kb-hidden');
+  });
+
+  it('starts with the Skills and Profiles segments collapsed', () => {
+    const html = renderBrain(state({ config: config({ skills: { Task: { 'To Do': null } }, profiles: { developer: { label: 'Developer', description: 'x' } } }) }));
+
+    const skillsBodyStart = html.lastIndexOf('kb-collapsible-body', html.indexOf('data-level="Task"'));
+    const skillsBodyTag = html.slice(html.lastIndexOf('<div', skillsBodyStart), html.indexOf('>', skillsBodyStart) + 1);
+    expect(skillsBodyTag).toContain('kb-hidden');
+
+    const profilesBodyStart = html.lastIndexOf('kb-collapsible-body', html.indexOf('data-profile-id="developer"'));
+    const profilesBodyTag = html.slice(html.lastIndexOf('<div', profilesBodyStart), html.indexOf('>', profilesBodyStart) + 1);
+    expect(profilesBodyTag).toContain('kb-hidden');
+  });
 });
