@@ -3,6 +3,7 @@ import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
 import { renderRepositories } from './renderRepositories';
+import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 
 export interface RenderState {
@@ -15,6 +16,22 @@ export interface RenderState {
   connectionStatus?: 'connected' | 'disconnected';
   avatars?: Record<string, string>;
   selectedTeam?: string;
+  parentCollapsed?: boolean;
+  childrenCollapsed?: boolean;
+}
+
+function renderSearchDialog(): string {
+  return `
+    <div id="kb-search-section" class="kb-search-overlay kb-hidden">
+      <div class="kb-search-dialog">
+        <div class="kb-search-dialog-header">
+          <input id="kb-search-input" placeholder="Search by title or #id...">
+          <button id="kb-search-close-btn">✕</button>
+        </div>
+        <div id="kb-search-results"></div>
+      </div>
+    </div>
+  `;
 }
 
 export function render(state: RenderState): string {
@@ -38,13 +55,13 @@ export function render(state: RenderState): string {
     `;
   }
   if (state.screen === 'home') {
-    return renderHome(state);
+    return `${renderHome(state)}${renderSearchDialog()}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
-    return renderConfig(state);
+    return `${renderConfig(state)}${renderSearchDialog()}${renderFooter(state)}`;
   }
   if (state.screen === 'repositories') {
-    return renderRepositories(state);
+    return `${renderRepositories(state)}${renderSearchDialog()}${renderFooter(state)}`;
   }
 
   if (!state.workItem) {
@@ -53,6 +70,7 @@ export function render(state: RenderState): string {
         <input id="kb-search-input" placeholder="Search by title or #id...">
         <div id="kb-search-results"></div>
       </div>
+      ${renderFooter(state)}
     `;
   }
 
@@ -61,8 +79,10 @@ export function render(state: RenderState): string {
   const parentSectionHtml = state.parent
     ? `
     <div class="kb-section-card kb-parent-section">
-      <div class="kb-section-label">Parent</div>
-      ${renderWorkItemCard(state.parent, state.config, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true)}
+      <button type="button" class="kb-section-label" data-action="toggle-group" data-section="parent"><span><span class="kb-chevron">▾</span>Parent</span></button>
+      <div class="kb-collapsible-body${state.parentCollapsed ? ' kb-hidden' : ''}">
+        ${renderWorkItemCard(state.parent, state.config, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true)}
+      </div>
     </div>
   `
     : '';
@@ -73,18 +93,7 @@ export function render(state: RenderState): string {
     : '<div class="kb-empty">No child items.</div>';
 
   return `
-    <div class="kb-header kb-page-header">
-      <button id="kb-home-btn" class="kb-secondary-btn">🏠 Home</button>
-    </div>
-    <div id="kb-search-section" class="kb-search-overlay kb-hidden">
-      <div class="kb-search-dialog">
-        <div class="kb-search-dialog-header">
-          <input id="kb-search-input" placeholder="Search by title or #id...">
-          <button id="kb-search-close-btn">✕</button>
-        </div>
-        <div id="kb-search-results"></div>
-      </div>
-    </div>
+    ${renderSearchDialog()}
     ${parentSectionHtml}
     <div class="kb-section-card kb-section-card-current">
       <div class="kb-section-label">
@@ -97,8 +106,13 @@ export function render(state: RenderState): string {
       ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
     </div>
     <div class="kb-section-card kb-section-card-children">
-      <div class="kb-section-label">Children (${state.subtasks.length})</div>
-      ${subtasksHtml}
+      ${
+        state.subtasks.length
+          ? `<button type="button" class="kb-section-label" data-action="toggle-group" data-section="children"><span><span class="kb-chevron">▾</span>Children (${state.subtasks.length})</span></button>`
+          : `<div class="kb-section-label">Children (${state.subtasks.length})</div>`
+      }
+      <div class="kb-collapsible-body${state.childrenCollapsed ? ' kb-hidden' : ''}">${subtasksHtml}</div>
     </div>
+    ${renderFooter(state)}
   `;
 }

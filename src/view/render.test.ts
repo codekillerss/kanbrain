@@ -67,7 +67,14 @@ describe('render', () => {
 
   it('delegates to the home screen when screen is "home"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'home' });
-    expect(html).toContain('id="kb-run-setup-home-btn"');
+    expect(html).toContain('>Flow<');
+  });
+
+  it('appends the footer on every configured screen', () => {
+    for (const screen of ['home', 'flow', 'config', 'repositories'] as const) {
+      const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen });
+      expect(html).toContain('kb-footer');
+    }
   });
 
   it('delegates to the config screen when screen is "config"', () => {
@@ -75,14 +82,10 @@ describe('render', () => {
     expect(html).toContain('kb-config-level');
   });
 
-  it('shows a Home button on the flow screen', () => {
+  it('shows a Home button in the footer on the flow screen (there is no per-screen header anymore)', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('id="kb-home-btn"');
-  });
-
-  it('makes the flow screen header sticky', () => {
-    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
-    expect(html).toContain('kb-header kb-page-header');
+    expect(html).not.toContain('kb-page-header');
   });
 
   it('shows an inline search box when there is config but no active work item', () => {
@@ -129,14 +132,14 @@ describe('render', () => {
     expect(html).toContain('kb-section-card kb-section-card-children');
   });
 
-  it('only shows the Home button in the header, not Switch/Clear', () => {
+  it('keeps the Home button out of the Current Work Item section actions (it lives in the footer)', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
-    const headerStart = html.indexOf('kb-page-header');
-    const headerEnd = html.indexOf('</div>', headerStart);
-    const header = html.slice(headerStart, headerEnd);
-    expect(header).toContain('id="kb-home-btn"');
-    expect(header).not.toContain('id="kb-toggle-search-btn"');
-    expect(header).not.toContain('id="kb-clear-btn"');
+    const labelStart = html.indexOf('Current Work Item');
+    const labelEnd = html.indexOf('</div>', html.indexOf('kb-section-actions', labelStart));
+    const label = html.slice(labelStart, labelEnd);
+    expect(label).not.toContain('id="kb-home-btn"');
+    expect(label).toContain('id="kb-toggle-search-btn"');
+    expect(label).toContain('id="kb-clear-btn"');
   });
 
   it('shows an action button when the status has a configured skill', () => {
@@ -200,6 +203,72 @@ describe('render', () => {
     expect(cardIndex).toBeGreaterThanOrEqual(0);
     expect(labelIndex).toBeGreaterThan(cardIndex);
     expect(subtaskIndex).toBeGreaterThan(labelIndex);
+  });
+
+  it('shows a collapse toggle on the Children header when there are children', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const labelIndex = html.indexOf('Children (1)');
+    const buttonStart = html.lastIndexOf('<button', labelIndex);
+    expect(buttonStart).toBeGreaterThanOrEqual(0);
+    const buttonTag = html.slice(buttonStart, html.indexOf('>', buttonStart) + 1);
+    expect(buttonTag).toContain('data-action="toggle-group"');
+    expect(html).toContain('kb-chevron');
+  });
+
+  it('wraps the children list in a container that is the toggle button\'s next sibling', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const buttonCloseIndex = html.indexOf('</button>', html.indexOf('data-action="toggle-group"'));
+    const afterButton = html.slice(buttonCloseIndex + '</button>'.length).trimStart();
+    expect(afterButton.startsWith('<div class="kb-collapsible-body">')).toBe(true);
+  });
+
+  it('does not show a collapse toggle on the Children header when there are no children', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+
+    const labelIndex = html.indexOf('Children (0)');
+    expect(labelIndex).toBeGreaterThanOrEqual(0);
+    const nearbyHtml = html.slice(Math.max(0, labelIndex - 100), labelIndex);
+    expect(nearbyHtml).not.toContain('data-action="toggle-group"');
+  });
+
+  it('tags the Children toggle button with data-section="children"', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const labelIndex = html.indexOf('Children (1)');
+    const buttonStart = html.lastIndexOf('<button', labelIndex);
+    const buttonTag = html.slice(buttonStart, html.indexOf('>', buttonStart) + 1);
+    expect(buttonTag).toContain('data-section="children"');
+  });
+
+  it('renders the Children body already collapsed when childrenCollapsed is true', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem(),
+      parent: null,
+      subtasks,
+      screen: 'flow',
+      childrenCollapsed: true,
+    });
+
+    const bodyStart = html.indexOf('kb-collapsible-body', html.indexOf('Children (1)'));
+    const bodyTag = html.slice(html.lastIndexOf('<div', bodyStart), html.indexOf('>', bodyStart) + 1);
+    expect(bodyTag).toContain('kb-hidden');
+  });
+
+  it('renders the Children body expanded by default when childrenCollapsed is omitted', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const bodyStart = html.indexOf('kb-collapsible-body', html.indexOf('Children (1)'));
+    const bodyTag = html.slice(html.lastIndexOf('<div', bodyStart), html.indexOf('>', bodyStart) + 1);
+    expect(bodyTag).not.toContain('kb-hidden');
   });
 
   it('shows the status as a colored dot next to the plain status text', () => {
@@ -387,13 +456,100 @@ describe('render', () => {
     });
 
     expect(html).toContain('kb-parent-section');
-    expect(html).toContain('>Parent</div>');
+    expect(html).toContain('>Parent</span>');
     const parentSectionStart = html.indexOf('kb-parent-section');
     const parentSectionHtml = html.slice(parentSectionStart, html.indexOf('kb-section-card', parentSectionStart + 1));
     expect(parentSectionHtml).toContain('kb-subtask-card');
     expect(parentSectionHtml).toContain('data-id="900"');
     expect(parentSectionHtml).toContain('Epic parent');
     expect(parentSectionHtml).toContain('data-action="pick-work-item"');
+  });
+
+  it('shows a collapse toggle on the Parent header', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    const labelIndex = html.indexOf('>Parent</span>');
+    const buttonStart = html.lastIndexOf('<button', labelIndex);
+    expect(buttonStart).toBeGreaterThanOrEqual(0);
+    const buttonTag = html.slice(buttonStart, html.indexOf('>', buttonStart) + 1);
+    expect(buttonTag).toContain('data-action="toggle-group"');
+  });
+
+  it('wraps the parent card in a container that is the toggle button\'s next sibling', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    const parentSectionStart = html.indexOf('kb-parent-section');
+    const buttonCloseIndex = html.indexOf('</button>', parentSectionStart);
+    const afterButton = html.slice(buttonCloseIndex + '</button>'.length).trimStart();
+    expect(afterButton.startsWith('<div class="kb-collapsible-body">')).toBe(true);
+  });
+
+  it('tags the Parent toggle button with data-section="parent"', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    const labelIndex = html.indexOf('>Parent</span>');
+    const buttonStart = html.lastIndexOf('<button', labelIndex);
+    const buttonTag = html.slice(buttonStart, html.indexOf('>', buttonStart) + 1);
+    expect(buttonTag).toContain('data-section="parent"');
+  });
+
+  it('renders the Parent body already collapsed when parentCollapsed is true', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+      parentCollapsed: true,
+    });
+
+    const parentSectionStart = html.indexOf('kb-parent-section');
+    const bodyStart = html.indexOf('kb-collapsible-body', parentSectionStart);
+    const bodyTag = html.slice(html.lastIndexOf('<div', bodyStart), html.indexOf('>', bodyStart) + 1);
+    expect(bodyTag).toContain('kb-hidden');
+  });
+
+  it('renders the Parent body expanded by default when parentCollapsed is omitted', () => {
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const html = render({
+      hasWorkspace: true,
+      config,
+      workItem: workItem({ id: 482 }),
+      parent,
+      subtasks: [],
+      screen: 'flow',
+    });
+
+    const parentSectionStart = html.indexOf('kb-parent-section');
+    const bodyStart = html.indexOf('kb-collapsible-body', parentSectionStart);
+    const bodyTag = html.slice(html.lastIndexOf('<div', bodyStart), html.indexOf('>', bodyStart) + 1);
+    expect(bodyTag).not.toContain('kb-hidden');
   });
 
   it('does not show the parent section when there is no parent', () => {

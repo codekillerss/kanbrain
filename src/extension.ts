@@ -19,6 +19,7 @@ import { registerPickWorkItemCommand } from './commands/pickWorkItem';
 import { registerViewPullRequestDiffCommand } from './commands/viewPullRequestDiff';
 import { registerViewPullRequestDiffAtLineCommand } from './commands/viewPullRequestDiffAtLine';
 import { registerResolveRepositoryTagCommand } from './commands/resolveRepositoryTag';
+import { registerOpenWorkItemInBrowserCommand } from './commands/openWorkItemInBrowser';
 import { migrateLegacyLocalConfigIfNeeded } from './config/config';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
@@ -78,6 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerViewPullRequestDiffCommand(workspaceRoot),
     registerViewPullRequestDiffAtLineCommand(workspaceRoot),
     registerResolveRepositoryTagCommand(workspaceRoot, provider),
+    registerOpenWorkItemInBrowserCommand(),
   );
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);

@@ -18,29 +18,15 @@ function renderHomeWorkItemSection(state: RenderState): string {
   const config = state.config!;
   const avatars = state.avatars ?? {};
 
-  const searchDialog = `
-    <div id="kb-search-section" class="kb-search-overlay kb-hidden">
-      <div class="kb-search-dialog">
-        <div class="kb-search-dialog-header">
-          <input id="kb-search-input" placeholder="Search by title or #id...">
-          <button id="kb-search-close-btn">✕</button>
-        </div>
-        <div id="kb-search-results"></div>
-      </div>
-    </div>
-  `;
-
   if (!state.workItem) {
     return `
       <div class="kb-home-commands">
         <button id="kb-toggle-search-btn" class="kb-secondary-btn">🔍 Select Work Item</button>
       </div>
-      ${searchDialog}
     `;
   }
 
   return `
-    ${searchDialog}
     ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false, avatars, false, null, false, state.selectedTeam)}
     <div class="kb-home-commands">
       <button id="kb-open-flow-btn" class="kb-secondary-btn">➡️ Open Flow</button>
@@ -104,26 +90,5 @@ export function renderHome(state: RenderState): string {
     </div>
     ${renderHomeTeamSection(state)}
     ${renderHomeProfileSection(state)}
-    <div class="kb-section-card">
-      <div class="kb-section-label">Commands</div>
-      <div class="kb-home-commands">
-        <button id="kb-run-setup-home-btn" class="kb-secondary-btn">⚙ Setup</button>
-        <button id="kb-run-check-board-config-btn" class="kb-secondary-btn">✅ Check Board Configuration</button>
-        <button id="kb-run-sync-board-config-btn" class="kb-secondary-btn">🔄 Sync Board Configuration</button>
-        <button id="kb-run-configure-ai-btn" class="kb-secondary-btn">🤖 Configure with AI</button>
-      </div>
-    </div>
-    <div class="kb-section-card">
-      <div class="kb-section-label">Configuration</div>
-      <div class="kb-home-commands">
-        <button id="kb-show-config-btn" class="kb-secondary-btn">🛠️ Configuration</button>
-      </div>
-    </div>
-    <div class="kb-section-card">
-      <div class="kb-section-label">Repositories</div>
-      <div class="kb-home-commands">
-        <button id="kb-show-repositories-btn" class="kb-secondary-btn">📁 Repositories</button>
-      </div>
-    </div>
   `;
 }

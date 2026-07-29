@@ -11,6 +11,7 @@ export function detailPanelCss(): string {
     .kb-detail-status-row { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.75; margin-top: 6px; }
     .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .kb-detail-assignee { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.9; }
+    .kb-detail-web-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--vscode-textLink-foreground); }
     .kb-detail-body { display: flex; flex-wrap: wrap; gap: 24px; }
     .kb-detail-main { flex: 2 1 420px; min-width: 0; }
     .kb-detail-side { flex: 1 1 260px; min-width: 0; }

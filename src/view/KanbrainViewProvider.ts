@@ -31,6 +31,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'repositories' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
+  private parentCollapsed = false;
+  private childrenCollapsed = false;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -125,6 +127,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.cloneRepositoryFromView(String(message.repositoryId ?? ''));
       } else if (message.type === 'open-work-item-detail') {
         await this.openWorkItemDetail(Number(message.id));
+      } else if (message.type === 'toggle-section') {
+        this.toggleSection(String(message.section ?? ''));
       }
     });
 
@@ -156,6 +160,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.currentScreen = id === undefined ? 'home' : 'flow';
     this.lastState = '';
     void this.refresh();
+  }
+
+  private toggleSection(section: string): void {
+    if (section === 'parent') {
+      this.parentCollapsed = !this.parentCollapsed;
+    } else if (section === 'children') {
+      this.childrenCollapsed = !this.childrenCollapsed;
+    }
   }
 
   setSelectedTeam(team: string | undefined): void {
@@ -670,6 +682,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         screen: this.currentScreen,
         avatars,
         selectedTeam: this.selectedTeam,
+        parentCollapsed: this.parentCollapsed,
+        childrenCollapsed: this.childrenCollapsed,
       }),
     );
   }
@@ -790,7 +804,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     document.addEventListener('click', (e) => {
       const target = e.target;
-      if (target.id === 'kb-toggle-search-btn') {
+      if (target.id === 'kb-toggle-search-btn' || target.id === 'kb-footer-select-work-item-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {
           const wasHidden = section.classList.contains('kb-hidden');
@@ -801,7 +815,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
-      } else if (target.id === 'kb-run-setup-btn' || target.id === 'kb-run-setup-home-btn') {
+      } else if (target.id === 'kb-run-setup-btn') {
         setLoading(target);
         vscode.postMessage({ type: 'run-setup' });
       } else if (target.id === 'kb-run-connect-btn') {
@@ -818,7 +832,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'run-configure-with-ai' });
       } else if (target.id === 'kb-home-btn') {
         vscode.postMessage({ type: 'show-home' });
-      } else if (target.id === 'kb-open-flow-btn') {
+      } else if (target.id === 'kb-open-flow-btn' || (target.closest && target.closest('#kb-footer-work-item-btn'))) {
         vscode.postMessage({ type: 'show-flow' });
       } else if (target.id === 'kb-show-config-btn') {
         vscode.postMessage({ type: 'show-config' });
@@ -852,6 +866,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const items = toggle.nextElementSibling;
         if (items) {
           items.classList.toggle('kb-hidden');
+        }
+        if (toggle.dataset.section) {
+          vscode.postMessage({ type: 'toggle-section', section: toggle.dataset.section });
         }
       } else if (target.dataset && target.dataset.action === 'select-tab') {
         activeSearchTab = target.dataset.tab;
@@ -969,7 +986,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); padding: 8px; }
+      body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-team-card { margin: 10px; }
@@ -995,6 +1012,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-global-skill-option:hover { filter: brightness(1.12); }
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
+      button.kb-section-label { appearance: none; -webkit-appearance: none; border: none; width: 100%; text-align: left; cursor: pointer; font-family: var(--vscode-font-family); }
+      button.kb-section-label:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-section-label:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-section-actions { display: flex; gap: 2px; }
       .kb-hidden { display: none; }
       .kb-result-item { width: 100%; margin: 2px 0; }
@@ -1003,11 +1023,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-view-details-link:hover { text-decoration: underline; }
       #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
-      .kb-header { display: flex; gap: 6px; margin-bottom: 6px; }
-      .kb-page-header { position: sticky; top: 0; z-index: 10; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+      .kb-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); }
+      .kb-footer-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; background: none; border: none; border-radius: 4px; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 14px; line-height: 1; }
+      .kb-footer-btn:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-footer-btn-active { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground)); }
+      .kb-footer-btn-active:hover { background: var(--vscode-list-activeSelectionBackground); }
+      .kb-footer-work-item-id { font-size: 12px; font-weight: 600; }
+      .kb-footer-divider { width: 1px; align-self: stretch; margin: 4px 4px; background: var(--vscode-panel-border); }
+      .kb-footer-spacer { flex: 1; }
       .kb-secondary-btn { box-sizing: border-box; padding: 8px 12px; text-align: center; font-size: 12px; font-weight: 500; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: 1px solid var(--vscode-button-border, var(--vscode-panel-border)); border-radius: 4px; cursor: pointer; font-family: var(--vscode-font-family); }
       .kb-secondary-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
-      .kb-header .kb-secondary-btn { flex: 1; }
       .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
       .kb-result-group { margin-bottom: 4px; }
       .kb-group-toggle { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 0; margin: 12px 0 0; font-size: 11px; font-weight: 400; text-transform: uppercase; opacity: 0.7; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }

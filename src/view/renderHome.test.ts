@@ -45,40 +45,15 @@ function state(overrides: Partial<RenderState> = {}): RenderState {
 }
 
 describe('renderHome', () => {
-  it('shows buttons for Setup, Check Board Configuration, and Sync Board Configuration', () => {
+  it('does not show the Commands, Configuration, or Repositories sections (those quick actions live in the footer now)', () => {
     const html = renderHome(state());
 
-    expect(html).toContain('id="kb-run-setup-home-btn"');
-    expect(html).toContain('id="kb-run-check-board-config-btn"');
-    expect(html).toContain('id="kb-run-sync-board-config-btn"');
-  });
-
-  it('shows a Configure with AI button in Commands', () => {
-    const html = renderHome(state());
-
-    expect(html).toContain('id="kb-run-configure-ai-btn"');
-  });
-
-  it('shows the Configuration button in its own section, not inside Commands', () => {
-    const html = renderHome(state());
-
-    expect(html).toContain('id="kb-show-config-btn"');
-    const commandsIndex = html.indexOf('Commands');
-    const commandsSectionEnd = html.indexOf('kb-section-card', commandsIndex + 1);
-    const configButtonIndex = html.indexOf('id="kb-show-config-btn"');
-    expect(configButtonIndex).toBeGreaterThan(commandsSectionEnd);
-  });
-
-  it('orders sections as Flow, then Commands, then Configuration', () => {
-    const html = renderHome(state());
-
-    const flowIndex = html.indexOf('Flow');
-    const commandsIndex = html.indexOf('Commands');
-    const configurationLabelIndex = html.indexOf('>Configuration<');
-
-    expect(flowIndex).toBeGreaterThanOrEqual(0);
-    expect(commandsIndex).toBeGreaterThan(flowIndex);
-    expect(configurationLabelIndex).toBeGreaterThan(commandsIndex);
+    expect(html).not.toContain('id="kb-run-setup-home-btn"');
+    expect(html).not.toContain('id="kb-run-check-board-config-btn"');
+    expect(html).not.toContain('id="kb-run-sync-board-config-btn"');
+    expect(html).not.toContain('id="kb-run-configure-ai-btn"');
+    expect(html).not.toContain('id="kb-show-config-btn"');
+    expect(html).not.toContain('id="kb-show-repositories-btn"');
   });
 
   it('does not make its own work item header sticky (only the Flow/Config screens get that)', () => {
@@ -92,7 +67,6 @@ describe('renderHome', () => {
 
     expect(html).toContain('id="kb-toggle-search-btn"');
     expect(html).toContain('Select Work Item');
-    expect(html).toContain('kb-search-overlay');
     expect(html).not.toContain('id="kb-clear-btn"');
     expect(html).not.toContain('id="kb-open-flow-btn"');
   });
@@ -221,18 +195,16 @@ describe('renderHome', () => {
     expect(html).toMatch(/<option value="Team 1" selected>/);
   });
 
-  it('places the Team section after Flow and before Commands', () => {
+  it('places the Team section after Flow', () => {
     const html = renderHome(
       state({ config: config({ cardSettingsByTeam: { 'Team 1': { Stories: { Task: { parent: true, assignedTo: false } } } } }) }),
     );
 
     const flowIndex = html.indexOf('>Flow<');
     const teamIndex = html.indexOf('>Team<');
-    const commandsIndex = html.indexOf('>Commands<');
 
     expect(flowIndex).toBeGreaterThanOrEqual(0);
     expect(teamIndex).toBeGreaterThan(flowIndex);
-    expect(commandsIndex).toBeGreaterThan(teamIndex);
   });
 
   it('does not show a Profile section when there are 0 profiles configured', () => {

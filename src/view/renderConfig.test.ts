@@ -29,19 +29,21 @@ function state(overrides: Partial<RenderState> = {}): RenderState {
 }
 
 describe('renderConfig', () => {
-  it('shows a Home button', () => {
+  it('does not show its own Home button (that lives in the footer now)', () => {
     const html = renderConfig(state());
-    expect(html).toContain('id="kb-home-btn"');
+    expect(html).not.toContain('id="kb-home-btn"');
+  });
+
+  it('shows Setup and Configure with AI buttons in a Project section', () => {
+    const html = renderConfig(state());
+    expect(html).toContain('id="kb-run-setup-btn"');
+    expect(html).toContain('id="kb-run-configure-ai-btn"');
+    expect(html).toContain('>Project<');
   });
 
   it('renders the config editor', () => {
     const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
     expect(html).toContain('data-level="Task"');
-  });
-
-  it('makes the header sticky', () => {
-    const html = renderConfig(state());
-    expect(html).toContain('kb-header kb-page-header');
   });
 
   it('shows a "Show assignee in search results" checkbox, checked by default', () => {

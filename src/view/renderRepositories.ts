@@ -23,9 +23,6 @@ export function renderRepositories(state: RenderState): string {
     : '<div class="kb-empty">No repositories mapped yet. Run Kanbrain: Setup or Kanbrain: Sync Board Configuration to discover them.</div>';
 
   return `
-    <div class="kb-header kb-page-header">
-      <button id="kb-home-btn" class="kb-secondary-btn">🏠 Home</button>
-    </div>
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">Repository Paths</div>
       ${body}

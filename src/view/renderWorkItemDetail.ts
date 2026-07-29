@@ -112,6 +112,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
       </div>
       <div class="kb-detail-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${assigneeHtml}
+      <a class="kb-detail-web-link" href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([workItem.id, workItem.url]))}">Open in browser</a>
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

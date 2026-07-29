@@ -68,6 +68,19 @@ describe('renderWorkItemDetail', () => {
     expect(row).toContain('Fix bug');
   });
 
+  it('shows an "Open in browser" link after the status row, pointing at the openWorkItemInBrowser command with the id and url', () => {
+    const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482, url: 'https://dev.azure.com/org/proj/_workitems/edit/482' }) }));
+
+    const statusIndex = html.indexOf('kb-detail-status-row');
+    const linkIndex = html.indexOf('kb-detail-web-link');
+
+    expect(linkIndex).toBeGreaterThan(statusIndex);
+    expect(html).toContain(
+      `href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([482, 'https://dev.azure.com/org/proj/_workitems/edit/482']))}"`,
+    );
+    expect(html).toContain('Open in browser');
+  });
+
   it('shows the assignee row after the status', () => {
     const html = renderWorkItemDetail(input());
 

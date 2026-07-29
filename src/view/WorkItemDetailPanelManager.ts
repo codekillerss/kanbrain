@@ -44,6 +44,7 @@ export class WorkItemDetailPanelManager {
         'kanbrain.checkoutBranch',
         'kanbrain.openPullRequestDetail',
         'kanbrain.resolveRepositoryTag',
+        'kanbrain.openWorkItemInBrowser',
       ],
     });
     panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'icons', 'work-item.svg');
