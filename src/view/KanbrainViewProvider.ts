@@ -129,6 +129,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.openWorkItemDetail(Number(message.id));
       } else if (message.type === 'toggle-section') {
         this.toggleSection(String(message.section ?? ''));
+      } else if (message.type === 'run-segment-ai') {
+        await this.runSegmentAi(String(message.segment ?? ''));
       }
     });
 
@@ -168,6 +170,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     } else if (section === 'children') {
       this.childrenCollapsed = !this.childrenCollapsed;
     }
+  }
+
+  private async runSegmentAi(segment: string): Promise<void> {
+    const commandBySegment: Record<string, string> = {
+      repositories: 'kanbrain.configureRepositoriesWithAi',
+      skills: 'kanbrain.configureSkillsWithAi',
+      profiles: 'kanbrain.configureProfilesWithAi',
+    };
+    const command = commandBySegment[segment];
+    if (!command) {
+      return;
+    }
+    await vscode.commands.executeCommand(command);
+    this.notifyCommandFinished();
   }
 
   setSelectedTeam(team: string | undefined): void {
@@ -887,6 +903,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'add-global-skill' });
       } else if (target.dataset && target.dataset.action === 'remove-global-skill') {
         vscode.postMessage({ type: 'remove-global-skill', id: target.dataset.globalSkillId });
+      } else if (target.dataset && target.dataset.action === 'run-segment-ai') {
+        setLoading(target);
+        vscode.postMessage({ type: 'run-segment-ai', segment: target.dataset.segment });
       } else if (target.dataset && target.dataset.action === 'add-profile') {
         vscode.postMessage({ type: 'add-profile' });
       } else if (target.dataset && target.dataset.action === 'remove-profile') {
