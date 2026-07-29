@@ -29,6 +29,7 @@
       { "command": "kanbrain.checkBoardConfig", "title": "Kanbrain: Check Board Configuration" },
       { "command": "kanbrain.syncBoardConfig", "title": "Kanbrain: Sync Board Configuration" },
       { "command": "kanbrain.configureWithAi", "title": "Kanbrain: Configure with AI" },
+      { "command": "kanbrain.configureRepositoriesWithAi", "title": "Kanbrain: Configure Repositories with AI" },
       { "command": "kanbrain.connect", "title": "Kanbrain: Connect to Azure DevOps" }
     ],
     "viewsContainers": {

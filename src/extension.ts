@@ -11,6 +11,7 @@ import { registerSelectWorkItemCommand } from './commands/selectWorkItem';
 import { registerCheckBoardConfigCommand } from './commands/checkBoardConfig';
 import { registerSyncBoardConfigCommand } from './commands/syncBoardConfig';
 import { registerConfigureWithAiCommand } from './commands/configureWithAi';
+import { registerConfigureRepositoriesWithAiCommand } from './commands/configureRepositoriesWithAi';
 import { registerConnectCommand } from './commands/connect';
 import { registerOpenWorkItemDetailCommand } from './commands/openWorkItemDetail';
 import { registerCheckoutBranchCommand } from './commands/checkoutBranch';
@@ -71,6 +72,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCheckBoardConfigCommand(client, workspaceRoot),
     registerSyncBoardConfigCommand(client, workspaceRoot, extensionVersion),
     registerConfigureWithAiCommand(client, workspaceRoot),
+    registerConfigureRepositoriesWithAiCommand(client, workspaceRoot),
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
     registerOpenWorkItemDetailCommand(detailPanelManager),
     registerCheckoutBranchCommand(workspaceRoot),
