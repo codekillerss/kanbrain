@@ -1095,7 +1095,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
       .kb-config-parent-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
-      .kb-parent-header-toggle { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; font: inherit; color: inherit; }
+      .kb-parent-header-toggle { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; flex: 1; align-items: center; font: inherit; color: inherit; }
       .kb-config-parent-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-config-parent-section > .kb-collapsible-body { max-height: 50vh; overflow-y: auto; }
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
