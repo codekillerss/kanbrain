@@ -41,11 +41,6 @@ describe('renderConfig', () => {
     expect(html).toContain('>Project<');
   });
 
-  it('renders the config editor', () => {
-    const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
-    expect(html).toContain('data-level="Task"');
-  });
-
   it('shows a "Show assignee in search results" checkbox, checked by default', () => {
     const html = renderConfig(state());
     expect(html).toContain('id="kb-show-assignee-toggle"');
@@ -56,38 +51,6 @@ describe('renderConfig', () => {
   it('unchecks the checkbox when showAssignedTo is false', () => {
     const html = renderConfig(state({ config: config({ showAssignedTo: false }) }));
     expect(html).not.toMatch(/id="kb-show-assignee-toggle"[^>]*checked/);
-  });
-
-  it('wraps Skill Configuration in a parent section container around the config editor', () => {
-    const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } } }) }));
-
-    const parentIndex = html.indexOf('kb-config-parent-section');
-    const headerIndex = html.indexOf('Skill Configuration');
-    const levelIndex = html.indexOf('data-level="Task"');
-
-    expect(parentIndex).toBeGreaterThanOrEqual(0);
-    expect(headerIndex).toBeGreaterThan(parentIndex);
-    expect(levelIndex).toBeGreaterThan(headerIndex);
-  });
-
-  it('wraps Profiles in its own parent section, before Skill Configuration', () => {
-    const html = renderConfig(
-      state({ config: config({ profiles: { developer: { label: 'Developer', description: 'x' } }, skills: { Task: { 'To Do': null } } }) }),
-    );
-
-    const profilesHeaderIndex = html.indexOf('>Profiles<');
-    const profilesRowIndex = html.indexOf('data-profile-id="developer"');
-    const skillHeaderIndex = html.indexOf('Skill Configuration');
-
-    expect(profilesHeaderIndex).toBeGreaterThanOrEqual(0);
-    expect(profilesRowIndex).toBeGreaterThan(profilesHeaderIndex);
-    expect(skillHeaderIndex).toBeGreaterThan(profilesRowIndex);
-  });
-
-  it('shows the Profiles section even when there are no profiles configured', () => {
-    const html = renderConfig(state());
-    expect(html).toContain('>Profiles<');
-    expect(html).toContain('data-action="add-profile"');
   });
 
   it('wraps the Display label and assignee checkbox in a bordered section card', () => {
@@ -114,5 +77,12 @@ describe('renderConfig', () => {
       }),
     );
     expect(html).not.toContain('id="kb-team-select"');
+  });
+
+  it('does not show Skill Configuration or Profiles — they live on the Brain screen now', () => {
+    const html = renderConfig(state({ config: config({ skills: { Task: { 'To Do': null } }, profiles: { developer: { label: 'Developer', description: 'x' } } }) }));
+    expect(html).not.toContain('Skill Configuration');
+    expect(html).not.toContain('data-level="Task"');
+    expect(html).not.toContain('data-profile-id="developer"');
   });
 });

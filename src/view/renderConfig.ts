@@ -1,6 +1,4 @@
 import type { RenderState } from './render';
-import { renderConfigEditor } from './renderConfigEditor';
-import { renderProfilesEditor } from './renderProfilesEditor';
 
 export function renderConfig(state: RenderState): string {
   const config = state.config!;
@@ -19,14 +17,6 @@ export function renderConfig(state: RenderState): string {
         <input type="checkbox" id="kb-show-assignee-toggle" ${config.showAssignedTo === false ? '' : 'checked'}>
         Show assignee in search results
       </label>
-    </div>
-    <div class="kb-config-parent-section">
-      <div class="kb-config-parent-header">Profiles</div>
-      ${renderProfilesEditor(config.profiles ?? {})}
-    </div>
-    <div class="kb-config-parent-section">
-      <div class="kb-config-parent-header">Skill Configuration</div>
-      ${renderConfigEditor(config)}
     </div>
   `;
 }

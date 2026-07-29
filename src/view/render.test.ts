@@ -79,7 +79,7 @@ describe('render', () => {
 
   it('delegates to the config screen when screen is "config"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'config' });
-    expect(html).toContain('kb-config-level');
+    expect(html).toContain('id="kb-run-configure-ai-btn"');
   });
 
   it('delegates to the brain screen when screen is "brain"', () => {
