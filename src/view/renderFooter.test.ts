@@ -164,4 +164,30 @@ describe('renderFooter', () => {
     const homeBtnEnd = html.indexOf('>', homeBtnStart);
     expect(html.slice(homeBtnStart, homeBtnEnd)).not.toContain('kb-footer-btn-active');
   });
+
+  it('shows a Reviews button', () => {
+    const html = renderFooter(state());
+    expect(html).toContain('id="kb-show-reviews-btn"');
+  });
+
+  it('places the Reviews button after Brain and before the divider that precedes Check', () => {
+    const html = renderFooter(state({ workItem: workItem() }));
+
+    const brainIndex = html.indexOf('id="kb-show-brain-btn"');
+    const reviewsIndex = html.indexOf('id="kb-show-reviews-btn"');
+    const dividerIndex = html.indexOf('kb-footer-divider', brainIndex);
+    const checkIndex = html.indexOf('id="kb-run-check-board-config-btn"');
+
+    expect(reviewsIndex).toBeGreaterThan(brainIndex);
+    expect(dividerIndex).toBeGreaterThan(reviewsIndex);
+    expect(checkIndex).toBeGreaterThan(dividerIndex);
+  });
+
+  it('marks the reviews icon as active on the Reviews screen', () => {
+    const html = renderFooter(state({ screen: 'reviews' }));
+    const btnStart = html.indexOf('id="kb-show-reviews-btn"');
+    const tagStart = html.lastIndexOf('<button', btnStart);
+    const tag = html.slice(tagStart, html.indexOf('>', btnStart));
+    expect(tag).toContain('kb-footer-btn-active');
+  });
 });
