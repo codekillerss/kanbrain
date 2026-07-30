@@ -68,7 +68,8 @@ function renderRepoGroup(group: RepoGroup, repositories: Record<string, Reposito
   return `
     <div class="kb-section-card kb-review-repo-group">
       <button type="button" class="kb-section-label" data-action="toggle-group">
-        <span><span class="kb-chevron">▾</span>${repoTagHtml} (${group.items.length})</span>
+        <span><span class="kb-chevron">▾</span>${repoTagHtml}</span>
+        <span class="kb-review-group-count">(${group.items.length})</span>
       </button>
       <div class="kb-collapsible-body">
         ${group.items.map(pr => renderReviewRow(pr, repositories)).join('')}

@@ -52,7 +52,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
-    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.options = {
+      enableScripts: true,
+      enableCommandUris: ['kanbrain.openPullRequestDetail', 'kanbrain.checkoutBranch'],
+    };
 
     webviewView.webview.onDidReceiveMessage(async message => {
       if (message.type === 'run-skill') {
@@ -1215,6 +1218,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-review-row-title:hover { color: var(--vscode-textLink-foreground); }
       .kb-review-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
       .kb-review-row-author { font-size: 11px; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+      .kb-review-group-count { flex-shrink: 0; opacity: 0.7; font-weight: 400; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }

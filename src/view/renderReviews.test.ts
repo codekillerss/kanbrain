@@ -94,6 +94,16 @@ describe('renderReviews', () => {
     expect(html).toContain('(1)');
   });
 
+  it('renders the count as its own trailing element so it lands opposite the repo tag (kb-section-label justifies space-between)', () => {
+    const html = renderReviews(
+      state({
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    expect(html).toContain('<span class="kb-review-group-count">(1)</span>');
+  });
+
   it('marks the repo tag as unmapped when there is no local path configured for it', () => {
     const html = renderReviews(
       state({
