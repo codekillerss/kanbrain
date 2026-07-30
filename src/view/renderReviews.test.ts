@@ -63,6 +63,56 @@ describe('renderReviews', () => {
     expect(html).toContain('data-action="set-reviews-status-filter"');
   });
 
+  it('shows "My PRs" and "Assigned to me" checkboxes, both unchecked by default', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [] }));
+    expect(html).toContain('id="kb-reviews-filter-mine"');
+    expect(html).toContain('My PRs');
+    expect(html).toContain('id="kb-reviews-filter-assigned"');
+    expect(html).toContain('Assigned to me');
+
+    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
+    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
+    expect(mineTag).not.toContain('checked');
+
+    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
+    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
+    expect(assignedTag).not.toContain('checked');
+  });
+
+  it('checks only "My PRs" when reviewsOwnerFilter is "mine"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'mine' }));
+
+    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
+    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
+    expect(mineTag).toContain('checked');
+
+    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
+    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
+    expect(assignedTag).not.toContain('checked');
+  });
+
+  it('checks only "Assigned to me" when reviewsOwnerFilter is "assigned"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'assigned' }));
+
+    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
+    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
+    expect(assignedTag).toContain('checked');
+
+    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
+    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
+    expect(mineTag).not.toContain('checked');
+  });
+
+  it('appends "created by you" to the empty message when reviewsOwnerFilter is "mine"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active', reviewsOwnerFilter: 'mine' }));
+    expect(html).toContain('No active pull requests created by you.');
+  });
+
+  it('appends "assigned to you" to the empty message when reviewsOwnerFilter is "assigned"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active', reviewsOwnerFilter: 'assigned' }));
+    expect(html).toContain('No active pull requests assigned to you.');
+  });
+
   it('marks the selected status tab as active', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'completed' }));
     const tabStart = html.indexOf('data-status="completed"');

@@ -373,12 +373,30 @@ export class AzureDevOpsClient {
     }
   }
 
+  async getCurrentUserId(): Promise<string | null> {
+    try {
+      const profile = await this.request<{ id: string }>('https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1');
+      return profile.id;
+    } catch {
+      return null;
+    }
+  }
+
   async listProjectPullRequests(
     organization: string,
     project: string,
     status: 'active' | 'completed' | 'abandoned',
+    options: { creatorId?: string; reviewerId?: string } = {},
   ): Promise<PullRequestSummary[]> {
     try {
+      let url = `https://dev.azure.com/${organization}/${project}/_apis/git/pullrequests?searchCriteria.status=${status}`;
+      if (options.creatorId) {
+        url += `&searchCriteria.creatorId=${encodeURIComponent(options.creatorId)}`;
+      }
+      if (options.reviewerId) {
+        url += `&searchCriteria.reviewerId=${encodeURIComponent(options.reviewerId)}`;
+      }
+      url += '&api-version=7.1';
       const data = await this.request<{
         value: {
           pullRequestId: number;
@@ -391,7 +409,7 @@ export class AzureDevOpsClient {
           createdBy: { displayName: string; imageUrl?: string };
           repository: { id: string; name: string; webUrl: string };
         }[];
-      }>(`https://dev.azure.com/${organization}/${project}/_apis/git/pullrequests?searchCriteria.status=${status}&api-version=7.1`);
+      }>(url);
       return data.value.map(pr => ({
         id: pr.pullRequestId,
         repositoryId: pr.repository.id,

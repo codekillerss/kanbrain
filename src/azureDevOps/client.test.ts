@@ -721,6 +721,66 @@ describe('AzureDevOpsClient.listProjectPullRequests', () => {
 
     expect(prs).toEqual([]);
   });
+
+  it('appends searchCriteria.creatorId when a creatorId is given', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ value: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.listProjectPullRequests('my-org', 'MyProject', 'active', { creatorId: 'user-1' });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/pullrequests?searchCriteria.status=active&searchCriteria.creatorId=user-1&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('appends searchCriteria.reviewerId when a reviewerId is given', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ value: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.listProjectPullRequests('my-org', 'MyProject', 'active', { reviewerId: 'user-1' });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/pullrequests?searchCriteria.status=active&searchCriteria.reviewerId=user-1&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('omits both owner filters when neither is given', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ value: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.listProjectPullRequests('my-org', 'MyProject', 'active');
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/pullrequests?searchCriteria.status=active&api-version=7.1',
+      expect.anything(),
+    );
+  });
+});
+
+describe('AzureDevOpsClient.getCurrentUserId', () => {
+  it('fetches and returns the current user id from the profile endpoint', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'user-1' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const id = await client.getCurrentUserId();
+
+    expect(id).toBe('user-1');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'no access' }, false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const id = await client.getCurrentUserId();
+
+    expect(id).toBeNull();
+  });
 });
 
 describe('AzureDevOpsClient.getRepository', () => {

@@ -36,9 +36,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
   private reviewsStatusFilter: 'active' | 'completed' | 'abandoned' = 'active';
+  private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' = 'all';
   private reviewsPullRequests: PullRequestSummary[] = [];
+  private currentUserId: string | null | undefined;
   private lastReviewsFetchAt = 0;
   private lastReviewsStatusFilterFetched: 'active' | 'completed' | 'abandoned' | undefined;
+  private lastReviewsOwnerFilterFetched: 'all' | 'mine' | 'assigned' | undefined;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -132,6 +135,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.showReviewsScreen();
       } else if (message.type === 'set-reviews-status-filter') {
         this.setReviewsStatusFilter(message.status);
+      } else if (message.type === 'set-reviews-owner-filter') {
+        this.setReviewsOwnerFilter(message.value);
       } else if (message.type === 'save-repository-path') {
         this.saveRepositoryPath(String(message.repositoryId ?? ''), String(message.path ?? ''));
       } else if (message.type === 'pick-repository-folder') {
@@ -267,6 +272,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.reviewsStatusFilter = status;
+    this.lastState = '';
+    this.lastReviewsFetchAt = 0;
+    void this.refresh();
+  }
+
+  private setReviewsOwnerFilter(value: unknown): void {
+    if (value !== 'all' && value !== 'mine' && value !== 'assigned') {
+      return;
+    }
+    if (value === this.reviewsOwnerFilter) {
+      return;
+    }
+    this.reviewsOwnerFilter = value;
     this.lastState = '';
     this.lastReviewsFetchAt = 0;
     void this.refresh();
@@ -721,12 +739,22 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (config && this.client && this.currentScreen === 'reviews') {
+      if (this.reviewsOwnerFilter !== 'all' && this.currentUserId === undefined) {
+        this.currentUserId = await this.client.getCurrentUserId();
+      }
       const now = Date.now();
-      const filterChanged = this.lastReviewsStatusFilterFetched !== this.reviewsStatusFilter;
+      const filterChanged =
+        this.lastReviewsStatusFilterFetched !== this.reviewsStatusFilter || this.lastReviewsOwnerFilterFetched !== this.reviewsOwnerFilter;
       if (filterChanged || now - this.lastReviewsFetchAt >= REVIEWS_POLL_INTERVAL_MS) {
-        this.reviewsPullRequests = await this.client.listProjectPullRequests(config.organization, config.project, this.reviewsStatusFilter);
+        const creatorId = this.reviewsOwnerFilter === 'mine' && this.currentUserId ? this.currentUserId : undefined;
+        const reviewerId = this.reviewsOwnerFilter === 'assigned' && this.currentUserId ? this.currentUserId : undefined;
+        this.reviewsPullRequests = await this.client.listProjectPullRequests(config.organization, config.project, this.reviewsStatusFilter, {
+          creatorId,
+          reviewerId,
+        });
         this.lastReviewsFetchAt = now;
         this.lastReviewsStatusFilterFetched = this.reviewsStatusFilter;
+        this.lastReviewsOwnerFilterFetched = this.reviewsOwnerFilter;
       }
     }
 
@@ -754,6 +782,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         openBrainSegment: this.openBrainSegment,
         reviewsPullRequests: this.reviewsPullRequests,
         reviewsStatusFilter: this.reviewsStatusFilter,
+        reviewsOwnerFilter: this.reviewsOwnerFilter,
       }),
     );
   }
@@ -780,6 +809,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     function setLoading(btn) {
       btn.classList.add('kb-loading');
       btn.disabled = true;
+    }
+
+    function disableReviewsFilterControls(triggerEl) {
+      const filtersContainer = triggerEl.closest('.kb-reviews-filters');
+      if (!filtersContainer) return;
+      filtersContainer.querySelectorAll('.kb-search-tab').forEach((btn) => { btn.disabled = true; });
+      filtersContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.disabled = true; });
     }
 
     function saveSkillRow(row) {
@@ -872,6 +908,32 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    const reviewsMineCheckbox = document.getElementById('kb-reviews-filter-mine');
+    const reviewsAssignedCheckbox = document.getElementById('kb-reviews-filter-assigned');
+
+    function applyReviewsOwnerFilter(checkbox, value) {
+      disableReviewsFilterControls(checkbox);
+      const label = checkbox.closest('.kb-checkbox-row');
+      if (label) setLoading(label);
+      vscode.postMessage({ type: 'set-reviews-owner-filter', value });
+    }
+
+    if (reviewsMineCheckbox) {
+      reviewsMineCheckbox.addEventListener('change', () => {
+        if (reviewsMineCheckbox.checked && reviewsAssignedCheckbox) {
+          reviewsAssignedCheckbox.checked = false;
+        }
+        applyReviewsOwnerFilter(reviewsMineCheckbox, reviewsMineCheckbox.checked ? 'mine' : 'all');
+      });
+    }
+    if (reviewsAssignedCheckbox) {
+      reviewsAssignedCheckbox.addEventListener('change', () => {
+        if (reviewsAssignedCheckbox.checked && reviewsMineCheckbox) {
+          reviewsMineCheckbox.checked = false;
+        }
+        applyReviewsOwnerFilter(reviewsAssignedCheckbox, reviewsAssignedCheckbox.checked ? 'assigned' : 'all');
+      });
+    }
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -912,12 +974,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
       } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter' && !target.classList.contains('kb-search-tab-active')) {
+        disableReviewsFilterControls(target);
         const tabBar = target.closest('.kb-search-tabs');
         if (tabBar) {
-          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => {
-            btn.classList.remove('kb-search-tab-active');
-            btn.disabled = true;
-          });
+          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => btn.classList.remove('kb-search-tab-active'));
         }
         target.classList.add('kb-search-tab-active');
         setLoading(target);
@@ -1211,6 +1271,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
+      .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
+      .kb-reviews-owner-filters { display: flex; gap: 14px; margin: 0 0 14px; }
+      .kb-reviews-owner-filters .kb-checkbox-row { margin: 0; }
       .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
       .kb-dev-badge svg { flex-shrink: 0; }
       .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 140px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }

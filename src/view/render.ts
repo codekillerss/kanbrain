@@ -22,6 +22,7 @@ export interface RenderState {
   openBrainSegment?: 'repositories' | 'skills' | 'profiles' | null;
   reviewsPullRequests?: PullRequestSummary[];
   reviewsStatusFilter?: 'active' | 'completed' | 'abandoned';
+  reviewsOwnerFilter?: 'all' | 'mine' | 'assigned';
 }
 
 function renderSearchDialog(): string {
