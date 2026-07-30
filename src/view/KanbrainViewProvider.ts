@@ -1199,14 +1199,26 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
       .kb-dev-badge svg { flex-shrink: 0; }
-      .kb-reviews-toolbar { margin: 0 0 12px; }
-      .kb-reviews-toolbar select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
-      .kb-review-card { display: block; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; color: var(--vscode-foreground); text-decoration: none; }
-      .kb-review-card:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-review-card-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
-      .kb-review-card-title { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 600; }
-      .kb-review-card-title svg { flex-shrink: 0; }
-      .kb-review-card-meta { margin-top: 4px; font-size: 11px; opacity: 0.75; }
+      .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }
+      .kb-branch-tag { color: var(--vscode-charts-blue); border-color: var(--vscode-charts-blue); cursor: pointer; }
+      .kb-branch-tag:hover { background: var(--vscode-charts-blue); color: var(--vscode-editor-background); }
+      .kb-branch-tag-disabled { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); cursor: default; opacity: 0.7; }
+      .kb-branch-tag-disabled:hover { background: none; color: var(--vscode-descriptionForeground); }
+      .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
+      .kb-repo-tag-unmapped { border-style: dashed; cursor: pointer; }
+      .kb-repo-tag-unmapped:hover { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
+      .kb-reviews-toolbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; }
+      .kb-reviews-toolbar select { flex: 1; box-sizing: border-box; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
+      .kb-review-card { position: relative; display: block; border: 1px solid var(--vscode-panel-border); border-left: 3px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px 10px 10px 12px; margin: 8px 0; color: var(--vscode-foreground); text-decoration: none; transition: background-color 0.1s ease, border-color 0.1s ease; }
+      .kb-review-card:hover { background: var(--vscode-list-hoverBackground); border-color: var(--vscode-focusBorder); }
+      .kb-review-card-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+      .kb-review-card-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .kb-review-status-badge { display: inline-flex; align-items: center; padding: 1px 7px; border: 1px solid transparent; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+      .kb-review-card-title { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; line-height: 1.35; }
+      .kb-review-card-title svg { flex-shrink: 0; opacity: 0.6; }
+      .kb-review-card-title-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .kb-review-card-meta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11px; opacity: 0.75; }
+      .kb-review-card-meta-dot { opacity: 0.6; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }

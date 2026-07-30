@@ -75,10 +75,23 @@ describe('renderReviews', () => {
     expect(html).toContain(`command:kanbrain.openPullRequestDetail?${commandArgs}`);
   });
 
-  it('shows a status dot colored for the status', () => {
+  it('shows a status badge colored for the status', () => {
     const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'active', isDraft: false })], reviewsStatusFilter: 'active' }));
-    expect(html).toContain('kb-status-dot');
-    expect(html).toContain('background-color: var(--vscode-charts-blue)');
+    expect(html).toContain('kb-review-status-badge');
+    expect(html).toContain('color: var(--vscode-charts-blue)');
+  });
+
+  it('shows Draft as the badge label when the PR is a draft, regardless of status', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'active', isDraft: true })], reviewsStatusFilter: 'active' }));
+    const badgeStart = html.indexOf('kb-review-status-badge');
+    const badgeEnd = html.indexOf('</span>', badgeStart);
+    expect(html.slice(badgeStart, badgeEnd)).toContain('Draft');
+  });
+
+  it('shows an avatar-initial fallback with the author\'s first letter', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ createdBy: { displayName: 'Jane Doe', imageUrl: null } })], reviewsStatusFilter: 'active' }));
+    expect(html).toContain('kb-avatar-initial');
+    expect(html).toContain('>J<');
   });
 
   it('shows the status filter select with the active option selected', () => {
