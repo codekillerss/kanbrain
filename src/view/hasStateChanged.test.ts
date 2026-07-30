@@ -40,4 +40,16 @@ describe('hasStateChanged', () => {
 
     expect(hasStateChanged(previous, null, { id: 1 }, [])).toBe(false);
   });
+
+  it('is true when only the extra value changes', () => {
+    const previous = serializeState(null, { id: 1 }, [], {});
+
+    expect(hasStateChanged(previous, null, { id: 1 }, [], {}, [{ id: 99 }])).toBe(true);
+  });
+
+  it('is false when extra is omitted on both sides (defaults to the same null)', () => {
+    const previous = serializeState(null, { id: 1 }, [], {});
+
+    expect(hasStateChanged(previous, null, { id: 1 }, [], {})).toBe(false);
+  });
 });
