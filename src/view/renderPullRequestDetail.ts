@@ -6,6 +6,7 @@ import { renderComment } from './renderComment';
 import { renderBranchTag, renderRepoTag } from './renderRepoBranchTags';
 import { rewriteImageSrcs } from './inlineImages';
 import { renderMarkdownText } from './renderMarkdownText';
+import { renderPrStatusDot } from './renderPrStatus';
 
 const VOTE_LABELS: Record<number, string> = {
   10: 'Approved',
@@ -17,17 +18,6 @@ const VOTE_LABELS: Record<number, string> = {
 
 function renderVoteLabel(vote: number): string {
   return VOTE_LABELS[vote] ?? 'No vote';
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'var(--vscode-charts-blue)',
-  completed: 'var(--vscode-charts-green)',
-  abandoned: 'var(--vscode-charts-red)',
-};
-
-function renderStatusDot(status: string, isDraft: boolean): string {
-  const color = isDraft ? 'var(--vscode-charts-yellow)' : (STATUS_COLORS[status] ?? 'var(--vscode-charts-blue)');
-  return `<span class="kb-status-dot" style="background-color: ${color}"></span>`;
 }
 
 function renderReviewer(reviewer: PullRequestReviewer): string {
@@ -147,7 +137,7 @@ export function renderPullRequestDetail(input: PullRequestDetailInput): string {
       <div class="kb-detail-title-row">
         <h1 class="kb-detail-title">${escapeHtml(pr.title)}</h1>
       </div>
-      <div class="kb-detail-status-row">${renderStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoTagHtml}</div>
+      <div class="kb-detail-status-row">${renderPrStatusDot(pr.status, pr.isDraft)}${escapeHtml(statusLabel)}${repoTagHtml}</div>
       <div class="kb-pr-branches">${sourceBranchTag} &rarr; ${targetBranchTag}</div>
       <a class="kb-pr-web-link" href="${escapeHtml(pr.webUrl)}">Open in browser</a>
       ${renderDiffAction(pr, gitLensIconDataUri)}
