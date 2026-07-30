@@ -63,7 +63,7 @@ function groupByRepo(prs: PullRequestSummary[]): RepoGroup[] {
 
 function renderRepoGroup(group: RepoGroup, repositories: Record<string, RepositoryPathEntry>): string {
   const isMapped = !!repositories[group.repositoryId]?.path;
-  const repoTagHtml = `<span class="kb-repo-tag${isMapped ? '' : ' kb-repo-tag-unmapped'}">${REPO_ICON}${escapeHtml(group.label)}</span>`;
+  const repoTagHtml = `<span class="kb-repo-tag${isMapped ? '' : ' kb-repo-tag-unmapped'}">${REPO_ICON}<span class="kb-tag-text">${escapeHtml(group.label)}</span></span>`;
 
   return `
     <div class="kb-section-card kb-review-repo-group">

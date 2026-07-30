@@ -12,18 +12,18 @@ export const REPO_ICON =
 export function renderBranchTag(branchName: string, checkoutCommandArgs: [string, string] | null): string {
   const text = escapeHtml(branchName);
   if (!checkoutCommandArgs) {
-    return `<span class="kb-branch-tag kb-branch-tag-disabled" title="${text} — no local path configured">${BRANCH_ICON}${text}</span>`;
+    return `<span class="kb-branch-tag kb-branch-tag-disabled" title="${text} — no local path configured">${BRANCH_ICON}<span class="kb-tag-text">${text}</span></span>`;
   }
   const commandArgs = encodeURIComponent(JSON.stringify(checkoutCommandArgs));
-  return `<a class="kb-branch-tag" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${text}">${BRANCH_ICON}${text}</a>`;
+  return `<a class="kb-branch-tag" href="command:kanbrain.checkoutBranch?${commandArgs}" title="Check out ${text}">${BRANCH_ICON}<span class="kb-tag-text">${text}</span></a>`;
 }
 
 export function renderRepoTag(repositoryId: string, entry: RepositoryPathEntry | undefined): string {
   if (entry?.path) {
-    return `<span class="kb-repo-tag kb-repo-tag-mapped" title="${escapeHtml(entry.name)}">${REPO_ICON}${escapeHtml(entry.name)}</span>`;
+    return `<span class="kb-repo-tag kb-repo-tag-mapped" title="${escapeHtml(entry.name)}">${REPO_ICON}<span class="kb-tag-text">${escapeHtml(entry.name)}</span></span>`;
   }
   const label = entry ? entry.name : 'Unknown repository';
   const text = escapeHtml(label);
   const commandArgs = encodeURIComponent(JSON.stringify([repositoryId]));
-  return `<a class="kb-repo-tag kb-repo-tag-unmapped" href="command:kanbrain.resolveRepositoryTag?${commandArgs}" title="${text} — click to configure">${REPO_ICON}${text}</a>`;
+  return `<a class="kb-repo-tag kb-repo-tag-unmapped" href="command:kanbrain.resolveRepositoryTag?${commandArgs}" title="${text} — click to configure">${REPO_ICON}<span class="kb-tag-text">${text}</span></a>`;
 }

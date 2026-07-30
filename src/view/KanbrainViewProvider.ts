@@ -1204,7 +1204,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
       .kb-dev-badge svg { flex-shrink: 0; }
-      .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }
+      .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 140px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }
+      .kb-branch-tag svg, .kb-repo-tag svg { flex-shrink: 0; }
+      .kb-tag-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .kb-branch-tag { color: var(--vscode-charts-blue); border-color: var(--vscode-charts-blue); cursor: pointer; }
       .kb-branch-tag:hover { background: var(--vscode-charts-blue); color: var(--vscode-editor-background); }
       .kb-branch-tag-disabled { color: var(--vscode-descriptionForeground); border-color: var(--vscode-descriptionForeground); cursor: default; opacity: 0.7; }
