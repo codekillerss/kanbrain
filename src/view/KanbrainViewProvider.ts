@@ -1144,7 +1144,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       .kb-section-card .kb-section-label { margin: 0; border-radius: 0; }
       .kb-section-card .kb-home-commands, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
-      .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card { margin: 8px 10px; }
+      .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card, .kb-section-card .kb-review-row { margin: 8px 10px; }
       .kb-home-commands { display: flex; flex-direction: column; gap: 6px; }
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
       .kb-icon-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
@@ -1203,7 +1203,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
       .kb-repo-tag-unmapped { border-style: dashed; cursor: pointer; }
       .kb-repo-tag-unmapped:hover { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
-      .kb-review-row { position: relative; display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; padding: 6px 8px 6px 10px; margin: 2px 0; border-left: 3px solid var(--vscode-panel-border); border-radius: 2px; }
+      .kb-review-row { position: relative; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; padding: 8px 8px 8px 10px; border: 1px solid var(--vscode-panel-border); border-left: 3px solid var(--vscode-panel-border); border-radius: 4px; }
       .kb-review-row:hover { background: var(--vscode-list-hoverBackground); }
       .kb-review-row-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--vscode-foreground); text-decoration: none; }
       .kb-review-row-title:hover { color: var(--vscode-textLink-foreground); }

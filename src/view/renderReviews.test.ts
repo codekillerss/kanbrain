@@ -79,14 +79,16 @@ describe('renderReviews', () => {
     expect(tag).not.toContain('kb-search-tab-active');
   });
 
-  it('groups pull requests by repository, with the repo shown as a tag plus a count in the group header', () => {
+  it('groups pull requests into a section card per repository, with the repo shown as a tag plus a count in the header', () => {
     const html = renderReviews(
       state({
         reviewsPullRequests: [pr({ id: 1, repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
         reviewsStatusFilter: 'active',
       }),
     );
-    expect(html).toContain('kb-group-toggle');
+    expect(html).toContain('kb-section-card');
+    expect(html).toContain('kb-chevron');
+    expect(html).toContain('kb-collapsible-body');
     expect(html).toContain('kb-repo-tag');
     expect(html).toContain('kanbrain');
     expect(html).toContain('(1)');
@@ -126,7 +128,7 @@ describe('renderReviews', () => {
     );
     expect(html).toContain('kanbrain');
     expect(html).toContain('ado-shared-libs');
-    expect(html.split('kb-group-toggle').length - 1).toBe(2);
+    expect(html.split('kb-review-repo-group').length - 1).toBe(2);
   });
 
   it('keeps pull requests from the same repo under one group', () => {
@@ -140,7 +142,7 @@ describe('renderReviews', () => {
       }),
     );
     expect(html).toContain('(2)');
-    expect(html.split('kb-group-toggle').length - 1).toBe(1);
+    expect(html.split('kb-review-repo-group').length - 1).toBe(1);
   });
 
   it('renders the title as its own link on the first line', () => {

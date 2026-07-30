@@ -66,9 +66,11 @@ function renderRepoGroup(group: RepoGroup, repositories: Record<string, Reposito
   const repoTagHtml = `<span class="kb-repo-tag${isMapped ? '' : ' kb-repo-tag-unmapped'}">${REPO_ICON}${escapeHtml(group.label)}</span>`;
 
   return `
-    <div class="kb-result-group">
-      <button type="button" class="kb-section-label kb-group-toggle" data-action="toggle-group">${repoTagHtml} (${group.items.length})</button>
-      <div class="kb-group-items">
+    <div class="kb-section-card kb-review-repo-group">
+      <button type="button" class="kb-section-label" data-action="toggle-group">
+        <span><span class="kb-chevron">▾</span>${repoTagHtml} (${group.items.length})</span>
+      </button>
+      <div class="kb-collapsible-body">
         ${group.items.map(pr => renderReviewRow(pr, repositories)).join('')}
       </div>
     </div>
