@@ -6,7 +6,7 @@ const BRANCH_ICON_PATH =
 
 const BRANCH_ICON = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${BRANCH_ICON_PATH}" fill="currentColor"/></svg>`;
 
-const REPO_ICON =
+export const REPO_ICON =
   '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="8.5" y1="3" x2="8.5" y2="21" stroke="currentColor" stroke-width="2"/></svg>';
 
 export function renderBranchTag(branchName: string, checkoutCommandArgs: [string, string] | null): string {

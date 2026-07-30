@@ -1,8 +1,10 @@
 import type { RenderState } from './render';
-import type { PullRequestSummary } from '../types';
+import type { PullRequestSummary, RepositoryPathEntry } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { resolvePrStatusColor } from './renderPrStatus';
 import { capitalize } from './renderDevelopment';
+import { renderBranchTag, REPO_ICON } from './renderRepoBranchTags';
+import { renderAvatarOrInitial } from './renderAssignee';
 
 const STATUS_FILTER_OPTIONS: { value: 'active' | 'completed' | 'abandoned'; label: string }[] = [
   { value: 'active', label: 'Active' },
@@ -21,45 +23,61 @@ function renderReviewsStatusTabs(selected: 'active' | 'completed' | 'abandoned')
   `;
 }
 
-function renderReviewRow(pr: PullRequestSummary): string {
+function renderReviewRow(pr: PullRequestSummary, repositories: Record<string, RepositoryPathEntry>): string {
   const statusColor = resolvePrStatusColor(pr.status, pr.isDraft);
   const statusLabel = pr.isDraft ? 'Draft' : capitalize(pr.status);
   const commandArgs = encodeURIComponent(JSON.stringify([pr.repositoryId, pr.id]));
+  const isMapped = !!repositories[pr.repositoryId]?.path;
+  const branchTagHtml = renderBranchTag(pr.sourceBranch, isMapped ? [pr.repositoryId, pr.sourceBranch] : null);
+  const avatarHtml = renderAvatarOrInitial(pr.createdBy.displayName, pr.createdBy.imageUrl, {});
 
   return `
-    <a class="kb-review-row" style="border-left-color: ${statusColor}" href="command:kanbrain.openPullRequestDetail?${commandArgs}" title="${escapeHtml(statusLabel)}">
-      <span class="kb-review-row-title">#${pr.id} ${escapeHtml(pr.title)}</span>
-      <span class="kb-review-row-author">${escapeHtml(pr.createdBy.displayName)}</span>
-      <span class="kb-review-row-branch">${escapeHtml(pr.sourceBranch)}</span>
-    </a>
-  `;
-}
-
-function renderRepoGroup(repoLabel: string, prs: PullRequestSummary[]): string {
-  return `
-    <div class="kb-result-group">
-      <button type="button" class="kb-section-label kb-group-toggle" data-action="toggle-group">${escapeHtml(repoLabel)} (${prs.length})</button>
-      <div class="kb-group-items">
-        ${prs.map(renderReviewRow).join('')}
+    <div class="kb-review-row" style="border-left-color: ${statusColor}" title="${escapeHtml(statusLabel)}">
+      <a class="kb-review-row-title" href="command:kanbrain.openPullRequestDetail?${commandArgs}">#${pr.id} ${escapeHtml(pr.title)}</a>
+      <div class="kb-review-row-meta">
+        ${avatarHtml}<span class="kb-review-row-author">${escapeHtml(pr.createdBy.displayName)}</span>
+        ${branchTagHtml}
       </div>
     </div>
   `;
 }
 
-function groupByRepo(prs: PullRequestSummary[]): { label: string; items: PullRequestSummary[] }[] {
-  const groups = new Map<string, { label: string; items: PullRequestSummary[] }>();
+interface RepoGroup {
+  repositoryId: string;
+  label: string;
+  items: PullRequestSummary[];
+}
+
+function groupByRepo(prs: PullRequestSummary[]): RepoGroup[] {
+  const groups = new Map<string, RepoGroup>();
   for (const pr of prs) {
     const existing = groups.get(pr.repositoryId);
     if (existing) {
       existing.items.push(pr);
     } else {
-      groups.set(pr.repositoryId, { label: pr.repositoryName, items: [pr] });
+      groups.set(pr.repositoryId, { repositoryId: pr.repositoryId, label: pr.repositoryName, items: [pr] });
     }
   }
   return [...groups.values()];
 }
 
+function renderRepoGroup(group: RepoGroup, repositories: Record<string, RepositoryPathEntry>): string {
+  const isMapped = !!repositories[group.repositoryId]?.path;
+  const repoTagHtml = `<span class="kb-repo-tag${isMapped ? '' : ' kb-repo-tag-unmapped'}">${REPO_ICON}${escapeHtml(group.label)}</span>`;
+
+  return `
+    <div class="kb-result-group">
+      <button type="button" class="kb-section-label kb-group-toggle" data-action="toggle-group">${repoTagHtml} (${group.items.length})</button>
+      <div class="kb-group-items">
+        ${group.items.map(pr => renderReviewRow(pr, repositories)).join('')}
+      </div>
+    </div>
+  `;
+}
+
 export function renderReviews(state: RenderState): string {
+  const config = state.config!;
+  const repositories = config.repositories ?? {};
   const statusFilter = state.reviewsStatusFilter ?? 'active';
   const pullRequests = state.reviewsPullRequests ?? [];
   const sorted = [...pullRequests].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
@@ -69,7 +87,7 @@ export function renderReviews(state: RenderState): string {
     ${
       sorted.length
         ? groupByRepo(sorted)
-            .map(group => renderRepoGroup(group.label, group.items))
+            .map(group => renderRepoGroup(group, repositories))
             .join('')
         : `<div class="kb-empty">No ${statusFilter} pull requests.</div>`
     }

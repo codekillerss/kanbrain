@@ -1203,11 +1203,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
       .kb-repo-tag-unmapped { border-style: dashed; cursor: pointer; }
       .kb-repo-tag-unmapped:hover { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
-      .kb-review-row { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 5px 8px 5px 10px; margin: 1px 0; border-left: 3px solid var(--vscode-panel-border); border-radius: 2px; color: var(--vscode-foreground); text-decoration: none; font-size: 12px; }
+      .kb-review-row { position: relative; display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; padding: 6px 8px 6px 10px; margin: 2px 0; border-left: 3px solid var(--vscode-panel-border); border-radius: 2px; }
       .kb-review-row:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-review-row-title { flex: 3 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-      .kb-review-row-author { flex: 1 1 auto; min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
-      .kb-review-row-branch { flex: 1 1 auto; min-width: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.6; font-size: 11px; }
+      .kb-review-row-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--vscode-foreground); text-decoration: none; }
+      .kb-review-row-title:hover { color: var(--vscode-textLink-foreground); }
+      .kb-review-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .kb-review-row-author { font-size: 11px; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }

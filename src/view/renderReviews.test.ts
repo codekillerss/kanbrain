@@ -79,7 +79,7 @@ describe('renderReviews', () => {
     expect(tag).not.toContain('kb-search-tab-active');
   });
 
-  it('groups pull requests by repository, with the repo name and count in the group header', () => {
+  it('groups pull requests by repository, with the repo shown as a tag plus a count in the group header', () => {
     const html = renderReviews(
       state({
         reviewsPullRequests: [pr({ id: 1, repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
@@ -87,7 +87,31 @@ describe('renderReviews', () => {
       }),
     );
     expect(html).toContain('kb-group-toggle');
-    expect(html).toContain('kanbrain (1)');
+    expect(html).toContain('kb-repo-tag');
+    expect(html).toContain('kanbrain');
+    expect(html).toContain('(1)');
+  });
+
+  it('marks the repo tag as unmapped when there is no local path configured for it', () => {
+    const html = renderReviews(
+      state({
+        config: config({ repositories: {} }),
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    expect(html).toContain('kb-repo-tag-unmapped');
+  });
+
+  it('does not mark the repo tag as unmapped when a local path is configured for it', () => {
+    const html = renderReviews(
+      state({
+        config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '/local/kanbrain' } } }),
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    expect(html).not.toContain('kb-repo-tag-unmapped');
   });
 
   it('puts pull requests from different repos into separate groups', () => {
@@ -100,8 +124,8 @@ describe('renderReviews', () => {
         reviewsStatusFilter: 'active',
       }),
     );
-    expect(html).toContain('kanbrain (1)');
-    expect(html).toContain('ado-shared-libs (1)');
+    expect(html).toContain('kanbrain');
+    expect(html).toContain('ado-shared-libs');
     expect(html.split('kb-group-toggle').length - 1).toBe(2);
   });
 
@@ -115,16 +139,15 @@ describe('renderReviews', () => {
         reviewsStatusFilter: 'active',
       }),
     );
-    expect(html).toContain('kanbrain (2)');
+    expect(html).toContain('(2)');
     expect(html.split('kb-group-toggle').length - 1).toBe(1);
   });
 
-  it('renders a single-line row with id, title, author, and branch', () => {
+  it('renders the title as its own link on the first line', () => {
     const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsStatusFilter: 'active' }));
+    expect(html).toContain('class="kb-review-row-title"');
     expect(html).toContain('#57');
     expect(html).toContain('Fix &lt;login&gt; bug');
-    expect(html).toContain('Jane Doe');
-    expect(html).toContain('feature/login-fix');
   });
 
   it('escapes the title instead of injecting raw HTML', () => {
@@ -132,10 +155,41 @@ describe('renderReviews', () => {
     expect(html).not.toContain('Fix <login> bug');
   });
 
-  it('links each row to the openPullRequestDetail command with repositoryId and id', () => {
+  it('links the title to the openPullRequestDetail command with repositoryId and id', () => {
     const html = renderReviews(state({ reviewsPullRequests: [pr({ repositoryId: 'repo-1', id: 57 })], reviewsStatusFilter: 'active' }));
     const commandArgs = encodeURIComponent(JSON.stringify(['repo-1', 57]));
     expect(html).toContain(`command:kanbrain.openPullRequestDetail?${commandArgs}`);
+  });
+
+  it('shows the assignee as an avatar-initial plus name on the second line', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ createdBy: { displayName: 'Jane Doe', imageUrl: null } })], reviewsStatusFilter: 'active' }));
+    expect(html).toContain('kb-avatar-initial');
+    expect(html).toContain('>J<');
+    expect(html).toContain('kb-review-row-author');
+    expect(html).toContain('Jane Doe');
+  });
+
+  it('shows the branch as a real branch tag, not plain text', () => {
+    const html = renderReviews(
+      state({
+        config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '/local/kanbrain' } } }),
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', sourceBranch: 'feature/login-fix' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    expect(html).toContain('kb-branch-tag');
+    expect(html).toContain('feature/login-fix');
+  });
+
+  it('renders the branch tag as disabled (not a checkout link) when the repo has no local path configured', () => {
+    const html = renderReviews(
+      state({
+        config: config({ repositories: {} }),
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', sourceBranch: 'feature/login-fix' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    expect(html).toContain('kb-branch-tag-disabled');
   });
 
   it('colors the row border for the status instead of showing a status badge', () => {
