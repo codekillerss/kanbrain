@@ -2,6 +2,16 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.0] - 2026-07-30
+
+### Added
+
+- New "Reviews" screen (🔀 in the footer) lists every pull request across every repository in the configured Azure DevOps project — not just the ones linked to your current work item. Filter by Active, Completed, or Abandoned with tabs at the top; each repository is its own collapsible section (same look as Parent/Current/Children on the Flow screen), with its pull requests listed inside as title, assignee, and branch. Clicking a title opens the same PR detail panel used elsewhere. The list refreshes automatically roughly every 30 seconds while the screen is open.
+
+### Fixed
+
+- Command links (`command:` URIs) rendered inside the sidebar's main panel — including the new PR title link and branch checkout tags — now actually work; the panel had never opted into VS Code's `enableCommandUris`, so they were silently inert.
+
 ## [0.8.0] - 2026-07-29
 
 ### Added
