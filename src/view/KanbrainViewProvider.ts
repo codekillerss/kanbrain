@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig, SkillEntry } from '../types';
+import type { WorkItem, KanbrainConfig, SkillEntry, PullRequestSummary } from '../types';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveSkill } from '../config/resolveSkill';
 import { resolveActiveProfile } from '../config/resolveActiveProfile';
@@ -17,6 +17,7 @@ import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 
 const POLL_INTERVAL_MS = 5000;
+const REVIEWS_POLL_INTERVAL_MS = 30000;
 
 export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'kanbrain.view';
@@ -28,12 +29,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private selectedTeam: string | undefined;
   private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
-  private currentScreen: 'home' | 'flow' | 'config' | 'brain' = 'home';
+  private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
+  private reviewsStatusFilter: 'active' | 'completed' | 'abandoned' = 'active';
+  private reviewsPullRequests: PullRequestSummary[] = [];
+  private lastReviewsFetchAt = 0;
+  private lastReviewsStatusFilterFetched: 'active' | 'completed' | 'abandoned' | undefined;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -120,6 +125,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setSelectedProfile(message.profileId || undefined);
       } else if (message.type === 'show-brain') {
         this.showBrainScreen();
+      } else if (message.type === 'show-reviews') {
+        this.showReviewsScreen();
+      } else if (message.type === 'set-reviews-status-filter') {
+        this.setReviewsStatusFilter(message.status);
       } else if (message.type === 'save-repository-path') {
         this.saveRepositoryPath(String(message.repositoryId ?? ''), String(message.path ?? ''));
       } else if (message.type === 'pick-repository-folder') {
@@ -235,6 +244,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   showBrainScreen(): void {
     this.currentScreen = 'brain';
     this.lastState = '';
+    void this.refresh();
+  }
+
+  showReviewsScreen(): void {
+    this.currentScreen = 'reviews';
+    this.lastState = '';
+    this.lastReviewsFetchAt = 0;
+    void this.refresh();
+  }
+
+  private setReviewsStatusFilter(status: unknown): void {
+    if (status !== 'active' && status !== 'completed' && status !== 'abandoned') {
+      return;
+    }
+    this.reviewsStatusFilter = status;
+    this.lastState = '';
+    this.lastReviewsFetchAt = 0;
     void this.refresh();
   }
 
@@ -686,15 +712,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    if (config && this.client && this.currentScreen === 'reviews') {
+      const now = Date.now();
+      const filterChanged = this.lastReviewsStatusFilterFetched !== this.reviewsStatusFilter;
+      if (filterChanged || now - this.lastReviewsFetchAt >= REVIEWS_POLL_INTERVAL_MS) {
+        this.reviewsPullRequests = await this.client.listProjectPullRequests(config.organization, config.project, this.reviewsStatusFilter);
+        this.lastReviewsFetchAt = now;
+        this.lastReviewsStatusFilterFetched = this.reviewsStatusFilter;
+      }
+    }
+
     // Whether the assignee actually renders is decided per work item type by resolveShowAssignedTo
     // (mirrored from the real board), so avatars are always resolved here rather than gated by the
     // (now search-only) manual showAssignedTo toggle.
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
-    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars)) {
+    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars, this.reviewsPullRequests)) {
       return;
     }
-    this.lastState = serializeState(config, workItem, subtasks, avatars);
+    this.lastState = serializeState(config, workItem, subtasks, avatars, this.reviewsPullRequests);
     this.view.webview.html = this.wrapHtml(
       render({
         hasWorkspace: !!this.workspaceRoot,
@@ -708,6 +744,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         parentCollapsed: this.parentCollapsed,
         childrenCollapsed: this.childrenCollapsed,
         openBrainSegment: this.openBrainSegment,
+        reviewsPullRequests: this.reviewsPullRequests,
+        reviewsStatusFilter: this.reviewsStatusFilter,
       }),
     );
   }
@@ -826,6 +864,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    const reviewsStatusFilter = document.getElementById('kb-reviews-status-filter');
+    if (reviewsStatusFilter) {
+      reviewsStatusFilter.addEventListener('change', () => {
+        vscode.postMessage({ type: 'set-reviews-status-filter', status: reviewsStatusFilter.value });
+      });
+    }
+
     document.addEventListener('click', (e) => {
       const target = e.target;
       if (target.id === 'kb-toggle-search-btn' || target.id === 'kb-footer-select-work-item-btn') {
@@ -862,6 +907,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-config' });
       } else if (target.id === 'kb-show-brain-btn') {
         vscode.postMessage({ type: 'show-brain' });
+      } else if (target.id === 'kb-show-reviews-btn') {
+        vscode.postMessage({ type: 'show-reviews' });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
@@ -1152,6 +1199,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
       .kb-dev-badge svg { flex-shrink: 0; }
+      .kb-reviews-toolbar { margin: 0 0 12px; }
+      .kb-reviews-toolbar select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
+      .kb-review-card { display: block; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; color: var(--vscode-foreground); text-decoration: none; }
+      .kb-review-card:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-review-card-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+      .kb-review-card-title { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 600; }
+      .kb-review-card-title svg { flex-shrink: 0; }
+      .kb-review-card-meta { margin-top: 4px; font-size: 11px; opacity: 0.75; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }
