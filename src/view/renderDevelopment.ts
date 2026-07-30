@@ -9,7 +9,7 @@ function renderBranchForkIcon(fill: string): string {
   return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${BRANCH_FORK_ICON_PATH}" fill="${fill}"/></svg>`;
 }
 
-function renderPullRequestIcon(): string {
+export function renderPullRequestIcon(): string {
   return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="18" r="2.5" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2.5" stroke="currentColor" stroke-width="2"/><path d="M6 15.5V9a3 3 0 0 1 3-3h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 3l4 3-4 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
