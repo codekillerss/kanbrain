@@ -2,6 +2,18 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.1] - 2026-07-30
+
+### Changed
+
+- The Reviews screen now polls for new pull requests every 10 seconds (down from 30) instead of relying on re-clicking a status tab.
+- Long repository and branch tag labels are now truncated with an ellipsis instead of stretching the row.
+
+### Fixed
+
+- Clicking the already-active status tab on the Reviews screen no longer re-fetches and re-renders for no reason.
+- All status tabs on the Reviews screen are now disabled for the duration of a real filter switch, so a second click on a different tab can't race the first.
+
 ## [0.9.0] - 2026-07-30
 
 ### Added
