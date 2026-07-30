@@ -17,7 +17,7 @@ import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 
 const POLL_INTERVAL_MS = 5000;
-const REVIEWS_POLL_INTERVAL_MS = 30000;
+const REVIEWS_POLL_INTERVAL_MS = 10000;
 
 export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'kanbrain.view';
@@ -259,6 +259,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private setReviewsStatusFilter(status: unknown): void {
     if (status !== 'active' && status !== 'completed' && status !== 'abandoned') {
+      return;
+    }
+    if (status === this.reviewsStatusFilter) {
+      // Already on this tab — the periodic 10s poll (REVIEWS_POLL_INTERVAL_MS) keeps it fresh,
+      // no need to force an extra fetch just because the same tab was clicked again.
       return;
     }
     this.reviewsStatusFilter = status;
@@ -906,10 +911,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-brain' });
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
-      } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter') {
+      } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter' && !target.classList.contains('kb-search-tab-active')) {
         const tabBar = target.closest('.kb-search-tabs');
         if (tabBar) {
-          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => btn.classList.remove('kb-search-tab-active'));
+          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => {
+            btn.classList.remove('kb-search-tab-active');
+            btn.disabled = true;
+          });
         }
         target.classList.add('kb-search-tab-active');
         setLoading(target);
@@ -1141,6 +1149,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-search-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; }
       .kb-search-tab { flex-shrink: 0; padding: 4px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-search-tab:disabled { opacity: 0.5; cursor: default; }
       .kb-search-tab:hover { background: var(--vscode-list-hoverBackground); }
       .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
       .kb-search-tab-empty { opacity: 0.5; }
