@@ -904,6 +904,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
       } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter') {
+        const tabBar = target.closest('.kb-search-tabs');
+        if (tabBar) {
+          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => btn.classList.remove('kb-search-tab-active'));
+        }
+        target.classList.add('kb-search-tab-active');
+        setLoading(target);
         vscode.postMessage({ type: 'set-reviews-status-filter', status: target.dataset.status });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
