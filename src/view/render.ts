@@ -18,6 +18,7 @@ export interface RenderState {
   selectedTeam?: string;
   parentCollapsed?: boolean;
   childrenCollapsed?: boolean;
+  openBrainSegment?: 'repositories' | 'skills' | 'profiles' | null;
 }
 
 function renderSearchDialog(): string {

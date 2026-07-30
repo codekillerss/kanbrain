@@ -7,7 +7,7 @@ function renderSegment(title: string, segment: string, body: string, collapsed: 
   return `
     <div class="kb-config-parent-section">
       <div class="kb-config-parent-header">
-        <button type="button" class="kb-parent-header-toggle" data-action="toggle-group">
+        <button type="button" class="kb-parent-header-toggle" data-action="toggle-group" data-segment="${segment}">
           <span><span class="kb-chevron">▾</span>${title}</span>
         </button>
         <button type="button" class="kb-secondary-btn" data-action="run-segment-ai" data-segment="${segment}">✨ Configure with AI</button>
@@ -21,9 +21,10 @@ function renderSegment(title: string, segment: string, body: string, collapsed: 
 
 export function renderBrain(state: RenderState): string {
   const config = state.config!;
+  const openSegment = state.openBrainSegment === undefined ? 'repositories' : state.openBrainSegment;
   return [
-    renderSegment('Repositories', 'repositories', renderRepositoriesBody(config), false),
-    renderSegment('Skills', 'skills', renderConfigEditor(config), true),
-    renderSegment('Profiles', 'profiles', renderProfilesEditor(config.profiles ?? {}), true),
+    renderSegment('Repositories', 'repositories', renderRepositoriesBody(config), openSegment !== 'repositories'),
+    renderSegment('Skills', 'skills', renderConfigEditor(config), openSegment !== 'skills'),
+    renderSegment('Profiles', 'profiles', renderProfilesEditor(config.profiles ?? {}), openSegment !== 'profiles'),
   ].join('');
 }

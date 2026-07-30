@@ -33,6 +33,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private avatarCache = new Map<string, string | null>();
   private parentCollapsed = false;
   private childrenCollapsed = false;
+  private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'repositories';
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -131,6 +132,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.toggleSection(String(message.section ?? ''));
       } else if (message.type === 'run-segment-ai') {
         await this.runSegmentAi(String(message.segment ?? ''));
+      } else if (message.type === 'set-open-brain-segment') {
+        this.setOpenBrainSegment(message.segment ?? null);
       }
     });
 
@@ -170,6 +173,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     } else if (section === 'children') {
       this.childrenCollapsed = !this.childrenCollapsed;
     }
+  }
+
+  private setOpenBrainSegment(segment: string | null): void {
+    this.openBrainSegment = segment === 'repositories' || segment === 'skills' || segment === 'profiles' ? segment : null;
   }
 
   private async runSegmentAi(segment: string): Promise<void> {
@@ -700,6 +707,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         selectedTeam: this.selectedTeam,
         parentCollapsed: this.parentCollapsed,
         childrenCollapsed: this.childrenCollapsed,
+        openBrainSegment: this.openBrainSegment,
       }),
     );
   }
@@ -892,6 +900,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             });
           }
           items.classList.toggle('kb-hidden');
+          if (parentHeader && toggle.dataset.segment) {
+            vscode.postMessage({ type: 'set-open-brain-segment', segment: wasHidden ? toggle.dataset.segment : null });
+          }
         }
         if (toggle.dataset.section) {
           vscode.postMessage({ type: 'toggle-section', section: toggle.dataset.section });
