@@ -2,6 +2,20 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.8.0] - 2026-07-29
+
+### Added
+
+- New "Brain" screen (🧠 in the footer, replacing the old standalone Repositories screen) groups Repositories, Skills, and Profiles into three sections. Only one section is expanded at a time (opening one collapses the others), and each has its own "✨ Configure with AI" button that generates a markdown file scoped to just that area and hands it to an agent in the Kanbrain terminal: Repositories only maps already-cloned local paths and suggests cloning the rest (never clones automatically); Skills tells the agent to run Sync Board Configuration first and think through a Definition of Done per status before writing skill instructions; Profiles proposes new/adjusted profiles based on the team's real work item types, confirming with the user before writing anything.
+- The Flow screen's Parent and Children sections are now collapsible (session-only, not persisted to disk).
+- A divider now separates the Home icon from the current work item icon in the footer.
+
+### Changed
+
+- Screen navigation (Home, Repositories/Brain, Configuration) moved out of the Home screen header into the persistent footer.
+- The Configuration screen now only shows Project and Display — Skill Configuration and Profiles moved to the new Brain screen.
+- Brain segments are reordered (Skills, Profiles, Repositories), each with its own icon, and the "+ Add global skill"/"+ Add profile" buttons are now pinned at the bottom of their section instead of scrolling away with the list.
+
 ## [0.7.5] - 2026-07-28
 
 ### Added
