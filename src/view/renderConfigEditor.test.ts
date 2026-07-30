@@ -146,7 +146,6 @@ describe('renderConfigEditor', () => {
 
     expect(html).toContain('No work item types configured yet.');
     expect(html).toContain('Global Skills');
-    expect(html).toContain('data-action="add-global-skill"');
   });
 
   it('shows a remove button for each global skill row', () => {

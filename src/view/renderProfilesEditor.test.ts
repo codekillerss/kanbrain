@@ -3,12 +3,10 @@ import { renderProfilesEditor } from './renderProfilesEditor';
 import type { ProfileEntry } from '../types';
 
 describe('renderProfilesEditor', () => {
-  it('shows the Profiles header and Add button even when there are no profiles', () => {
+  it('shows the Profiles header even when there are no profiles', () => {
     const html = renderProfilesEditor({});
 
     expect(html).toContain('Profiles');
-    expect(html).toContain('data-action="add-profile"');
-    expect(html).toContain('+ Add profile');
   });
 
   it('renders one row per profile with data-profile-id and the label/description values', () => {

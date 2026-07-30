@@ -31,7 +31,6 @@ export function renderProfilesEditor(profiles: Record<string, ProfileEntry>): st
       <div class="kb-config-static-header">Profiles</div>
       <div class="kb-config-level-body">
         ${rows}
-        <button type="button" class="kb-secondary-btn" data-action="add-profile">+ Add profile</button>
       </div>
     </div>
   `;

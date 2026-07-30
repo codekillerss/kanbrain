@@ -33,7 +33,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private avatarCache = new Map<string, string | null>();
   private parentCollapsed = false;
   private childrenCollapsed = false;
-  private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'repositories';
+  private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -896,12 +896,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             document.querySelectorAll('.kb-config-parent-section > .kb-collapsible-body').forEach((body) => {
               if (body !== items) {
                 body.classList.add('kb-hidden');
+                body.parentElement.classList.remove('kb-config-parent-section-expanded');
               }
             });
           }
           items.classList.toggle('kb-hidden');
-          if (parentHeader && toggle.dataset.segment) {
-            vscode.postMessage({ type: 'set-open-brain-segment', segment: wasHidden ? toggle.dataset.segment : null });
+          if (parentHeader) {
+            parentHeader.parentElement.classList.toggle('kb-config-parent-section-expanded', wasHidden);
+            if (toggle.dataset.segment) {
+              vscode.postMessage({ type: 'set-open-brain-segment', segment: wasHidden ? toggle.dataset.segment : null });
+            }
           }
         }
         if (toggle.dataset.section) {
@@ -1026,7 +1030,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; }
+      body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-team-card { margin: 10px; }
@@ -1108,7 +1112,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-parent-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 8px; }
       .kb-parent-header-toggle { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; flex: 1; align-items: center; font: inherit; color: inherit; }
       .kb-config-parent-header:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
-      .kb-config-parent-section > .kb-collapsible-body { max-height: 50vh; overflow-y: auto; }
+      .kb-brain-segments { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .kb-config-parent-section-expanded { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .kb-config-parent-section-expanded > .kb-collapsible-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .kb-segment-scroll { flex: 1; min-height: 0; overflow-y: auto; }
       .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
       .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }

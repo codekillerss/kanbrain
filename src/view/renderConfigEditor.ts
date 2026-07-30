@@ -79,7 +79,6 @@ function renderGlobalSkillsSection(globalSkills: Record<string, SkillEntry>): st
       <div class="kb-config-static-header">Global Skills</div>
       <div class="kb-config-level-body">
         ${rows}
-        <button type="button" class="kb-secondary-btn" data-action="add-global-skill">+ Add global skill</button>
       </div>
     </div>
   `;
