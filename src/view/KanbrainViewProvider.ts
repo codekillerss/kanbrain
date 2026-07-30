@@ -864,12 +864,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
-    const reviewsStatusFilter = document.getElementById('kb-reviews-status-filter');
-    if (reviewsStatusFilter) {
-      reviewsStatusFilter.addEventListener('change', () => {
-        vscode.postMessage({ type: 'set-reviews-status-filter', status: reviewsStatusFilter.value });
-      });
-    }
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -909,6 +903,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-brain' });
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
+      } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter') {
+        vscode.postMessage({ type: 'set-reviews-status-filter', status: target.dataset.status });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
@@ -1207,18 +1203,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-repo-tag { color: var(--vscode-charts-orange); border-color: var(--vscode-charts-orange); }
       .kb-repo-tag-unmapped { border-style: dashed; cursor: pointer; }
       .kb-repo-tag-unmapped:hover { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
-      .kb-reviews-toolbar { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; }
-      .kb-reviews-toolbar select { flex: 1; box-sizing: border-box; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
-      .kb-review-card { position: relative; display: block; border: 1px solid var(--vscode-panel-border); border-left: 3px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px 10px 10px 12px; margin: 8px 0; color: var(--vscode-foreground); text-decoration: none; transition: background-color 0.1s ease, border-color 0.1s ease; }
-      .kb-review-card:hover { background: var(--vscode-list-hoverBackground); border-color: var(--vscode-focusBorder); }
-      .kb-review-card-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
-      .kb-review-card-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-      .kb-review-status-badge { display: inline-flex; align-items: center; padding: 1px 7px; border: 1px solid transparent; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
-      .kb-review-card-title { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; line-height: 1.35; }
-      .kb-review-card-title svg { flex-shrink: 0; opacity: 0.6; }
-      .kb-review-card-title-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .kb-review-card-meta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11px; opacity: 0.75; }
-      .kb-review-card-meta-dot { opacity: 0.6; }
+      .kb-review-row { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 5px 8px 5px 10px; margin: 1px 0; border-left: 3px solid var(--vscode-panel-border); border-radius: 2px; color: var(--vscode-foreground); text-decoration: none; font-size: 12px; }
+      .kb-review-row:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-review-row-title { flex: 3 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+      .kb-review-row-author { flex: 1 1 auto; min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
+      .kb-review-row-branch { flex: 1 1 auto; min-width: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.6; font-size: 11px; }
       .kb-loading { opacity: 0.6; cursor: default; }
       .kb-loading::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 6px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: middle; animation: kb-spin 0.6s linear infinite; }
       @keyframes kb-spin { to { transform: rotate(360deg); } }

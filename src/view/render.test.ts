@@ -89,7 +89,7 @@ describe('render', () => {
 
   it('delegates to the reviews screen when screen is "reviews"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'reviews' });
-    expect(html).toContain('id="kb-reviews-status-filter"');
+    expect(html).toContain('data-action="set-reviews-status-filter"');
   });
 
   it('does not show the search dialog on the reviews screen', () => {
