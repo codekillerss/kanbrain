@@ -1,8 +1,9 @@
-import type { WorkItem, KanbrainConfig } from '../types';
+import type { WorkItem, KanbrainConfig, PullRequestSummary } from '../types';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { renderHome } from './renderHome';
 import { renderConfig } from './renderConfig';
 import { renderBrain } from './renderBrain';
+import { renderReviews } from './renderReviews';
 import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 
@@ -12,13 +13,15 @@ export interface RenderState {
   workItem: WorkItem | null;
   parent: WorkItem | null;
   subtasks: WorkItem[];
-  screen: 'home' | 'flow' | 'config' | 'brain';
+  screen: 'home' | 'flow' | 'config' | 'brain' | 'reviews';
   connectionStatus?: 'connected' | 'disconnected';
   avatars?: Record<string, string>;
   selectedTeam?: string;
   parentCollapsed?: boolean;
   childrenCollapsed?: boolean;
   openBrainSegment?: 'repositories' | 'skills' | 'profiles' | null;
+  reviewsPullRequests?: PullRequestSummary[];
+  reviewsStatusFilter?: 'active' | 'completed' | 'abandoned';
 }
 
 function renderSearchDialog(): string {
@@ -63,6 +66,9 @@ export function render(state: RenderState): string {
   }
   if (state.screen === 'brain') {
     return `${renderBrain(state)}${renderSearchDialog()}${renderFooter(state)}`;
+  }
+  if (state.screen === 'reviews') {
+    return `${renderReviews(state)}${renderFooter(state)}`;
   }
 
   if (!state.workItem) {

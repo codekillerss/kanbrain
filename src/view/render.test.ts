@@ -71,7 +71,7 @@ describe('render', () => {
   });
 
   it('appends the footer on every configured screen', () => {
-    for (const screen of ['home', 'flow', 'config', 'brain'] as const) {
+    for (const screen of ['home', 'flow', 'config', 'brain', 'reviews'] as const) {
       const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen });
       expect(html).toContain('kb-footer');
     }
@@ -85,6 +85,16 @@ describe('render', () => {
   it('delegates to the brain screen when screen is "brain"', () => {
     const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'brain' });
     expect(html).toContain('data-action="run-segment-ai"');
+  });
+
+  it('delegates to the reviews screen when screen is "reviews"', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'reviews' });
+    expect(html).toContain('id="kb-reviews-status-filter"');
+  });
+
+  it('does not show the search dialog on the reviews screen', () => {
+    const html = render({ hasWorkspace: true, config, workItem: null, parent: null, subtasks: [], screen: 'reviews' });
+    expect(html).not.toContain('id="kb-search-input"');
   });
 
   it('shows a Home button in the footer on the flow screen (there is no per-screen header anymore)', () => {
