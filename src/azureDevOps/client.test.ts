@@ -644,6 +644,85 @@ describe('AzureDevOpsClient.getPullRequest', () => {
   });
 });
 
+describe('AzureDevOpsClient.listProjectPullRequests', () => {
+  it('fetches and maps pull requests across the whole project', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            pullRequestId: 57,
+            title: 'Fix login bug',
+            status: 'active',
+            isDraft: false,
+            sourceRefName: 'refs/heads/feature/login-fix',
+            targetRefName: 'refs/heads/main',
+            creationDate: '2026-07-28T10:00:00Z',
+            createdBy: { displayName: 'Jane Doe', imageUrl: 'https://example.com/jane.png' },
+            repository: { id: 'repo-1', name: 'kanbrain', webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain' },
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const prs = await client.listProjectPullRequests('my-org', 'MyProject', 'active');
+
+    expect(prs).toEqual([
+      {
+        id: 57,
+        repositoryId: 'repo-1',
+        repositoryName: 'kanbrain',
+        title: 'Fix login bug',
+        status: 'active',
+        isDraft: false,
+        sourceBranch: 'feature/login-fix',
+        targetBranch: 'main',
+        createdBy: { displayName: 'Jane Doe', imageUrl: 'https://example.com/jane.png' },
+        creationDate: '2026-07-28T10:00:00Z',
+        webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain/pullrequest/57',
+      },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/git/pullrequests?searchCriteria.status=active&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('defaults a missing imageUrl to null', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            pullRequestId: 57,
+            title: 'Fix login bug',
+            status: 'active',
+            isDraft: false,
+            sourceRefName: 'refs/heads/feature/login-fix',
+            targetRefName: 'refs/heads/main',
+            creationDate: '2026-07-28T10:00:00Z',
+            createdBy: { displayName: 'Jane Doe' },
+            repository: { id: 'repo-1', name: 'kanbrain', webUrl: 'https://dev.azure.com/my-org/MyProject/_git/kanbrain' },
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const prs = await client.listProjectPullRequests('my-org', 'MyProject', 'active');
+
+    expect(prs[0].createdBy).toEqual({ displayName: 'Jane Doe', imageUrl: null });
+  });
+
+  it('returns an empty array when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'no access' }, false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const prs = await client.listProjectPullRequests('my-org', 'MyProject', 'active');
+
+    expect(prs).toEqual([]);
+  });
+});
+
 describe('AzureDevOpsClient.getRepository', () => {
   it('fetches and maps the repository name', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ name: 'kanbrain' }));

@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail, PullRequestThread } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail, PullRequestThread, PullRequestSummary } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
@@ -370,6 +370,43 @@ export class AzureDevOpsClient {
       };
     } catch {
       return null;
+    }
+  }
+
+  async listProjectPullRequests(
+    organization: string,
+    project: string,
+    status: 'active' | 'completed' | 'abandoned',
+  ): Promise<PullRequestSummary[]> {
+    try {
+      const data = await this.request<{
+        value: {
+          pullRequestId: number;
+          title: string;
+          status: string;
+          isDraft: boolean;
+          sourceRefName: string;
+          targetRefName: string;
+          creationDate: string;
+          createdBy: { displayName: string; imageUrl?: string };
+          repository: { id: string; name: string; webUrl: string };
+        }[];
+      }>(`https://dev.azure.com/${organization}/${project}/_apis/git/pullrequests?searchCriteria.status=${status}&api-version=7.1`);
+      return data.value.map(pr => ({
+        id: pr.pullRequestId,
+        repositoryId: pr.repository.id,
+        repositoryName: pr.repository.name,
+        title: pr.title,
+        status: pr.status,
+        isDraft: pr.isDraft,
+        sourceBranch: pr.sourceRefName.replace(/^refs\/heads\//, ''),
+        targetBranch: pr.targetRefName.replace(/^refs\/heads\//, ''),
+        createdBy: { displayName: pr.createdBy.displayName, imageUrl: pr.createdBy.imageUrl ?? null },
+        creationDate: pr.creationDate,
+        webUrl: `${pr.repository.webUrl}/pullrequest/${pr.pullRequestId}`,
+      }));
+    } catch {
+      return [];
     }
   }
 

@@ -63,6 +63,20 @@ export interface PullRequestDetail {
   webUrl: string;
 }
 
+export interface PullRequestSummary {
+  id: number;
+  repositoryId: string;
+  repositoryName: string;
+  title: string;
+  status: string;
+  isDraft: boolean;
+  sourceBranch: string;
+  targetBranch: string;
+  createdBy: AssignedTo;
+  creationDate: string;
+  webUrl: string;
+}
+
 export interface SkillEntry {
   path: string;
   label?: string;
