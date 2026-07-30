@@ -89,11 +89,22 @@ describe('renderFooter', () => {
     const html = renderFooter(state({ workItem: workItem() }));
 
     const brainIndex = html.indexOf('id="kb-show-brain-btn"');
-    const dividerIndex = html.indexOf('kb-footer-divider');
+    const dividerIndex = html.indexOf('kb-footer-divider', brainIndex);
     const checkIndex = html.indexOf('id="kb-run-check-board-config-btn"');
 
     expect(dividerIndex).toBeGreaterThan(brainIndex);
     expect(checkIndex).toBeGreaterThan(dividerIndex);
+  });
+
+  it('puts a divider between the home icon and the current work item icon', () => {
+    const html = renderFooter(state({ workItem: workItem() }));
+
+    const homeIndex = html.indexOf('id="kb-home-btn"');
+    const dividerIndex = html.indexOf('kb-footer-divider', homeIndex);
+    const workItemIndex = html.indexOf('id="kb-footer-work-item-btn"');
+
+    expect(dividerIndex).toBeGreaterThan(homeIndex);
+    expect(workItemIndex).toBeGreaterThan(dividerIndex);
   });
 
   it('shows the active work item icon and id, linking to Flow', () => {
