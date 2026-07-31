@@ -170,16 +170,18 @@ describe('renderFooter', () => {
     expect(html).toContain('id="kb-show-reviews-btn"');
   });
 
-  it('places the Reviews button after Brain and before the divider that precedes Check', () => {
+  it('places the Reviews button right after the work item icon, before Brain', () => {
     const html = renderFooter(state({ workItem: workItem() }));
 
-    const brainIndex = html.indexOf('id="kb-show-brain-btn"');
+    const workItemIndex = html.indexOf('id="kb-footer-work-item-btn"');
     const reviewsIndex = html.indexOf('id="kb-show-reviews-btn"');
+    const brainIndex = html.indexOf('id="kb-show-brain-btn"');
     const dividerIndex = html.indexOf('kb-footer-divider', brainIndex);
     const checkIndex = html.indexOf('id="kb-run-check-board-config-btn"');
 
-    expect(reviewsIndex).toBeGreaterThan(brainIndex);
-    expect(dividerIndex).toBeGreaterThan(reviewsIndex);
+    expect(reviewsIndex).toBeGreaterThan(workItemIndex);
+    expect(brainIndex).toBeGreaterThan(reviewsIndex);
+    expect(dividerIndex).toBeGreaterThan(brainIndex);
     expect(checkIndex).toBeGreaterThan(dividerIndex);
   });
 
