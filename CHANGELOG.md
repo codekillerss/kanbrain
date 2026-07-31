@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.3] - 2026-07-31
+
+### Fixed
+
+- `Kanbrain: Sync Board Configuration` now correctly strips the legacy embedded card-info header from existing `.kanbrain/skills/*.md` files even when they use Windows-style CRLF line endings — previously the migration silently left them untouched.
+
 ## [0.9.2] - 2026-07-31
 
 ### Added
