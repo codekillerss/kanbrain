@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 suite('Kanbrain Extension', () => {
   test('activates and registers its commands', async () => {
-    const extension = vscode.extensions.getExtension('kanbrain.kanbrain');
+    const extension = vscode.extensions.getExtension('CodeKillers.kanbrain-vscode');
     assert.ok(extension, 'extension not found — check publisher/name in package.json');
     await extension!.activate();
 
