@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.2] - 2026-07-31
+
+### Added
+
+- Clicking a branch tag now offers "Checkout" or "Compare with" instead of only checking out. Checkout keeps today's confirmation step; Compare with lets you pick one of the repository's other local branches from a list and opens the comparison in GitLens.
+
 ## [0.9.1] - 2026-07-30
 
 ### Changed
