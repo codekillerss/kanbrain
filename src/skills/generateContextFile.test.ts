@@ -33,13 +33,33 @@ afterEach(() => {
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
 });
 
+const cardInfoBlock = [
+  'Work item: Fix bug (#482)',
+  'Type: Task',
+  'Status: Active',
+  'Description: desc',
+  '',
+  'Parent:  (#)',
+  '',
+  'Subtasks:',
+  '_No subtasks._',
+].join('\n');
+
 describe('generateContextFile', () => {
   it('writes the resolved template under .kanbrain/generated', () => {
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(relativePath.startsWith(path.join('.kanbrain', 'generated'))).toBe(true);
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
-    expect(written).toBe('Title: Fix bug (#482)');
+    expect(written).toBe(`${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`);
+  });
+
+  it('always prepends the card info block, even for a skill file with no placeholders of its own', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'skills', 'fix.md'), '## Instructions\nDo the thing.');
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written).toBe(`${cardInfoBlock}\n\n---\n\n## Instructions\nDo the thing.`);
   });
 
   it('names the file with the work item id and a filesystem-safe timestamp', () => {
@@ -59,7 +79,9 @@ describe('generateContextFile', () => {
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, profile, new Date('2026-07-14T10:00:00.000Z'));
 
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
-    expect(written).toBe('## Requester profile\n**Developer** — I am a developer.\n\n---\n\nTitle: Fix bug (#482)');
+    expect(written).toBe(
+      `## Requester profile\n**Developer** — I am a developer.\n\n---\n\n${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`,
+    );
   });
 
   it('does not add a Requester profile block when profile is null', () => {

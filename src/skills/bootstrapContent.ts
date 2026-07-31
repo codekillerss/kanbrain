@@ -9,16 +9,6 @@ const EXPLAIN_CARD_BUTTON_COLOR = 'b2b2b2';
 
 export const EXPLAIN_CARD_SKILL_CONTENT = `# Skill: Explain Card
 
-Work item: {{title}} (#{{id}})
-Type: {{type}}
-Status: {{status}}
-Description: {{description}}
-
-Parent: {{parent.title}} (#{{parent.id}})
-
-Subtasks:
-{{subtasks}}
-
 ## Instructions
 Explain this work item to the user in your own words: what it's asking for, why it likely matters given its type/description/parent (if any), and how far along it is based on its status and subtasks (if any). Keep it clear and concise — a short paragraph or a few bullet points, not a restatement of the raw fields above. This is an explanation only — don't take any action on the work item or the Azure DevOps board.
 `;
@@ -89,7 +79,7 @@ There are two kinds of skill:
 - **Status skills** — \`.kanbrain/config.json\`'s \`skills\` map links one skill file to each (work item type, status) pair. The button shown on the active work item's card always reflects that work item's current status.
 - **Global skills** — \`.kanbrain/config.json\`'s \`globalSkills\` map holds skills that aren't tied to any status. They show up as a small "▾" menu next to the status skill button (or alone, if the current status has no skill mapped) — pick one to run it against the active work item regardless of its status. Useful for actions that make sense across the whole flow, like the auto-generated \`explain-card\` skill (explain the current work item in plain language), or a custom one like "estimate Effort for this Backlog item."
 
-Both kinds resolve the same placeholders in the skill file: \`{{id}}\` \`{{title}}\` \`{{description}}\` \`{{status}}\` \`{{type}}\` \`{{url}}\` \`{{branch}}\` \`{{parent.id}}\` \`{{parent.title}}\` \`{{parent.description}}\` \`{{subtasks}}\`.
+Every generated context file always starts with a card info block (work item id/title/type/status/description, parent, subtasks) ahead of the skill's own content — skill files don't need to restate any of that. Both kinds also resolve the same placeholders inside the skill file's own content, if you want to reference a specific field directly in your instructions: \`{{id}}\` \`{{title}}\` \`{{description}}\` \`{{status}}\` \`{{type}}\` \`{{url}}\` \`{{branch}}\` \`{{parent.id}}\` \`{{parent.title}}\` \`{{parent.description}}\` \`{{subtasks}}\`.
 
 ## Azure DevOps access
 

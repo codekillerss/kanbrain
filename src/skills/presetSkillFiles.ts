@@ -16,13 +16,6 @@ function slugify(value: string): string {
 function skillSkeleton(typeName: string, statusName: string): string {
   return `# Skill: ${typeName} — ${statusName}
 
-Work item: {{title}} (#{{id}})
-Status: {{status}}
-Description: {{description}}
-
-Subtasks:
-{{subtasks}}
-
 ## Instructions
 Describe here what the agent should do when the work item is in this status.
 `;

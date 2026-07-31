@@ -18,6 +18,7 @@ import {
   ensureDefaultProfiles,
   isBootstrapContentMissing,
 } from '../skills/bootstrapContent';
+import { migrateLegacySkillFiles } from '../skills/migrateLegacySkillFiles';
 
 export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, workspaceRoot: string, extensionVersion: string): vscode.Disposable {
   return vscode.commands.registerCommand('kanbrain.syncBoardConfig', async () => {
@@ -51,6 +52,8 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     if (!fs.existsSync(usageGuidePath)) {
       fs.writeFileSync(usageGuidePath, USAGE_GUIDE_CONTENT, 'utf-8');
     }
+
+    migrateLegacySkillFiles(workspaceRoot);
 
     const freshStatusColors = discoverStatusColors(types);
     const diff = diffBoardConfig(
