@@ -1005,6 +1005,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'pick-work-item', id: target.closest('[data-action="pick-work-item"]').dataset.id });
       } else if (target.dataset && target.dataset.action === 'open-work-item-detail') {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
+      } else if (target.closest && target.closest('a.kb-repo-tag-unmapped')) {
+        // Let the command: link navigate instead of toggling the enclosing group header.
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
         const toggle = target.closest('[data-action="toggle-group"]');
         const parentHeader = toggle.closest('.kb-config-parent-header');
@@ -1177,7 +1179,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-empty { opacity: 0.7; padding: 12px 0; }
       .kb-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--vscode-foreground); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-list-hoverBackground)); border-radius: 3px; }
       button.kb-section-label { appearance: none; -webkit-appearance: none; border: none; width: 100%; text-align: left; cursor: pointer; font-family: var(--vscode-font-family); }
-      button.kb-section-label:hover { background: var(--vscode-list-hoverBackground); }
+      button.kb-section-label:hover, .kb-section-label[data-action="toggle-group"]:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-section-label[data-action="toggle-group"] { width: 100%; box-sizing: border-box; cursor: pointer; }
       .kb-section-label:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-section-actions { display: flex; gap: 2px; }
       .kb-hidden { display: none; }

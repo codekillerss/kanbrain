@@ -3,7 +3,7 @@ import type { PullRequestSummary, RepositoryPathEntry } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { resolvePrStatusColor } from './renderPrStatus';
 import { capitalize } from './renderDevelopment';
-import { renderBranchTag, REPO_ICON } from './renderRepoBranchTags';
+import { renderBranchTag, renderRepoTag } from './renderRepoBranchTags';
 import { renderAvatarOrInitial } from './renderAssignee';
 
 const STATUS_FILTER_OPTIONS: { value: 'active' | 'completed' | 'abandoned'; label: string }[] = [
@@ -82,15 +82,14 @@ function groupByRepo(prs: PullRequestSummary[]): RepoGroup[] {
 }
 
 function renderRepoGroup(group: RepoGroup, repositories: Record<string, RepositoryPathEntry>): string {
-  const isMapped = !!repositories[group.repositoryId]?.path;
-  const repoTagHtml = `<span class="kb-repo-tag${isMapped ? '' : ' kb-repo-tag-unmapped'}">${REPO_ICON}<span class="kb-tag-text">${escapeHtml(group.label)}</span></span>`;
+  const repoTagHtml = renderRepoTag(group.repositoryId, repositories[group.repositoryId] ?? { name: group.label, path: '' });
 
   return `
     <div class="kb-section-card kb-review-repo-group">
-      <button type="button" class="kb-section-label" data-action="toggle-group">
+      <div class="kb-section-label" data-action="toggle-group">
         <span><span class="kb-chevron">▾</span>${repoTagHtml}</span>
         <span class="kb-review-group-count">(${group.items.length})</span>
-      </button>
+      </div>
       <div class="kb-collapsible-body">
         ${group.items.map(pr => renderReviewRow(pr, repositories)).join('')}
       </div>
