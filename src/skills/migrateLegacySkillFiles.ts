@@ -13,10 +13,23 @@ const LEGACY_STATUS_SKILL_BLOCK =
 
 const LEGACY_BLOCKS = [LEGACY_EXPLAIN_CARD_BLOCK, LEGACY_STATUS_SKILL_BLOCK];
 
+// Matches the block regardless of whether the file on disk uses LF or CRLF line endings —
+// Windows checkouts (e.g. with core.autocrlf=true) turn the LF endings these blocks were
+// originally written with into CRLF, which broke a plain content.includes(block) check.
+function buildLegacyBlockPattern(block: string): RegExp {
+  const pattern = block
+    .split('\n')
+    .map(line => line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\r?\n');
+  return new RegExp(pattern);
+}
+
+const LEGACY_BLOCK_PATTERNS = LEGACY_BLOCKS.map(buildLegacyBlockPattern);
+
 export function stripLegacyCardInfoBlock(content: string): string {
-  for (const block of LEGACY_BLOCKS) {
-    if (content.includes(block)) {
-      return content.replace(block, '');
+  for (const pattern of LEGACY_BLOCK_PATTERNS) {
+    if (pattern.test(content)) {
+      return content.replace(pattern, '');
     }
   }
   return content;

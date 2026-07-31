@@ -71,6 +71,15 @@ Just do whatever the user asks.
     expect(stripLegacyCardInfoBlock(content)).toBe(content);
   });
 
+  it('strips the legacy block when the file uses CRLF line endings (e.g. Windows checkouts)', () => {
+    const crlfContent = LEGACY_STATUS_SKILL.replace(/\n/g, '\r\n');
+
+    const result = stripLegacyCardInfoBlock(crlfContent);
+
+    expect(result).not.toContain('Work item: {{title}}');
+    expect(result).toContain('## Instructions');
+  });
+
   it('preserves custom instructions written after the legacy block', () => {
     const content = `# Skill: Task — In Progress
 
