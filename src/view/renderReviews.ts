@@ -115,12 +115,14 @@ export function renderReviews(state: RenderState): string {
       ${renderReviewsStatusTabs(statusFilter)}
       ${renderReviewsOwnerFilters(ownerFilter)}
     </div>
-    ${
-      sorted.length
-        ? groupByRepo(sorted)
-            .map(group => renderRepoGroup(group, repositories))
-            .join('')
-        : renderEmptyMessage(statusFilter, ownerFilter)
-    }
+    <div class="kb-reviews-list">
+      ${
+        sorted.length
+          ? groupByRepo(sorted)
+              .map(group => renderRepoGroup(group, repositories))
+              .join('')
+          : renderEmptyMessage(statusFilter, ownerFilter)
+      }
+    </div>
   `;
 }

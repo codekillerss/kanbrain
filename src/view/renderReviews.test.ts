@@ -63,6 +63,20 @@ describe('renderReviews', () => {
     expect(html).toContain('data-action="set-reviews-status-filter"');
   });
 
+  it('wraps the pull request groups in a scrollable list separate from the filters header', () => {
+    const html = renderReviews(
+      state({
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
+        reviewsStatusFilter: 'active',
+      }),
+    );
+    const filtersIndex = html.indexOf('kb-reviews-filters');
+    const listIndex = html.indexOf('kb-reviews-list');
+    const groupIndex = html.indexOf('kb-review-repo-group');
+    expect(listIndex).toBeGreaterThan(filtersIndex);
+    expect(groupIndex).toBeGreaterThan(listIndex);
+  });
+
   it('shows "My PRs" and "Assigned to me" checkboxes, both unchecked by default', () => {
     const html = renderReviews(state({ reviewsPullRequests: [] }));
     expect(html).toContain('id="kb-reviews-filter-mine"');
