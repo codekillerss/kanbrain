@@ -44,6 +44,8 @@ npm run test:integration
 
 Press F5 in VS Code to launch an Extension Development Host with Kanbrain loaded.
 
+> **Note:** `npm run test:integration` has to be run from a terminal *outside* VS Code. VS Code sets `ELECTRON_RUN_AS_NODE=1` in the environment of its integrated terminal, and `@vscode/test-electron` hands its whole environment to the VS Code instance it launches — which then starts as a plain Node process and never runs the tests, failing with `MODULE_NOT_FOUND` or `bad option:` errors that have nothing to do with the extension. If you want to run it from inside VS Code anyway, use `env -u ELECTRON_RUN_AS_NODE npm run test:integration`.
+
 > **Note:** `npm run test:integration` launches a real VS Code instance via `@vscode/test-electron`. On Windows, that tool spawns the Code binary through a shell without escaping arguments, so it can fail with `Cannot find module 'C:\Users\...\Área'`-style errors if the repository path contains a space (a known upstream limitation, not a bug in this extension). If that happens in your environment, use the manual verification checklist below instead, or move/clone the repo to a space-free path before running that script.
 
 ## Manual verification checklist
