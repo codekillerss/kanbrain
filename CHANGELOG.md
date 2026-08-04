@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.5] - 2026-08-04
+
+### Fixed
+
+- On the Flow screen, a long Children list no longer squeezes the Parent and Current Work Item sections. Children now grows to fill only the remaining space and scrolls internally instead.
+
 ## [0.9.4] - 2026-08-04
 
 ### Added
