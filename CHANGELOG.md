@@ -2,6 +2,13 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.4] - 2026-08-04
+
+### Added
+
+- A work item history button (⇄ next to "Switch work item") lets you quickly jump back to recently viewed work items.
+- The card info detail page now has a "Set as current work item" button in the title row, so you can switch context without going back to the Flow screen.
+
 ## [0.9.3] - 2026-07-31
 
 ### Fixed
