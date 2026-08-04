@@ -1273,6 +1273,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
       .kb-search-tab-empty { opacity: 0.5; }
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
+      .kb-parent-section, .kb-section-card-current { flex-shrink: 0; }
+      .kb-section-card-children { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
+      .kb-section-card-children > .kb-section-label { flex-shrink: 0; }
+      .kb-section-card-children > .kb-collapsible-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
       .kb-section-card-current {
         border-color: transparent;
         background:
