@@ -23,6 +23,7 @@ export class WorkItemDetailPanelManager {
     private readonly workspaceRoot: string,
     private readonly client: AzureDevOpsClient,
     private readonly extensionUri: vscode.Uri,
+    private readonly getActiveWorkItemId: () => number | undefined,
   ) {}
 
   async open(id: number): Promise<void> {
@@ -45,6 +46,7 @@ export class WorkItemDetailPanelManager {
         'kanbrain.openPullRequestDetail',
         'kanbrain.resolveRepositoryTag',
         'kanbrain.openWorkItemInBrowser',
+        'kanbrain.pickWorkItem',
       ],
     });
     panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'icons', 'work-item.svg');
@@ -112,6 +114,7 @@ export class WorkItemDetailPanelManager {
       return; // Transient failure — skip this refresh, retry next poll.
     }
     const parent = parentResult[0] ?? null;
+    const currentWorkItemId = this.getActiveWorkItemId();
 
     const { groups, htmlSections } = resolveDetailFields(layout, rawFields);
     const description = typeof rawFields['System.Description'] === 'string' ? (rawFields['System.Description'] as string) : null;
@@ -132,6 +135,7 @@ export class WorkItemDetailPanelManager {
       prDetails,
       inlineImages,
       repositories: config.repositories,
+      currentWorkItemId,
     });
     if (this.lastStateByPanel.get(id) === stateKey) {
       return;
@@ -152,6 +156,7 @@ export class WorkItemDetailPanelManager {
         prDetails,
         parent,
         children,
+        currentWorkItemId,
       }),
     );
   }
