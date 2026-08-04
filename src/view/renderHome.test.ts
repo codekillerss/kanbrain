@@ -77,6 +77,7 @@ describe('renderHome', () => {
     expect(html).toContain('kb-main-card');
     expect(html).toContain('id="kb-toggle-search-btn"');
     expect(html).toContain('id="kb-clear-btn"');
+    expect(html).toContain('id="kb-history-btn"');
     expect(html).toContain('kb-icon-btn');
     expect(html).toContain('id="kb-open-flow-btn"');
     expect(html).toContain('Open Flow');

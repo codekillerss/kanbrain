@@ -25,6 +25,18 @@ export interface RenderState {
   reviewsOwnerFilter?: 'all' | 'mine' | 'assigned';
 }
 
+function renderHistoryDialog(): string {
+  return `<div id="kb-history-section" class="kb-search-overlay kb-hidden">
+    <div class="kb-search-dialog">
+      <div class="kb-search-dialog-header">
+        <strong class="kb-dialog-title">Work Item History</strong>
+        <button id="kb-history-close-btn" class="kb-dialog-close-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+      <div id="kb-history-results"><div class="kb-empty">Loading...</div></div>
+    </div>
+  </div>`;
+}
+
 function renderSearchDialog(): string {
   return `
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
@@ -60,7 +72,7 @@ export function render(state: RenderState): string {
     `;
   }
   if (state.screen === 'home') {
-    return `${renderHome(state)}${renderSearchDialog()}${renderFooter(state)}`;
+    return `${renderHome(state)}${renderSearchDialog()}${renderHistoryDialog()}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
     return `${renderConfig(state)}${renderSearchDialog()}${renderFooter(state)}`;
@@ -102,11 +114,13 @@ export function render(state: RenderState): string {
 
   return `
     ${renderSearchDialog()}
+    ${renderHistoryDialog()}
     ${parentSectionHtml}
     <div class="kb-section-card kb-section-card-current">
       <div class="kb-section-label">
         <span>Current Work Item</span>
         <div class="kb-section-actions">
+          <button id="kb-history-btn" class="kb-icon-btn" title="Work item history">&#8634;</button>
           <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>

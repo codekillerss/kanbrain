@@ -8,6 +8,7 @@ function renderHomeFlowActions(state: RenderState): string {
   }
   return `
     <div class="kb-section-actions">
+      <button id="kb-history-btn" class="kb-icon-btn" title="Work item history">&#8634;</button>
       <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
       <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
     </div>

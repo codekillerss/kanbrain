@@ -27,6 +27,7 @@ import { migrateLegacyLocalConfigIfNeeded } from './config/config';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
+const WORK_ITEM_HISTORY_KEY = 'kanbrain.workItemHistoryIds';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -54,6 +55,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     },
     team => context.workspaceState.update(SELECTED_TEAM_KEY, team),
+    context.workspaceState.get<number[]>(WORK_ITEM_HISTORY_KEY, []),
+    ids => context.workspaceState.update(WORK_ITEM_HISTORY_KEY, ids),
   );
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
@@ -90,7 +93,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);
   if (savedWorkItemId) {
-    provider.setActiveWorkItem(savedWorkItemId);
+    provider.setActiveWorkItem(savedWorkItemId, false);
   }
 
   const savedTeam = context.workspaceState.get<string>(SELECTED_TEAM_KEY);

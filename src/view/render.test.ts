@@ -126,6 +126,13 @@ describe('render', () => {
     expect(html).toContain('id="kb-clear-btn"');
   });
 
+  it('shows a history button and dialog when there is an active work item', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    expect(html).toContain('id="kb-history-btn"');
+    expect(html).toContain('id="kb-history-section"');
+    expect(html).toContain('id="kb-history-close-btn" class="kb-dialog-close-btn"');
+  });
+
   it('wraps the current work item in a section card with Switch/Clear in the header', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     const labelStart = html.indexOf('Current Work Item');

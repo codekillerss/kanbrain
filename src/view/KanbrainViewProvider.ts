@@ -15,6 +15,7 @@ import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
+import { renderWorkItemHistory } from './renderWorkItemHistory';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -42,6 +43,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastReviewsFetchAt = 0;
   private lastReviewsStatusFilterFetched: 'active' | 'completed' | 'abandoned' | undefined;
   private lastReviewsOwnerFilterFetched: 'all' | 'mine' | 'assigned' | undefined;
+  private workItemHistoryIds: number[];
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -51,7 +53,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly checkAzureSession: () => Promise<boolean>,
     private readonly openWorkItemDetail: (id: number) => Promise<void>,
     private readonly persistSelectedTeam: (team: string | undefined) => void,
-  ) {}
+    initialWorkItemHistoryIds: number[] = [],
+    private readonly persistWorkItemHistory: (ids: number[]) => void = () => {},
+  ) {
+    this.workItemHistoryIds = initialWorkItemHistoryIds
+      .filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
+      .slice(0, 50);
+  }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -71,6 +79,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setActiveWorkItem(Number(message.id));
       } else if (message.type === 'clear-work-item') {
         this.setActiveWorkItem(undefined);
+      } else if (message.type === 'load-work-item-history') {
+        await this.loadWorkItemHistory();
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
         this.notifyCommandFinished();
@@ -176,12 +186,37 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     await presentBoardConfigCheck(this.client, this.workspaceRoot, { quietWhenNothingToReport: true });
   }
 
-  setActiveWorkItem(id: number | undefined): void {
+  setActiveWorkItem(id: number | undefined, recordHistory = true): void {
     this.activeWorkItemId = id;
+    if (id !== undefined && recordHistory) {
+      this.workItemHistoryIds = [id, ...this.workItemHistoryIds.filter(historyId => historyId !== id)].slice(0, 50);
+      this.persistWorkItemHistory(this.workItemHistoryIds);
+    }
     this.persistActiveWorkItem(id);
     this.currentScreen = id === undefined ? 'home' : 'flow';
     this.lastState = '';
     void this.refresh();
+  }
+
+  private async loadWorkItemHistory(): Promise<void> {
+    if (!this.view || !this.workspaceRoot || !this.client) return;
+    const config = readConfig(this.workspaceRoot);
+    if (!config) return;
+    try {
+      const fetched = this.workItemHistoryIds.length
+        ? await this.client.getWorkItems(config.organization, config.project, this.workItemHistoryIds)
+        : [];
+      const byId = new Map(fetched.map(item => [item.id, item]));
+      const items = this.workItemHistoryIds.map(id => byId.get(id)).filter((item): item is WorkItem => !!item);
+      const avatars = await this.resolveAvatars(items);
+      this.view.webview.postMessage({ type: 'work-item-history', html: renderWorkItemHistory(items, config, avatars) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.view.webview.postMessage({
+        type: 'work-item-history',
+        html: `<div class="kb-empty">Error loading history: ${escapeHtml(message)}</div>`,
+      });
+    }
   }
 
   private toggleSection(section: string): void {
@@ -946,6 +981,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             vscode.postMessage({ type: 'search-work-items', query: '' });
           }
         }
+      } else if (target.id === 'kb-history-btn') {
+        const section = document.getElementById('kb-history-section');
+        if (section) {
+          section.classList.remove('kb-hidden');
+          vscode.postMessage({ type: 'load-work-item-history' });
+        }
+      } else if (target.id === 'kb-history-close-btn') {
+        document.getElementById('kb-history-section')?.classList.add('kb-hidden');
+      } else if (target.id === 'kb-history-section' && target.classList.contains('kb-search-overlay')) {
+        target.classList.add('kb-hidden');
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.id === 'kb-run-setup-btn') {
@@ -1103,6 +1148,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           results.innerHTML = event.data.html;
           applySearchTab();
         }
+      } else if (event.data.type === 'work-item-history') {
+        const results = document.getElementById('kb-history-results');
+        if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
@@ -1207,7 +1255,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+      .kb-dialog-title { flex: 1; min-width: 0; font-size: 12px; }
       #kb-search-results { overflow-y: auto; flex: 1; min-height: 0; }
+      .kb-dialog-close-btn { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; border-radius: 2px; font-family: var(--vscode-font-family); font-size: 13px; }
+      .kb-dialog-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
+      .kb-dialog-close-btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       #kb-search-close-btn { flex-shrink: 0; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px 6px; border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-search-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; }
@@ -1273,6 +1325,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
       .kb-result-item-assignee { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: 0.75; }
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
+      .kb-history-item { padding-bottom: 4px; }
+      .kb-history-item-footer { gap: 8px; }
+      .kb-history-item-status { display: flex; align-items: center; gap: 4px; margin: 0 6px 2px; font-size: 11px; opacity: 0.8; }
+      .kb-history-item .kb-result-item-assignee { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .kb-history-item .kb-view-details-link { flex-shrink: 0; }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
       .kb-reviews-owner-filters { display: flex; gap: 14px; margin: 0 0 14px; }
