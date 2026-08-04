@@ -184,6 +184,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
+  getActiveWorkItemId(): number | undefined {
+    return this.activeWorkItemId;
+  }
+
   private toggleSection(section: string): void {
     if (section === 'parent') {
       this.parentCollapsed = !this.parentCollapsed;
