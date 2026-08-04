@@ -42,6 +42,7 @@ function input(overrides: Partial<WorkItemDetailInput> = {}): WorkItemDetailInpu
     prDetails: {},
     parent: null,
     children: [],
+    currentWorkItemId: undefined,
     ...overrides,
   };
 }
@@ -79,6 +80,20 @@ describe('renderWorkItemDetail', () => {
       `href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([482, 'https://dev.azure.com/org/proj/_workitems/edit/482']))}"`,
     );
     expect(html).toContain('Open in browser');
+  });
+
+  it('shows a "Set as current work item" link in the header when the item is not the current work item', () => {
+    const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482 }), currentWorkItemId: 900 }));
+
+    expect(html).toContain('kb-pick-link');
+    expect(html).toContain(`href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([482]))}"`);
+    expect(html).toContain('title="Set as current work item"');
+  });
+
+  it('omits the "Set as current work item" link when the item is already the current work item', () => {
+    const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482 }), currentWorkItemId: 482 }));
+
+    expect(html).not.toContain('kb-pick-link');
   });
 
   it('shows the assignee row after the status', () => {
