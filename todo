@@ -1,9 +1,0 @@
-Uma outra coisa que eu queria trabalhar seria o fato de que, na empresa onde eu trabalho, o pessoal tem varios projetos diferentes. Dai cada um tem um processo diferente, e atualmente a extensao mapeia a pasta baseada em apenas um projeto certo? Eu estou pensando, seria que daria para tornar a extensão compativel com multi projetos da azure? E dai fazer um switch igual fazemos com o switch de times hoje?
-
-exibir arquivos anexados ao card e permitir abri-los via browser inicialmente
-
-Opção de abrir config json file na pagina de config
-
-adicionar current profile/current team no footer?
-
-tags de repo e branch possuem max width elipsis?
