@@ -78,10 +78,11 @@ export interface WorkItemDetailInput {
   prDetails: Record<string, PullRequestDetails>;
   parent: WorkItem | null;
   children: WorkItem[];
+  currentWorkItemId: number | undefined;
 }
 
 export function renderWorkItemDetail(input: WorkItemDetailInput): string {
-  const { workItem, config, description, groups, htmlSections, comments, avatars, inlineImages, prDetails, parent, children } = input;
+  const { workItem, config, description, groups, htmlSections, comments, avatars, inlineImages, prDetails, parent, children, currentWorkItemId } = input;
   const { iconHtml } = renderTypeAccent(workItem.type, config);
   const assigneeHtml = renderAssigneeRow(workItem.assignedTo, avatars, 'kb-detail-assignee');
 
@@ -113,6 +114,7 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
       <div class="kb-detail-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${assigneeHtml}
       <a class="kb-detail-web-link" href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([workItem.id, workItem.url]))}">Open in browser</a>
+      ${workItem.id !== currentWorkItemId ? `<a class="kb-pick-link" href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([workItem.id]))}" title="Set as current work item">&#8644;</a>` : ''}
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

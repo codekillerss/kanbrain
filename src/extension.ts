@@ -40,7 +40,11 @@ export function activate(context: vscode.ExtensionContext): void {
       })
     : undefined;
 
-  const detailPanelManager = workspaceRoot && client ? new WorkItemDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
+  let providerRef: KanbrainViewProvider | undefined;
+
+  const detailPanelManager = workspaceRoot && client
+    ? new WorkItemDetailPanelManager(workspaceRoot, client, context.extensionUri, () => providerRef?.getActiveWorkItemId())
+    : undefined;
   const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
 
   const provider = new KanbrainViewProvider(
@@ -58,6 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.workspaceState.get<number[]>(WORK_ITEM_HISTORY_KEY, []),
     ids => context.workspaceState.update(WORK_ITEM_HISTORY_KEY, ids),
   );
+  providerRef = provider;
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
 
