@@ -110,11 +110,11 @@ export function renderWorkItemDetail(input: WorkItemDetailInput): string {
         ${iconHtml}
         <span class="kb-detail-id">#${workItem.id}</span>
         <h1 class="kb-detail-title">${escapeHtml(workItem.title)}</h1>
+        ${workItem.id !== currentWorkItemId ? `<a class="kb-pick-link" href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([workItem.id]))}" title="Set as current work item">&#8644;</a>` : ''}
       </div>
       <div class="kb-detail-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
       ${assigneeHtml}
       <a class="kb-detail-web-link" href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([workItem.id, workItem.url]))}">Open in browser</a>
-      ${workItem.id !== currentWorkItemId ? `<a class="kb-pick-link" href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([workItem.id]))}" title="Set as current work item">&#8644;</a>` : ''}
     </div>
     <div class="kb-detail-body">
       <div class="kb-detail-main">

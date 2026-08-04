@@ -82,12 +82,16 @@ describe('renderWorkItemDetail', () => {
     expect(html).toContain('Open in browser');
   });
 
-  it('shows a "Set as current work item" link in the header when the item is not the current work item', () => {
+  it('shows a "Set as current work item" link in the title row when the item is not the current work item', () => {
     const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482 }), currentWorkItemId: 900 }));
 
-    expect(html).toContain('kb-pick-link');
-    expect(html).toContain(`href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([482]))}"`);
-    expect(html).toContain('title="Set as current work item"');
+    const rowStart = html.indexOf('kb-detail-title-row');
+    const rowEnd = html.indexOf('</div>', html.indexOf('kb-detail-title', rowStart));
+    const row = html.slice(rowStart, rowEnd);
+
+    expect(row).toContain('kb-pick-link');
+    expect(row).toContain(`href="command:kanbrain.pickWorkItem?${encodeURIComponent(JSON.stringify([482]))}"`);
+    expect(row).toContain('title="Set as current work item"');
   });
 
   it('omits the "Set as current work item" link when the item is already the current work item', () => {

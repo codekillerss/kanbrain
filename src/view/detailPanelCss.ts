@@ -7,7 +7,21 @@ export function detailPanelCss(): string {
     .kb-type-icon { display: inline-flex; width: 14px; height: 14px; flex-shrink: 0; }
     .kb-type-icon svg { width: 100%; height: 100%; }
     .kb-detail-id { font-weight: 600; font-size: 16px; opacity: 0.75; flex-shrink: 0; }
-    .kb-detail-title { font-size: 22px; margin: 0; }
+    .kb-detail-title { font-size: 22px; margin: 0; flex: 1; min-width: 0; }
+    .kb-detail-title-row .kb-pick-link {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 0;
+      margin-right: 4px;
+      font-size: 16px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+    }
+    .kb-detail-title-row .kb-pick-link:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
     .kb-detail-status-row { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.75; margin-top: 6px; }
     .kb-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .kb-detail-assignee { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.9; }
