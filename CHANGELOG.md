@@ -2,6 +2,14 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.6] - 2026-08-05
+
+### Fixed
+
+- The global skill run menu (opened from a card's action pill) can now be scrolled with the mouse wheel or its scrollbar — scrolling inside it no longer closes it immediately.
+- On the Flow screen, a card's children now consistently appear ordered by creation date instead of an arbitrary order.
+- Cloning an already-configured project no longer leaves teammates without local repository paths: Kanbrain now discovers and writes `.kanbrain/config.local.json` automatically the first time the project is opened with a cached Azure DevOps session.
+
 ## [0.9.5] - 2026-08-04
 
 ### Fixed
