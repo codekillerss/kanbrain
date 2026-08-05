@@ -149,6 +149,23 @@ describe('AzureDevOpsClient', () => {
     expect(children[0].id).toBe(101);
   });
 
+  it('getChildren sorts the returned work items by createdDate ascending, regardless of API response order', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 102, fields: { 'System.Title': 'Newer', 'System.State': 'New', 'System.WorkItemType': 'Task', 'System.CreatedDate': '2026-02-01T00:00:00Z' }, relations: [] },
+          { id: 101, fields: { 'System.Title': 'Older', 'System.State': 'New', 'System.WorkItemType': 'Task', 'System.CreatedDate': '2026-01-01T00:00:00Z' }, relations: [] },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+    const parent = { id: 90, title: 'P', description: '', status: 'Active', type: 'Story', url: '', parentId: null, childIds: [102, 101], assignedTo: null, development: [] };
+
+    const children = await client.getChildren('my-org', 'MyProject', parent);
+
+    expect(children.map(c => c.id)).toEqual([101, 102]);
+  });
+
   it("gets the project's default team name", async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({ id: 'p1', name: 'MyProject', defaultTeam: { id: 't1', name: 'MyProject Team' } }),

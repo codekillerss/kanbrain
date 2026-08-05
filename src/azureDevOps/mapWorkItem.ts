@@ -81,5 +81,6 @@ export function mapWorkItem(raw: RawWorkItem, organization: string, project: str
     childIds: childRelations.map(r => extractIdFromUrl(r.url)),
     assignedTo: mapAssignedTo(raw.fields['System.AssignedTo']),
     development,
+    createdDate: raw.fields['System.CreatedDate'] ? String(raw.fields['System.CreatedDate']) : undefined,
   };
 }

@@ -109,6 +109,15 @@ describe('mapWorkItem', () => {
     const item = mapWorkItem(raw(), 'my-org', 'MyProject');
     expect(item.assignedTo).toBeNull();
   });
+
+  it('maps System.CreatedDate into createdDate', () => {
+    const item = mapWorkItem(
+      raw({ fields: { ...raw().fields, 'System.CreatedDate': '2026-01-15T10:00:00Z' } }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.createdDate).toBe('2026-01-15T10:00:00Z');
+  });
 });
 
 describe('parseDevelopmentLink', () => {

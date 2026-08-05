@@ -14,6 +14,7 @@ export interface WorkItem {
   childIds: number[];
   assignedTo: AssignedTo | null;
   development: DevelopmentLink[];
+  createdDate?: string;
 }
 
 export type DevelopmentLink =

@@ -144,7 +144,8 @@ export class AzureDevOpsClient {
   }
 
   async getChildren(organization: string, project: string, workItem: WorkItem): Promise<WorkItem[]> {
-    return this.getWorkItems(organization, project, workItem.childIds);
+    const children = await this.getWorkItems(organization, project, workItem.childIds);
+    return children.sort((a, b) => new Date(a.createdDate ?? 0).getTime() - new Date(b.createdDate ?? 0).getTime());
   }
 
   async getAuthenticatedImageDataUri(url: string): Promise<string | null> {
