@@ -1136,7 +1136,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       document.querySelectorAll('.kb-global-skill-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
 
-    window.addEventListener('scroll', closeAllGlobalSkillMenus, true);
+    window.addEventListener('scroll', (event) => {
+      if (event.target && event.target.closest && event.target.closest('.kb-global-skill-menu')) {
+        return;
+      }
+      closeAllGlobalSkillMenus();
+    }, true);
 
     const searchInput = document.getElementById('kb-search-input');
     if (searchInput) {
