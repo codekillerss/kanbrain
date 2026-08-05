@@ -45,6 +45,10 @@ function extractLocalFields(config: KanbrainConfig): LocalConfig {
   return local;
 }
 
+export function writeLocalRepositories(workspaceRoot: string, repositories: Record<string, RepositoryPathEntry>): void {
+  writeLocalConfig(workspaceRoot, { ...readLocalConfig(workspaceRoot), repositories });
+}
+
 function writeLocalConfig(workspaceRoot: string, local: LocalConfig): void {
   const localPath = getConfigLocalPath(workspaceRoot);
   fs.mkdirSync(path.dirname(localPath), { recursive: true });

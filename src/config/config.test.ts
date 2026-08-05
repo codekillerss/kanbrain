@@ -8,6 +8,7 @@ import {
   migrateLegacyLocalConfigIfNeeded,
   readConfig,
   writeConfig,
+  writeLocalRepositories,
   ensureGitignoreEntry,
   readConfigWithDiagnostics,
 } from './config';
@@ -250,6 +251,28 @@ describe('profiles (shared field)', () => {
     expect(readConfig(workspaceRoot)).toEqual(config);
     const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
     expect(sharedRaw.profiles).toEqual({ developer: { label: 'Developer', description: 'I am a developer.' } });
+  });
+});
+
+describe('writeLocalRepositories', () => {
+  it('creates config.local.json containing just the given repositories', () => {
+    writeLocalRepositories(workspaceRoot, { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } });
+
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({ repositories: { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } } });
+  });
+
+  it('preserves other fields already present in config.local.json', () => {
+    fs.mkdirSync(path.dirname(getConfigLocalPath(workspaceRoot)), { recursive: true });
+    fs.writeFileSync(getConfigLocalPath(workspaceRoot), JSON.stringify({ showAssignedTo: false }), 'utf-8');
+
+    writeLocalRepositories(workspaceRoot, { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } });
+
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({
+      showAssignedTo: false,
+      repositories: { 'repo-1': { name: 'kanbrain', path: 'C:\\repos\\kanbrain' } },
+    });
   });
 });
 

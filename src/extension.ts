@@ -24,6 +24,8 @@ import { registerViewPullRequestDiffAtLineCommand } from './commands/viewPullReq
 import { registerResolveRepositoryTagCommand } from './commands/resolveRepositoryTag';
 import { registerOpenWorkItemInBrowserCommand } from './commands/openWorkItemInBrowser';
 import { migrateLegacyLocalConfigIfNeeded } from './config/config';
+import { bootstrapLocalRepositoriesIfNeeded } from './config/bootstrapLocalRepositories';
+import { discoverLocalRepositories } from './git/discoverLocalRepositories';
 
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
@@ -75,6 +77,25 @@ export function activate(context: vscode.ExtensionContext): void {
       'Kanbrain moved repository paths and display preferences out of .kanbrain/config.json into a new, gitignored .kanbrain/config.local.json. config.json no longer contains machine-specific data.',
     );
   }
+
+  // Teammates cloning an already-configured project have config.json (committed) but no
+  // config.local.json (gitignored, machine-specific repo paths), and nothing else generates it
+  // for them short of re-running the full interactive Setup wizard. Fire-and-forget: only runs
+  // when a session is already cached, so it never forces a login prompt on activation.
+  void hasCachedAzureSession(getVscodeMicrosoftSession).then(async hasSession => {
+    if (!hasSession) {
+      return;
+    }
+    const bootstrapped = await bootstrapLocalRepositoriesIfNeeded(workspaceRoot, {
+      listAzureRepositories: (organization, project) => client.listRepositories(organization, project),
+      discoverLocalRepos: discoverLocalRepositories,
+    }).catch(() => false);
+    if (bootstrapped) {
+      vscode.window.showInformationMessage(
+        'Kanbrain discovered your local repository paths and wrote them to .kanbrain/config.local.json.',
+      );
+    }
+  });
 
   context.subscriptions.push(
     registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined), extensionVersion),
