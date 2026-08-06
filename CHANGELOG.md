@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.9.7] - 2026-08-06
+
+### Fixed
+
+- Searching a work item by its exact `#id` in the search dialog now always finds it, even if it isn't among the 50 most recently changed items. Previously the id search only filtered within that recent-items window, so older cards could be invisible to search.
+
 ## [0.9.6] - 2026-08-05
 
 ### Fixed
