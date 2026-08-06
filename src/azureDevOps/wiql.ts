@@ -4,8 +4,12 @@ const ORDER_BY = 'ORDER BY [System.ChangedDate] DESC';
 export function buildSearchQuery(searchText: string): string {
   const trimmed = searchText.trim();
 
-  if (!trimmed || /^\d+$/.test(trimmed)) {
+  if (!trimmed) {
     return `${BASE_QUERY} ${ORDER_BY}`;
+  }
+
+  if (/^\d+$/.test(trimmed)) {
+    return `${BASE_QUERY} AND [System.Id] = ${trimmed}`;
   }
 
   const escaped = trimmed.replace(/'/g, "''");

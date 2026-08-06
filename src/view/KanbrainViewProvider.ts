@@ -8,7 +8,6 @@ import { resolveActiveProfile } from '../config/resolveActiveProfile';
 import { cloneRepository } from '../git/cloneRepository';
 import { render } from './render';
 import { renderSearchResults } from './renderSearchResults';
-import { filterSearchResults } from './filterSearchResults';
 import { escapeHtml } from './escapeHtml';
 import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
@@ -351,9 +350,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       const ids = await this.client.searchWorkItems(config.organization, config.project, query);
       const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-      const filtered = filterSearchResults(items, query);
-      const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(filtered) : {};
-      html = renderSearchResults(filtered, config, this.typeCounts, avatars);
+      const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(items) : {};
+      html = renderSearchResults(items, config, this.typeCounts, avatars);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
