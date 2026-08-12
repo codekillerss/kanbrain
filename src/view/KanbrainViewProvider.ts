@@ -1031,7 +1031,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
             if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
             closeQueryDropdown();
-            vscode.postMessage({ type: 'search-work-items', query: '' });
+            // Don't fire the default (no-query) search here: whether a saved query was
+            // selected last time is only known once load-saved-queries responds, and firing
+            // both in parallel is a race — whichever response lands last wins, sometimes
+            // showing the wrong list. The saved-queries handler below fires the single,
+            // correctly-scoped search once it knows.
             vscode.postMessage({ type: 'load-saved-queries' });
             document.getElementById('kb-search-input')?.focus();
           }
@@ -1309,8 +1313,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           activeQueryId = event.data.selectedQueryId;
           setQueryTriggerLabel(event.data.selectedQueryPath, false);
           if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
-          triggerSearch();
         }
+        // Exactly one search fires per dialog open, only now that we know whether a saved
+        // query was previously selected — see the comment at the load-saved-queries call site.
+        triggerSearch();
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
