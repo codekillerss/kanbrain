@@ -47,7 +47,7 @@ function renderSearchDialog(): string {
               <span id="kb-query-trigger-label" class="kb-query-trigger-label kb-query-trigger-placeholder">Filter by saved query...</span>
             </div>
             <button id="kb-query-clear-btn" class="kb-query-clear-btn kb-hidden" title="Clear query" aria-label="Clear query">✕</button>
-            <span id="kb-query-combobox-icon" class="kb-query-combobox-icon" aria-hidden="true">▾</span>
+            <span id="kb-query-combobox-icon" class="kb-query-combobox-icon" aria-hidden="true">▼</span>
             <div id="kb-query-options" class="kb-query-dropdown kb-hidden">
               <input id="kb-query-filter-input" placeholder="Filter by saved query..." autocomplete="off">
               <div id="kb-query-options-list"></div>

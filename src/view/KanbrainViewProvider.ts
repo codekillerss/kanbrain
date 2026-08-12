@@ -1398,7 +1398,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-query-trigger-placeholder { opacity: 0.6; }
       .kb-query-clear-btn { flex-shrink: 0; background: transparent; border: none; padding: 2px; color: var(--vscode-errorForeground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; line-height: 1; }
       .kb-query-clear-btn:hover { opacity: 0.8; }
-      .kb-query-combobox-icon { flex-shrink: 0; padding: 0 2px; font-size: 10px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }
+      .kb-query-combobox-icon { flex-shrink: 0; padding: 0 4px; font-size: 14px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }
       .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 4px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-query-dropdown.kb-hidden { display: none; }
       #kb-query-filter-input { box-sizing: border-box; width: 100%; flex-shrink: 0; padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
