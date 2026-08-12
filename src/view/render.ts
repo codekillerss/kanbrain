@@ -24,6 +24,7 @@ export interface RenderState {
   reviewsTab?: 'all' | 'fixed' | 'needsMyFix';
   reviewsStatusFilters?: ('active' | 'completed' | 'abandoned')[];
   reviewsOwnerFilter?: 'all' | 'mine' | 'assigned';
+  reviewsFetchFailedCount?: number;
 }
 
 function renderHistoryDialog(): string {

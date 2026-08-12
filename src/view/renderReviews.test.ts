@@ -358,4 +358,23 @@ describe('renderReviews', () => {
     expect(html).toContain('kb-review-repo-group');
     expect(html).toContain('#57');
   });
+
+  it('shows a failure warning on the "fixed"/"needsMyFix" tabs when some per-PR thread fetches failed', () => {
+    const fixedHtml = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed', reviewsFetchFailedCount: 2 }));
+    expect(fixedHtml).toContain('2 pull requests could not be checked');
+
+    const needsMyFixHtml = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix', reviewsFetchFailedCount: 1 }));
+    expect(needsMyFixHtml).toContain('1 pull request could not be checked');
+  });
+
+  it('does not show the failure warning on the "all" tab or when there are no failures', () => {
+    const onAllWithFailures = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'all', reviewsFetchFailedCount: 3 }));
+    expect(onAllWithFailures).not.toContain('could not be checked');
+
+    const onFixedNoFailures = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed', reviewsFetchFailedCount: 0 }));
+    expect(onFixedNoFailures).not.toContain('could not be checked');
+
+    const onFixedUndefined = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed' }));
+    expect(onFixedUndefined).not.toContain('could not be checked');
+  });
 });

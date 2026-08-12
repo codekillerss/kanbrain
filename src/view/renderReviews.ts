@@ -114,6 +114,14 @@ function renderRepoGroup(group: RepoGroup, repositories: Record<string, Reposito
   `;
 }
 
+function renderFetchFailureNotice(tab: 'all' | 'fixed' | 'needsMyFix', failedCount: number): string {
+  if (tab === 'all' || !failedCount) {
+    return '';
+  }
+  const plural = failedCount === 1 ? '' : 's';
+  return `<div class="kb-empty">⚠ ${failedCount} pull request${plural} could not be checked and may be missing from this list.</div>`;
+}
+
 function renderEmptyMessage(
   tab: 'all' | 'fixed' | 'needsMyFix',
   statusFilters: ('active' | 'completed' | 'abandoned')[],
@@ -140,6 +148,7 @@ export function renderReviews(state: RenderState): string {
   const ownerFilter = state.reviewsOwnerFilter ?? 'all';
   const pullRequests = state.reviewsPullRequests ?? [];
   const sorted = [...pullRequests].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+  const failureNoticeHtml = renderFetchFailureNotice(tab, state.reviewsFetchFailedCount ?? 0);
 
   return `
     ${renderReviewsTopTabs(tab)}
@@ -147,6 +156,7 @@ export function renderReviews(state: RenderState): string {
       ${tab === 'all' ? `${renderReviewsStatusMultiSelect(statusFilters)}${renderReviewsOwnerFilters(ownerFilter)}` : ''}
     </div>
     <div class="kb-reviews-list">
+      ${failureNoticeHtml}
       ${
         sorted.length
           ? groupByRepo(sorted)

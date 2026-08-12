@@ -42,6 +42,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private reviewsStatusFilters: Array<'active' | 'completed' | 'abandoned'> = ['active'];
   private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' = 'all';
   private reviewsPullRequests: PullRequestSummary[] = [];
+  private reviewsFetchFailedCount = 0;
   private currentUserId: string | null | undefined;
   private lastReviewsFetchAt = 0;
   private lastReviewsFilterKeyFetched: string | undefined;
@@ -786,8 +787,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
-  private async fetchReviewsPullRequests(config: KanbrainConfig): Promise<PullRequestSummary[]> {
-    if (!this.client) return [];
+  private async fetchReviewsPullRequests(
+    config: KanbrainConfig,
+  ): Promise<{ pullRequests: PullRequestSummary[]; failedCount: number }> {
+    if (!this.client) return { pullRequests: [], failedCount: 0 };
 
     if (this.reviewsTab === 'all') {
       const creatorId = this.reviewsOwnerFilter === 'mine' && this.currentUserId ? this.currentUserId : undefined;
@@ -797,10 +800,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           this.client!.listProjectPullRequests(config.organization, config.project, status, { creatorId, reviewerId }),
         ),
       );
-      return perStatus.flat();
+      return { pullRequests: perStatus.flat(), failedCount: 0 };
     }
 
-    if (!this.currentUserId) return [];
+    if (!this.currentUserId) return { pullRequests: [], failedCount: 0 };
     const isFixed = this.reviewsTab === 'fixed';
     const base = await this.client.listProjectPullRequests(config.organization, config.project, 'active', {
       creatorId: isFixed ? undefined : this.currentUserId,
@@ -811,15 +814,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         try {
           const threads = await this.client!.getPullRequestThreads(config.organization, config.project, pr.repositoryId, pr.id);
           const { hasAnyActiveThread, hasMyThreadsAllResolved } = classifyPrThreads(threads, this.currentUserId!);
-          return { pr, keep: isFixed ? hasMyThreadsAllResolved : hasAnyActiveThread };
+          return { pr, keep: isFixed ? hasMyThreadsAllResolved : hasAnyActiveThread, failed: false };
         } catch {
           // One PR's thread fetch failing (network blip, deleted repo, etc.) shouldn't take down
           // the whole tab — just exclude that PR rather than rejecting the whole Promise.all.
-          return { pr, keep: false };
+          // The caller surfaces failedCount so this isn't silently indistinguishable from "nothing pending".
+          return { pr, keep: false, failed: true };
         }
       }),
     );
-    return classified.filter(c => c.keep).map(c => c.pr);
+    return {
+      pullRequests: classified.filter(c => c.keep).map(c => c.pr),
+      failedCount: classified.filter(c => c.failed).length,
+    };
   }
 
   private async refresh(): Promise<void> {
@@ -883,7 +890,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const filterKey = `${this.reviewsTab}|${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
       const filterChanged = this.lastReviewsFilterKeyFetched !== filterKey;
       if (filterChanged || now - this.lastReviewsFetchAt >= REVIEWS_POLL_INTERVAL_MS) {
-        this.reviewsPullRequests = await this.fetchReviewsPullRequests(config);
+        const { pullRequests, failedCount } = await this.fetchReviewsPullRequests(config);
+        this.reviewsPullRequests = pullRequests;
+        this.reviewsFetchFailedCount = failedCount;
         this.lastReviewsFetchAt = now;
         this.lastReviewsFilterKeyFetched = filterKey;
       }
@@ -894,10 +903,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     // (now search-only) manual showAssignedTo toggle.
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
-    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars, this.reviewsPullRequests)) {
+    const reviewsExtra = { pullRequests: this.reviewsPullRequests, failedCount: this.reviewsFetchFailedCount };
+    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars, reviewsExtra)) {
       return;
     }
-    this.lastState = serializeState(config, workItem, subtasks, avatars, this.reviewsPullRequests);
+    this.lastState = serializeState(config, workItem, subtasks, avatars, reviewsExtra);
     this.view.webview.html = this.wrapHtml(
       render({
         hasWorkspace: !!this.workspaceRoot,
@@ -915,6 +925,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         reviewsTab: this.reviewsTab,
         reviewsStatusFilters: this.reviewsStatusFilters,
         reviewsOwnerFilter: this.reviewsOwnerFilter,
+        reviewsFetchFailedCount: this.reviewsFetchFailedCount,
       }),
     );
   }
@@ -1134,10 +1145,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         setLoading(target);
         vscode.postMessage({ type: 'set-reviews-tab', tab: target.dataset.tab });
       } else if (target.dataset && target.dataset.action === 'toggle-reviews-status-filter') {
-        disableReviewsFilterControls(target);
-        target.classList.toggle('kb-search-tab-active');
-        setLoading(target);
-        vscode.postMessage({ type: 'toggle-reviews-status-filter', status: target.dataset.status });
+        const statusBar = target.closest('.kb-search-tabs');
+        const activeInBar = statusBar ? statusBar.querySelectorAll('.kb-search-tab-active').length : 0;
+        if (!(target.classList.contains('kb-search-tab-active') && activeInBar <= 1)) {
+          // At least one status must always stay selected. Mirror that invariant here so a
+          // click the server would reject never triggers the disable/loading UI in the first place.
+          disableReviewsFilterControls(target);
+          target.classList.toggle('kb-search-tab-active');
+          setLoading(target);
+          vscode.postMessage({ type: 'toggle-reviews-status-filter', status: target.dataset.status });
+        }
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
