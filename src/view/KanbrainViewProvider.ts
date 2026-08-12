@@ -1390,14 +1390,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
-      .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; }
+      .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
+      .kb-query-combobox:hover { background: var(--vscode-list-hoverBackground); }
       .kb-query-combobox:focus-within { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-query-trigger { flex: 1; min-width: 0; padding: 4px 2px; cursor: pointer; }
-      .kb-query-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-input-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
+      .kb-query-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-dropdown-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-query-trigger-placeholder { opacity: 0.6; }
       .kb-query-clear-btn { flex-shrink: 0; background: transparent; border: none; padding: 2px; color: var(--vscode-errorForeground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; line-height: 1; }
       .kb-query-clear-btn:hover { opacity: 0.8; }
-      .kb-query-combobox-icon { flex-shrink: 0; padding: 0 2px; font-size: 10px; opacity: 0.7; color: var(--vscode-input-foreground); cursor: pointer; }
+      .kb-query-combobox-icon { flex-shrink: 0; padding: 0 2px; font-size: 10px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }
       .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 4px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-query-dropdown.kb-hidden { display: none; }
       #kb-query-filter-input { box-sizing: border-box; width: 100%; flex-shrink: 0; padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
