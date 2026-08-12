@@ -21,7 +21,8 @@ export interface RenderState {
   childrenCollapsed?: boolean;
   openBrainSegment?: 'repositories' | 'skills' | 'profiles' | null;
   reviewsPullRequests?: PullRequestSummary[];
-  reviewsStatusFilter?: 'active' | 'completed' | 'abandoned';
+  reviewsTab?: 'all' | 'fixed' | 'needsMyFix';
+  reviewsStatusFilters?: ('active' | 'completed' | 'abandoned')[];
   reviewsOwnerFilter?: 'all' | 'mine' | 'assigned';
 }
 

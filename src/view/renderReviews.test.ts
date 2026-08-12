@@ -47,27 +47,32 @@ function state(overrides: Partial<RenderState> = {}): RenderState {
 
 describe('renderReviews', () => {
   it('shows an empty message for the active filter when there are no pull requests', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'] }));
     expect(html).toContain('No active pull requests.');
   });
 
   it('shows an empty message reflecting a non-default filter', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'completed' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
     expect(html).toContain('No completed pull requests.');
   });
 
+  it('shows a generic empty message when multiple statuses are selected', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active', 'completed'] }));
+    expect(html).toContain('No pull requests match the selected status filters.');
+  });
+
   it('shows the status filter as tabs, not a select', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'] }));
     expect(html).not.toContain('<select');
     expect(html).toContain('kb-search-tabs');
-    expect(html).toContain('data-action="set-reviews-status-filter"');
+    expect(html).toContain('data-action="toggle-reviews-status-filter"');
   });
 
   it('wraps the pull request groups in a scrollable list separate from the filters header', () => {
     const html = renderReviews(
       state({
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     const filtersIndex = html.indexOf('kb-reviews-filters');
@@ -118,36 +123,49 @@ describe('renderReviews', () => {
   });
 
   it('appends "created by you" to the empty message when reviewsOwnerFilter is "mine"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active', reviewsOwnerFilter: 'mine' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'mine' }));
     expect(html).toContain('No active pull requests created by you.');
   });
 
   it('appends "assigned to you" to the empty message when reviewsOwnerFilter is "assigned"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'active', reviewsOwnerFilter: 'assigned' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'assigned' }));
     expect(html).toContain('No active pull requests assigned to you.');
   });
 
   it('marks the selected status tab as active', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'completed' }));
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
     const tabStart = html.indexOf('data-status="completed"');
     const tagStart = html.lastIndexOf('<button', tabStart);
     const tag = html.slice(tagStart, html.indexOf('>', tabStart));
     expect(tag).toContain('kb-search-tab-active');
   });
 
-  it('does not mark non-selected tabs as active', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilter: 'completed' }));
+  it('does not mark non-selected status tabs as active', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
     const tabStart = html.indexOf('data-status="active"');
     const tagStart = html.lastIndexOf('<button', tabStart);
     const tag = html.slice(tagStart, html.indexOf('>', tabStart));
     expect(tag).not.toContain('kb-search-tab-active');
   });
 
+  it('marks multiple status tabs as active at once when multiple are selected', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active', 'abandoned'] }));
+    const activeStart = html.indexOf('data-status="active"');
+    const activeTag = html.slice(html.lastIndexOf('<button', activeStart), html.indexOf('>', activeStart));
+    expect(activeTag).toContain('kb-search-tab-active');
+    const abandonedStart = html.indexOf('data-status="abandoned"');
+    const abandonedTag = html.slice(html.lastIndexOf('<button', abandonedStart), html.indexOf('>', abandonedStart));
+    expect(abandonedTag).toContain('kb-search-tab-active');
+    const completedStart = html.indexOf('data-status="completed"');
+    const completedTag = html.slice(html.lastIndexOf('<button', completedStart), html.indexOf('>', completedStart));
+    expect(completedTag).not.toContain('kb-search-tab-active');
+  });
+
   it('groups pull requests into a section card per repository, with the repo shown as a tag plus a count in the header', () => {
     const html = renderReviews(
       state({
         reviewsPullRequests: [pr({ id: 1, repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('kb-section-card');
@@ -162,7 +180,7 @@ describe('renderReviews', () => {
     const html = renderReviews(
       state({
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('<span class="kb-review-group-count">(1)</span>');
@@ -173,7 +191,7 @@ describe('renderReviews', () => {
       state({
         config: config({ repositories: {} }),
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('kb-repo-tag-unmapped');
@@ -184,7 +202,7 @@ describe('renderReviews', () => {
       state({
         config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '/local/kanbrain' } } }),
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).not.toContain('kb-repo-tag-unmapped');
@@ -197,7 +215,7 @@ describe('renderReviews', () => {
           pr({ id: 1, repositoryId: 'repo-1', repositoryName: 'kanbrain' }),
           pr({ id: 2, repositoryId: 'repo-2', repositoryName: 'ado-shared-libs' }),
         ],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('kanbrain');
@@ -212,7 +230,7 @@ describe('renderReviews', () => {
           pr({ id: 1, repositoryId: 'repo-1', repositoryName: 'kanbrain' }),
           pr({ id: 2, repositoryId: 'repo-1', repositoryName: 'kanbrain' }),
         ],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('(2)');
@@ -220,25 +238,25 @@ describe('renderReviews', () => {
   });
 
   it('renders the title as its own link on the first line', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsStatusFilters: ['active'] }));
     expect(html).toContain('class="kb-review-row-title"');
     expect(html).toContain('#57');
     expect(html).toContain('Fix &lt;login&gt; bug');
   });
 
   it('escapes the title instead of injecting raw HTML', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsStatusFilters: ['active'] }));
     expect(html).not.toContain('Fix <login> bug');
   });
 
   it('links the title to the openPullRequestDetail command with repositoryId and id', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr({ repositoryId: 'repo-1', id: 57 })], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ repositoryId: 'repo-1', id: 57 })], reviewsStatusFilters: ['active'] }));
     const commandArgs = encodeURIComponent(JSON.stringify(['repo-1', 57]));
     expect(html).toContain(`command:kanbrain.openPullRequestDetail?${commandArgs}`);
   });
 
   it('shows the assignee as an avatar-initial plus name on the second line', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr({ createdBy: { displayName: 'Jane Doe', imageUrl: null } })], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ createdBy: { displayName: 'Jane Doe', imageUrl: null } })], reviewsStatusFilters: ['active'] }));
     expect(html).toContain('kb-avatar-initial');
     expect(html).toContain('>J<');
     expect(html).toContain('kb-review-row-author');
@@ -250,7 +268,7 @@ describe('renderReviews', () => {
       state({
         config: config({ repositories: { 'repo-1': { name: 'kanbrain', path: '/local/kanbrain' } } }),
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', sourceBranch: 'feature/login-fix' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('kb-branch-tag');
@@ -262,20 +280,20 @@ describe('renderReviews', () => {
       state({
         config: config({ repositories: {} }),
         reviewsPullRequests: [pr({ repositoryId: 'repo-1', sourceBranch: 'feature/login-fix' })],
-        reviewsStatusFilter: 'active',
+        reviewsStatusFilters: ['active'],
       }),
     );
     expect(html).toContain('kb-branch-tag-disabled');
   });
 
   it('colors the row border for the status instead of showing a status badge', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'active', isDraft: false })], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'active', isDraft: false })], reviewsStatusFilters: ['active'] }));
     expect(html).toContain('border-left-color: var(--vscode-charts-blue)');
     expect(html).not.toContain('kb-review-status-badge');
   });
 
   it('colors the row border yellow and titles it Draft for draft PRs', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'completed', isDraft: true })], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [pr({ status: 'completed', isDraft: true })], reviewsStatusFilters: ['active'] }));
     expect(html).toContain('border-left-color: var(--vscode-charts-yellow)');
     expect(html).toContain('title="Draft"');
   });
@@ -283,7 +301,61 @@ describe('renderReviews', () => {
   it('sorts pull requests newest first within a group', () => {
     const older = pr({ id: 1, creationDate: '2026-07-20T00:00:00Z', title: 'Older' });
     const newer = pr({ id: 2, creationDate: '2026-07-29T00:00:00Z', title: 'Newer' });
-    const html = renderReviews(state({ reviewsPullRequests: [older, newer], reviewsStatusFilter: 'active' }));
+    const html = renderReviews(state({ reviewsPullRequests: [older, newer], reviewsStatusFilters: ['active'] }));
     expect(html.indexOf('Newer')).toBeLessThan(html.indexOf('Older'));
+  });
+
+  it('shows three top-level tabs: All, Fixed, Needs my fix', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [] }));
+    expect(html).toContain('data-action="set-reviews-tab" data-tab="all"');
+    expect(html).toContain('data-action="set-reviews-tab" data-tab="fixed"');
+    expect(html).toContain('data-action="set-reviews-tab" data-tab="needsMyFix"');
+    expect(html).toContain('>All<');
+    expect(html).toContain('>Fixed<');
+    expect(html).toContain('>Needs my fix<');
+  });
+
+  it('marks the "all" tab active by default', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [] }));
+    const tabStart = html.indexOf('data-tab="all"');
+    const tag = html.slice(html.lastIndexOf('<button', tabStart), html.indexOf('>', tabStart));
+    expect(tag).toContain('kb-search-tab-active');
+  });
+
+  it('marks the "fixed" tab active when reviewsTab is "fixed"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
+    const tabStart = html.indexOf('data-tab="fixed"');
+    const tag = html.slice(html.lastIndexOf('<button', tabStart), html.indexOf('>', tabStart));
+    expect(tag).toContain('kb-search-tab-active');
+  });
+
+  it('shows the status multi-select and owner checkboxes only on the "all" tab', () => {
+    const onAll = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'all' }));
+    expect(onAll).toContain('data-action="toggle-reviews-status-filter"');
+    expect(onAll).toContain('id="kb-reviews-filter-mine"');
+
+    const onFixed = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
+    expect(onFixed).not.toContain('data-action="toggle-reviews-status-filter"');
+    expect(onFixed).not.toContain('id="kb-reviews-filter-mine"');
+
+    const onNeedsMyFix = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix' }));
+    expect(onNeedsMyFix).not.toContain('data-action="toggle-reviews-status-filter"');
+    expect(onNeedsMyFix).not.toContain('id="kb-reviews-filter-mine"');
+  });
+
+  it('shows a dedicated empty message on the "fixed" tab', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
+    expect(html).toContain('No pull requests fixed and ready for re-review.');
+  });
+
+  it('shows a dedicated empty message on the "needsMyFix" tab', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix' }));
+    expect(html).toContain('No pull requests need your fix.');
+  });
+
+  it('still renders the pull request list normally on the "fixed"/"needsMyFix" tabs', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed' }));
+    expect(html).toContain('kb-review-repo-group');
+    expect(html).toContain('#57');
   });
 });
