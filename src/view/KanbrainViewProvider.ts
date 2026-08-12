@@ -84,6 +84,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.loadWorkItemHistory();
       } else if (message.type === 'load-saved-queries') {
         await this.loadSavedQueries();
+      } else if (message.type === 'set-selected-saved-query') {
+        this.setSelectedSavedQuery(message.queryId ? String(message.queryId) : undefined);
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
         this.notifyCommandFinished();
@@ -228,7 +230,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) return;
     try {
       const queries = await this.client.listQueries(config.organization, config.project);
-      this.view.webview.postMessage({ type: 'saved-queries', html: renderSavedQueryOptions(queries) });
+      const selected = config.selectedSavedQueryId ? queries.find(q => q.id === config.selectedSavedQueryId) : undefined;
+      this.view.webview.postMessage({
+        type: 'saved-queries',
+        html: renderSavedQueryOptions(queries),
+        selectedQueryId: selected?.id,
+        selectedQueryPath: selected?.path,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
@@ -287,6 +295,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     writeConfig(this.workspaceRoot, config);
     this.lastState = '';
     void this.refresh();
+  }
+
+  private setSelectedSavedQuery(queryId: string | undefined): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.selectedSavedQueryId = queryId;
+    writeConfig(this.workspaceRoot, config);
   }
 
   showHomeScreen(): void {
@@ -1095,6 +1115,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         closeQueryDropdown();
         if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
         triggerSearch();
+        vscode.postMessage({ type: 'set-selected-saved-query', queryId: activeQueryId });
       } else if (target.closest && target.closest('a.kb-repo-tag-unmapped')) {
         // Let the command: link navigate instead of toggling the enclosing group header.
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
@@ -1271,6 +1292,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         queryClearBtn.classList.add('kb-hidden');
         closeQueryDropdown();
         triggerSearch();
+        vscode.postMessage({ type: 'set-selected-saved-query', queryId: undefined });
       });
     }
 
@@ -1286,6 +1308,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'saved-queries') {
         if (queryOptionsList) queryOptionsList.innerHTML = event.data.html;
+        if (event.data.selectedQueryId && event.data.selectedQueryPath) {
+          activeQueryId = event.data.selectedQueryId;
+          setQueryTriggerLabel(event.data.selectedQueryPath, false);
+          if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
+          triggerSearch();
+        }
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {

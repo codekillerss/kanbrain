@@ -9,6 +9,7 @@ interface LocalConfig {
   repositories?: Record<string, RepositoryPathEntry>;
   showAssignedTo?: boolean;
   selectedProfileId?: string;
+  selectedSavedQueryId?: string;
 }
 
 export function getConfigPath(workspaceRoot: string): string {
@@ -41,6 +42,9 @@ function extractLocalFields(config: KanbrainConfig): LocalConfig {
   }
   if (config.selectedProfileId !== undefined) {
     local.selectedProfileId = config.selectedProfileId;
+  }
+  if (config.selectedSavedQueryId !== undefined) {
+    local.selectedSavedQueryId = config.selectedSavedQueryId;
   }
   return local;
 }
@@ -105,6 +109,9 @@ function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): Kanbr
   if ('selectedProfileId' in local) {
     result.selectedProfileId = local.selectedProfileId;
   }
+  if ('selectedSavedQueryId' in local) {
+    result.selectedSavedQueryId = local.selectedSavedQueryId;
+  }
   return result;
 }
 
@@ -141,7 +148,7 @@ export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void
   const configPath = getConfigPath(workspaceRoot);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
-  const { repositories, showAssignedTo, selectedProfileId, ...shared } = config;
+  const { repositories, showAssignedTo, selectedProfileId, selectedSavedQueryId, ...shared } = config;
   fs.writeFileSync(configPath, `${JSON.stringify(shared, null, 2)}\n`, 'utf-8');
 
   const local = extractLocalFields(config);
