@@ -328,6 +328,14 @@ describe('render', () => {
     expect(html).toContain('id="kb-search-close-btn"');
   });
 
+  it('places the saved-query combobox above the title input inside the search dialog', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    expect(html).toContain('id="kb-query-filter-input"');
+    expect(html).toContain('id="kb-query-clear-btn"');
+    expect(html).toContain('id="kb-query-options"');
+    expect(html.indexOf('kb-query-combobox')).toBeLessThan(html.indexOf('id="kb-search-input"'));
+  });
+
   it('uses a custom label when the skill entry defines one', () => {
     const customConfig: KanbrainConfig = {
       ...config,
