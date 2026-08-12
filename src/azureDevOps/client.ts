@@ -43,6 +43,7 @@ export interface BoardColumn {
 }
 
 interface RawIdentityRef {
+  id?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
@@ -51,7 +52,7 @@ interface RawIdentityRef {
 function mapIdentityRef(raw: unknown): AssignedTo {
   const identity = raw as RawIdentityRef | undefined;
   const imageUrl = identity?.imageUrl ?? identity?._links?.avatar?.href ?? null;
-  return { displayName: identity?.displayName ?? 'Unknown', imageUrl };
+  return { id: identity?.id, displayName: identity?.displayName ?? 'Unknown', imageUrl };
 }
 
 const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);

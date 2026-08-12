@@ -607,6 +607,33 @@ describe('AzureDevOpsClient.getPullRequestThreads', () => {
 
     expect(threads[0].status).toBe('unknown');
   });
+
+  it('captures the comment author id when present, for identifying who opened a thread', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          {
+            id: 148,
+            status: 'active',
+            comments: [
+              {
+                id: 1,
+                content: 'Please fix this',
+                author: { id: 'user-123', displayName: 'Jane', imageUrl: 'https://example.com/jane.png' },
+                publishedDate: '2026-01-02T00:00:00Z',
+                commentType: 'text',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const threads = await client.getPullRequestThreads('my-org', 'MyProject', 'repo-1', 57);
+
+    expect(threads[0].comments[0].createdBy).toEqual({ id: 'user-123', displayName: 'Jane', imageUrl: 'https://example.com/jane.png' });
+  });
 });
 
 describe('AzureDevOpsClient.getCardSettings', () => {
