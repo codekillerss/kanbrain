@@ -1011,7 +1011,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
             activeQueryId = null;
-            if (queryFilterInput) queryFilterInput.value = '';
+            setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
             if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
             closeQueryDropdown();
             vscode.postMessage({ type: 'search-work-items', query: '' });
@@ -1091,7 +1091,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.closest && target.closest('[data-action="select-query"]')) {
         const option = target.closest('[data-action="select-query"]');
         activeQueryId = option.dataset.id;
-        if (queryFilterInput) queryFilterInput.value = option.dataset.path;
+        setQueryTriggerLabel(option.dataset.path, false);
         closeQueryDropdown();
         if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
         triggerSearch();
@@ -1189,22 +1189,39 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }, true);
 
     const searchInput = document.getElementById('kb-search-input');
+    const queryTrigger = document.getElementById('kb-query-trigger');
+    const queryTriggerLabel = document.getElementById('kb-query-trigger-label');
     const queryFilterInput = document.getElementById('kb-query-filter-input');
     const queryClearBtn = document.getElementById('kb-query-clear-btn');
     const queryOptions = document.getElementById('kb-query-options');
-    const queryComboboxIcon = document.querySelector('.kb-query-combobox-icon');
+    const queryOptionsList = document.getElementById('kb-query-options-list');
+    const queryComboboxIcon = document.getElementById('kb-query-combobox-icon');
     let activeQueryId = null;
+
+    const QUERY_PLACEHOLDER = 'Filter by saved query...';
+
+    function setQueryTriggerLabel(text, isPlaceholder) {
+      if (!queryTriggerLabel) return;
+      queryTriggerLabel.textContent = text;
+      queryTriggerLabel.classList.toggle('kb-query-trigger-placeholder', isPlaceholder);
+    }
 
     function closeQueryDropdown() {
       if (queryOptions) queryOptions.classList.add('kb-hidden');
+      if (queryFilterInput) queryFilterInput.value = '';
+      if (queryOptionsList) {
+        queryOptionsList.querySelectorAll('.kb-query-option').forEach((opt) => { opt.hidden = false; });
+      }
     }
 
     function toggleQueryDropdown() {
-      if (queryOptions) queryOptions.classList.toggle('kb-hidden');
-    }
-
-    function openQueryDropdown() {
-      if (queryOptions) queryOptions.classList.remove('kb-hidden');
+      if (!queryOptions) return;
+      if (queryOptions.classList.contains('kb-hidden')) {
+        queryOptions.classList.remove('kb-hidden');
+        if (queryFilterInput) queryFilterInput.focus();
+      } else {
+        closeQueryDropdown();
+      }
     }
 
     function triggerSearch() {
@@ -1215,16 +1232,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       searchInput.addEventListener('input', triggerSearch);
     }
 
+    if (queryTrigger) {
+      queryTrigger.addEventListener('click', toggleQueryDropdown);
+    }
+
+    if (queryComboboxIcon) {
+      queryComboboxIcon.addEventListener('click', toggleQueryDropdown);
+    }
+
     if (queryFilterInput) {
-      // A click toggles the dropdown (open when closed, close when already open) instead of
-      // opening on focus — opening on focus AND toggling on click would fight each other,
-      // since both events fire from the same first click and would cancel out.
-      queryFilterInput.addEventListener('click', toggleQueryDropdown);
       queryFilterInput.addEventListener('input', () => {
         const needle = queryFilterInput.value.trim().toLowerCase();
-        openQueryDropdown();
-        if (queryOptions) {
-          queryOptions.querySelectorAll('.kb-query-option').forEach((opt) => {
+        if (queryOptionsList) {
+          queryOptionsList.querySelectorAll('.kb-query-option').forEach((opt) => {
             opt.hidden = needle !== '' && !opt.dataset.path.toLowerCase().includes(needle);
           });
         }
@@ -1236,29 +1256,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
       queryFilterInput.addEventListener('blur', () => {
         // Delayed so a simultaneous click on a dropdown option (which blurs this field first,
-        // then fires its own click) gets to update activeQueryId/the input's value before this
-        // reads them — blur fires before click in the browser's event order.
+        // then fires its own click) gets to run first — blur fires before click in the
+        // browser's event order.
         setTimeout(() => {
-          const activeOption = activeQueryId
-            ? queryOptions && queryOptions.querySelector('[data-id="' + activeQueryId + '"]')
-            : null;
-          queryFilterInput.value = activeOption ? activeOption.dataset.path : '';
           closeQueryDropdown();
         }, 150);
-      });
-    }
-
-    if (queryComboboxIcon) {
-      queryComboboxIcon.addEventListener('click', () => {
-        if (queryFilterInput) queryFilterInput.focus();
-        openQueryDropdown();
       });
     }
 
     if (queryClearBtn) {
       queryClearBtn.addEventListener('click', () => {
         activeQueryId = null;
-        if (queryFilterInput) queryFilterInput.value = '';
+        setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
         queryClearBtn.classList.add('kb-hidden');
         closeQueryDropdown();
         triggerSearch();
@@ -1276,7 +1285,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const results = document.getElementById('kb-history-results');
         if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'saved-queries') {
-        if (queryOptions) queryOptions.innerHTML = event.data.html;
+        if (queryOptionsList) queryOptionsList.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
@@ -1381,15 +1390,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
-      .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; padding: 0 6px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; }
+      .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; }
       .kb-query-combobox:focus-within { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
-      .kb-query-combobox-icon { flex-shrink: 0; font-size: 10px; opacity: 0.7; color: var(--vscode-input-foreground); pointer-events: none; }
-      #kb-query-filter-input { box-sizing: border-box; width: 100%; flex: 1; min-width: 0; padding: 4px 0; background: transparent; color: var(--vscode-input-foreground); border: none; font-family: var(--vscode-font-family); }
-      #kb-query-filter-input:focus { outline: none; }
+      .kb-query-trigger { flex: 1; min-width: 0; padding: 4px 2px; cursor: pointer; }
+      .kb-query-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-input-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
+      .kb-query-trigger-placeholder { opacity: 0.6; }
       .kb-query-clear-btn { flex-shrink: 0; background: transparent; border: none; padding: 2px; color: var(--vscode-errorForeground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; line-height: 1; }
       .kb-query-clear-btn:hover { opacity: 0.8; }
-      .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 200px; overflow-y: auto; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-query-combobox-icon { flex-shrink: 0; padding: 0 2px; font-size: 10px; opacity: 0.7; color: var(--vscode-input-foreground); cursor: pointer; }
+      .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 4px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-query-dropdown.kb-hidden { display: none; }
+      #kb-query-filter-input { box-sizing: border-box; width: 100%; flex-shrink: 0; padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-query-filter-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      #kb-query-options-list { display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto; }
       .kb-query-option { width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-query-option:hover { background: var(--vscode-list-hoverBackground); }
       .kb-query-option:disabled { opacity: 0.5; cursor: default; }
