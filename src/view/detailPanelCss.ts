@@ -60,7 +60,8 @@ export function detailPanelCss(): string {
     .kb-comment-date { opacity: 0.7; }
     .kb-comment-body { line-height: 1.5; }
     .kb-dev-label { display: flex; align-items: center; gap: 4px; }
-    .kb-dev-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .kb-dev-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; padding-left: 20px; }
+    .kb-dev-row > :first-child { margin-left: -20px; }
     .kb-dev-item { display: flex; align-items: center; gap: 4px; font-size: 12px; opacity: 0.85; min-width: 0; }
     a.kb-dev-item { cursor: pointer; text-decoration: none; color: inherit; }
     a.kb-dev-item:hover { color: var(--vscode-textLink-foreground); }
