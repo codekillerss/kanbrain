@@ -1010,7 +1010,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           const wasHidden = section.classList.contains('kb-hidden');
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
+            activeQueryId = null;
+            if (queryFilterInput) queryFilterInput.value = '';
+            if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
+            closeQueryDropdown();
             vscode.postMessage({ type: 'search-work-items', query: '' });
+            vscode.postMessage({ type: 'load-saved-queries' });
             document.getElementById('kb-search-input')?.focus();
           }
         }
@@ -1083,6 +1088,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'pick-work-item', id: target.closest('[data-action="pick-work-item"]').dataset.id });
       } else if (target.dataset && target.dataset.action === 'open-work-item-detail') {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
+      } else if (target.closest && target.closest('[data-action="select-query"]')) {
+        const option = target.closest('[data-action="select-query"]');
+        activeQueryId = option.dataset.id;
+        if (queryFilterInput) queryFilterInput.value = option.dataset.path;
+        closeQueryDropdown();
+        if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
+        triggerSearch();
       } else if (target.closest && target.closest('a.kb-repo-tag-unmapped')) {
         // Let the command: link navigate instead of toggling the enclosing group header.
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
@@ -1159,6 +1171,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       ) {
         closeAllGlobalSkillMenus();
       }
+
+      if (!target.closest || !target.closest('.kb-query-combobox')) {
+        closeQueryDropdown();
+      }
     });
 
     function closeAllGlobalSkillMenus() {
@@ -1173,9 +1189,50 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }, true);
 
     const searchInput = document.getElementById('kb-search-input');
+    const queryFilterInput = document.getElementById('kb-query-filter-input');
+    const queryClearBtn = document.getElementById('kb-query-clear-btn');
+    const queryOptions = document.getElementById('kb-query-options');
+    let activeQueryId = null;
+
+    function closeQueryDropdown() {
+      if (queryOptions) queryOptions.classList.add('kb-hidden');
+    }
+
+    function triggerSearch() {
+      vscode.postMessage({ type: 'search-work-items', query: searchInput ? searchInput.value : '', queryId: activeQueryId || undefined });
+    }
+
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        vscode.postMessage({ type: 'search-work-items', query: e.target.value });
+      searchInput.addEventListener('input', triggerSearch);
+    }
+
+    if (queryFilterInput) {
+      queryFilterInput.addEventListener('focus', () => queryOptions && queryOptions.classList.remove('kb-hidden'));
+      queryFilterInput.addEventListener('input', () => {
+        const needle = queryFilterInput.value.trim().toLowerCase();
+        if (queryOptions) {
+          queryOptions.classList.remove('kb-hidden');
+          queryOptions.querySelectorAll('.kb-query-option').forEach((opt) => {
+            opt.hidden = needle !== '' && !opt.dataset.path.toLowerCase().includes(needle);
+          });
+        }
+      });
+      queryFilterInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          const activeOption = activeQueryId
+            ? queryOptions && queryOptions.querySelector('[data-id="' + activeQueryId + '"]')
+            : null;
+          queryFilterInput.value = activeOption ? activeOption.dataset.path : '';
+        }, 150);
+      });
+    }
+
+    if (queryClearBtn) {
+      queryClearBtn.addEventListener('click', () => {
+        activeQueryId = null;
+        if (queryFilterInput) queryFilterInput.value = '';
+        queryClearBtn.classList.add('kb-hidden');
+        triggerSearch();
       });
     }
 
@@ -1189,6 +1246,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (event.data.type === 'work-item-history') {
         const results = document.getElementById('kb-history-results');
         if (results) results.innerHTML = event.data.html;
+      } else if (event.data.type === 'saved-queries') {
+        if (queryOptions) queryOptions.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
@@ -1292,7 +1351,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
-      .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+      .kb-search-dialog-header { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-shrink: 0; }
+      .kb-query-combobox { position: relative; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+      #kb-query-filter-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-query-filter-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 200px; overflow-y: auto; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-query-option { width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .kb-query-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-query-option:disabled { opacity: 0.5; cursor: default; }
+      .kb-query-option:disabled:hover { background: none; }
+      .kb-query-type-badge { margin-left: 4px; font-size: 10px; opacity: 0.7; }
       .kb-dialog-title { flex: 1; min-width: 0; font-size: 12px; }
       #kb-search-results { overflow-y: auto; flex: 1; min-height: 0; }
       .kb-dialog-close-btn { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; border-radius: 2px; font-family: var(--vscode-font-family); font-size: 13px; }
