@@ -1529,6 +1529,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-reviews-filters { flex-shrink: 0; }
       .kb-reviews-list { flex: 1; min-height: 0; overflow-y: auto; }
       .kb-review-repo-group .kb-collapsible-body { max-height: 240px; overflow-y: auto; }
+      .kb-review-repo-group:only-child .kb-collapsible-body { max-height: none; }
       .kb-dev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; }
       .kb-dev-badge svg { flex-shrink: 0; }
       .kb-branch-tag, .kb-repo-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 140px; padding: 1px 7px; border-radius: 10px; font-size: 11px; text-decoration: none; border: 1px solid; line-height: 1.6; }
