@@ -208,7 +208,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const byId = new Map(fetched.map(item => [item.id, item]));
       const items = this.workItemHistoryIds.map(id => byId.get(id)).filter((item): item is WorkItem => !!item);
       const avatars = await this.resolveAvatars(items);
-      this.view.webview.postMessage({ type: 'work-item-history', html: renderWorkItemHistory(items, config, avatars) });
+      this.view.webview.postMessage({ type: 'work-item-history', html: renderWorkItemHistory(items, config, avatars, this.activeWorkItemId) });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
@@ -981,6 +981,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
             vscode.postMessage({ type: 'search-work-items', query: '' });
+            document.getElementById('kb-search-input')?.focus();
           }
         }
       } else if (target.id === 'kb-history-btn') {
@@ -1341,6 +1342,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-history-item-status { display: flex; align-items: center; gap: 4px; margin: 0 6px 2px; font-size: 11px; opacity: 0.8; }
       .kb-history-item .kb-result-item-assignee { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       .kb-history-item .kb-view-details-link { flex-shrink: 0; }
+      .kb-result-item-main:disabled { opacity: 0.5; cursor: default; }
+      .kb-result-item-main:disabled:hover { background: none; }
+      .kb-current-badge { flex-shrink: 0; margin-left: 6px; padding: 1px 5px; border-radius: 8px; font-size: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
       .kb-reviews-owner-filters { display: flex; gap: 14px; margin: 0 0 14px; }
