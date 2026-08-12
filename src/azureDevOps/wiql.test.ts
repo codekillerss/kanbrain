@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchQuery, buildTypeCountQuery } from './wiql';
+import { buildSearchQuery, buildTypeCountQuery, filterWorkItemsByText, countItemsByType } from './wiql';
+import type { WorkItem } from '../types';
 
 describe('buildSearchQuery', () => {
   it('returns a title-ordered query with no filter when search text is empty', () => {
@@ -43,5 +44,59 @@ describe('buildTypeCountQuery', () => {
   it('escapes single quotes in type names', () => {
     const query = buildTypeCountQuery(["Tester's Task"]);
     expect(query).toContain("IN ('Tester''s Task')");
+  });
+});
+
+function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
+  return {
+    id: 1,
+    title: 'Fix login bug',
+    description: '',
+    status: 'Active',
+    type: 'Bug',
+    url: '',
+    parentId: null,
+    childIds: [],
+    assignedTo: null,
+    development: [],
+    ...overrides,
+  };
+}
+
+describe('filterWorkItemsByText', () => {
+  it('returns all items unchanged when search text is empty', () => {
+    const items = [workItem({ id: 1 }), workItem({ id: 2 })];
+    expect(filterWorkItemsByText(items, '')).toEqual(items);
+    expect(filterWorkItemsByText(items, '   ')).toEqual(items);
+  });
+
+  it('filters by exact id when the search text is numeric', () => {
+    const items = [workItem({ id: 1, title: 'Fix login bug' }), workItem({ id: 2, title: 'Add logout button' })];
+    expect(filterWorkItemsByText(items, '2')).toEqual([items[1]]);
+  });
+
+  it('filters by title substring, case-insensitively, when not numeric', () => {
+    const items = [workItem({ id: 1, title: 'Fix Login Bug' }), workItem({ id: 2, title: 'Add logout button' })];
+    expect(filterWorkItemsByText(items, 'login')).toEqual([items[0]]);
+  });
+
+  it('returns an empty array when nothing matches', () => {
+    const items = [workItem({ id: 1, title: 'Fix login bug' })];
+    expect(filterWorkItemsByText(items, 'nonexistent')).toEqual([]);
+  });
+});
+
+describe('countItemsByType', () => {
+  it('groups items by their type', () => {
+    const items = [
+      workItem({ id: 1, type: 'Bug' }),
+      workItem({ id: 2, type: 'Bug' }),
+      workItem({ id: 3, type: 'Task' }),
+    ];
+    expect(countItemsByType(items)).toEqual({ Bug: 2, Task: 1 });
+  });
+
+  it('returns an empty object for an empty list', () => {
+    expect(countItemsByType([])).toEqual({});
   });
 });

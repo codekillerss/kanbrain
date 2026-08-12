@@ -100,6 +100,12 @@ export interface ProfileEntry {
   description: string;
 }
 
+export interface SavedQuery {
+  id: string;
+  path: string;
+  queryType: 'flat' | 'tree' | 'oneHop';
+}
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
