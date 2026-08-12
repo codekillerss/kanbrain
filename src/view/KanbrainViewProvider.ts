@@ -1356,6 +1356,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       #kb-query-filter-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-query-filter-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-query-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 200px; overflow-y: auto; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-query-dropdown.kb-hidden { display: none; }
       .kb-query-option { width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-query-option:hover { background: var(--vscode-list-hoverBackground); }
       .kb-query-option:disabled { opacity: 0.5; cursor: default; }
