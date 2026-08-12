@@ -15,6 +15,8 @@ import { sendReadCommand } from '../terminal/kanbrainTerminal';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
+import { renderSavedQueryOptions } from './renderSavedQueryOptions';
+import { filterWorkItemsByText, countItemsByType } from '../azureDevOps/wiql';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -73,13 +75,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'run-global-skill') {
         await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
-        await this.searchWorkItems(String(message.query ?? ''));
+        await this.searchWorkItems(String(message.query ?? ''), message.queryId ? String(message.queryId) : undefined);
       } else if (message.type === 'pick-work-item') {
         this.setActiveWorkItem(Number(message.id));
       } else if (message.type === 'clear-work-item') {
         this.setActiveWorkItem(undefined);
       } else if (message.type === 'load-work-item-history') {
         await this.loadWorkItemHistory();
+      } else if (message.type === 'load-saved-queries') {
+        await this.loadSavedQueries();
       } else if (message.type === 'run-setup') {
         await vscode.commands.executeCommand('kanbrain.setup');
         this.notifyCommandFinished();
@@ -218,6 +222,22 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private async loadSavedQueries(): Promise<void> {
+    if (!this.view || !this.workspaceRoot || !this.client) return;
+    const config = readConfig(this.workspaceRoot);
+    if (!config) return;
+    try {
+      const queries = await this.client.listQueries(config.organization, config.project);
+      this.view.webview.postMessage({ type: 'saved-queries', html: renderSavedQueryOptions(queries) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.view.webview.postMessage({
+        type: 'saved-queries',
+        html: `<div class="kb-empty">Error loading queries: ${escapeHtml(message)}</div>`,
+      });
+    }
+  }
+
   getActiveWorkItemId(): number | undefined {
     return this.activeWorkItemId;
   }
@@ -334,7 +354,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private async searchWorkItems(query: string): Promise<void> {
+  private async searchWorkItems(query: string, queryId?: string): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -345,13 +365,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     let html: string;
     try {
-      if (query.trim() === '') {
-        this.typeCounts = await this.fetchTypeCounts(this.client, config);
+      let items: WorkItem[];
+      let typeCounts: Record<string, number>;
+      if (queryId) {
+        const ids = await this.client.runSavedQuery(config.organization, config.project, queryId);
+        const queryItems = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
+        typeCounts = countItemsByType(queryItems);
+        items = filterWorkItemsByText(queryItems, query);
+      } else {
+        if (query.trim() === '') {
+          this.typeCounts = await this.fetchTypeCounts(this.client, config);
+        }
+        const ids = await this.client.searchWorkItems(config.organization, config.project, query);
+        items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
+        typeCounts = this.typeCounts;
       }
-      const ids = await this.client.searchWorkItems(config.organization, config.project, query);
-      const items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
       const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(items) : {};
-      html = renderSearchResults(items, config, this.typeCounts, avatars);
+      html = renderSearchResults(items, config, typeCounts, avatars);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
