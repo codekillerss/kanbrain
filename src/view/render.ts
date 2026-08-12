@@ -42,12 +42,13 @@ function renderSearchDialog(): string {
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
         <div class="kb-search-dialog-header">
+          <div class="kb-query-combobox">
+            <span class="kb-query-combobox-icon" aria-hidden="true">▾</span>
+            <input id="kb-query-filter-input" placeholder="Filter by saved query..." autocomplete="off">
+            <button id="kb-query-clear-btn" class="kb-query-clear-btn kb-hidden" title="Clear query" aria-label="Clear query">✕</button>
+            <div id="kb-query-options" class="kb-query-dropdown kb-hidden"></div>
+          </div>
           <button id="kb-search-close-btn">✕</button>
-        </div>
-        <div class="kb-query-combobox">
-          <input id="kb-query-filter-input" placeholder="Filter by saved query..." autocomplete="off">
-          <button id="kb-query-clear-btn" class="kb-icon-btn kb-hidden" title="Clear query" aria-label="Clear query">✕</button>
-          <div id="kb-query-options" class="kb-query-dropdown kb-hidden"></div>
         </div>
         <input id="kb-search-input" placeholder="Search by title or #id...">
         <div id="kb-search-results"></div>
