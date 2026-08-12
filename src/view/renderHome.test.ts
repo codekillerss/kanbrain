@@ -127,9 +127,10 @@ describe('renderHome', () => {
     expect(html).toContain('data:image/png;base64,JANE');
   });
 
-  it('does not make the title clickable on the home screen card', () => {
+  it('makes the current work item title clickable on the home screen card', () => {
     const html = renderHome(state({ workItem: workItem() }));
-    expect(html).not.toContain('kb-title-clickable');
+    expect(html).toContain('kb-title-clickable');
+    expect(html).toContain('data-action="open-work-item-detail" data-id="482"');
   });
 
   it('does not show a Team section when there are 0 teams in cardSettingsByTeam', () => {

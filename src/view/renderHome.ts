@@ -28,7 +28,7 @@ function renderHomeWorkItemSection(state: RenderState): string {
   }
 
   return `
-    ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false, avatars, false, null, false, state.selectedTeam)}
+    ${renderWorkItemCard(state.workItem, config, 'kb-main-card', false, avatars, true, null, false, state.selectedTeam)}
     <div class="kb-home-commands">
       <button id="kb-open-flow-btn" class="kb-secondary-btn">➡️ Open Flow</button>
     </div>
