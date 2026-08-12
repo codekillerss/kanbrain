@@ -17,6 +17,7 @@ import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { filterWorkItemsByText, countItemsByType } from '../azureDevOps/wiql';
+import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -37,13 +38,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
-  private reviewsStatusFilter: 'active' | 'completed' | 'abandoned' = 'active';
+  private reviewsTab: 'all' | 'fixed' | 'needsMyFix' = 'all';
+  private reviewsStatusFilters: Array<'active' | 'completed' | 'abandoned'> = ['active'];
   private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' = 'all';
   private reviewsPullRequests: PullRequestSummary[] = [];
   private currentUserId: string | null | undefined;
   private lastReviewsFetchAt = 0;
-  private lastReviewsStatusFilterFetched: 'active' | 'completed' | 'abandoned' | undefined;
-  private lastReviewsOwnerFilterFetched: 'all' | 'mine' | 'assigned' | undefined;
+  private lastReviewsFilterKeyFetched: string | undefined;
   private workItemHistoryIds: number[];
   private selectedSavedQueryId: string | undefined;
 
@@ -152,8 +153,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.showBrainScreen();
       } else if (message.type === 'show-reviews') {
         this.showReviewsScreen();
-      } else if (message.type === 'set-reviews-status-filter') {
-        this.setReviewsStatusFilter(message.status);
+      } else if (message.type === 'set-reviews-tab') {
+        this.setReviewsTab(message.tab);
+      } else if (message.type === 'toggle-reviews-status-filter') {
+        this.toggleReviewsStatusFilter(message.status);
       } else if (message.type === 'set-reviews-owner-filter') {
         this.setReviewsOwnerFilter(message.value);
       } else if (message.type === 'save-repository-path') {
@@ -337,16 +340,29 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private setReviewsStatusFilter(status: unknown): void {
+  private setReviewsTab(tab: unknown): void {
+    if (tab !== 'all' && tab !== 'fixed' && tab !== 'needsMyFix') {
+      return;
+    }
+    if (tab === this.reviewsTab) {
+      return;
+    }
+    this.reviewsTab = tab;
+    this.lastState = '';
+    this.lastReviewsFetchAt = 0;
+    void this.refresh();
+  }
+
+  private toggleReviewsStatusFilter(status: unknown): void {
     if (status !== 'active' && status !== 'completed' && status !== 'abandoned') {
       return;
     }
-    if (status === this.reviewsStatusFilter) {
-      // Already on this tab — the periodic 10s poll (REVIEWS_POLL_INTERVAL_MS) keeps it fresh,
-      // no need to force an extra fetch just because the same tab was clicked again.
+    const isSelected = this.reviewsStatusFilters.includes(status);
+    if (isSelected && this.reviewsStatusFilters.length === 1) {
+      // At least one status must always stay selected.
       return;
     }
-    this.reviewsStatusFilter = status;
+    this.reviewsStatusFilters = isSelected ? this.reviewsStatusFilters.filter(s => s !== status) : [...this.reviewsStatusFilters, status];
     this.lastState = '';
     this.lastReviewsFetchAt = 0;
     void this.refresh();
@@ -770,6 +786,42 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  private async fetchReviewsPullRequests(config: KanbrainConfig): Promise<PullRequestSummary[]> {
+    if (!this.client) return [];
+
+    if (this.reviewsTab === 'all') {
+      const creatorId = this.reviewsOwnerFilter === 'mine' && this.currentUserId ? this.currentUserId : undefined;
+      const reviewerId = this.reviewsOwnerFilter === 'assigned' && this.currentUserId ? this.currentUserId : undefined;
+      const perStatus = await Promise.all(
+        this.reviewsStatusFilters.map(status =>
+          this.client!.listProjectPullRequests(config.organization, config.project, status, { creatorId, reviewerId }),
+        ),
+      );
+      return perStatus.flat();
+    }
+
+    if (!this.currentUserId) return [];
+    const isFixed = this.reviewsTab === 'fixed';
+    const base = await this.client.listProjectPullRequests(config.organization, config.project, 'active', {
+      creatorId: isFixed ? undefined : this.currentUserId,
+      reviewerId: isFixed ? this.currentUserId : undefined,
+    });
+    const classified = await Promise.all(
+      base.map(async pr => {
+        try {
+          const threads = await this.client!.getPullRequestThreads(config.organization, config.project, pr.repositoryId, pr.id);
+          const { hasAnyActiveThread, hasMyThreadsAllResolved } = classifyPrThreads(threads, this.currentUserId!);
+          return { pr, keep: isFixed ? hasMyThreadsAllResolved : hasAnyActiveThread };
+        } catch {
+          // One PR's thread fetch failing (network blip, deleted repo, etc.) shouldn't take down
+          // the whole tab — just exclude that PR rather than rejecting the whole Promise.all.
+          return { pr, keep: false };
+        }
+      }),
+    );
+    return classified.filter(c => c.keep).map(c => c.pr);
+  }
+
   private async refresh(): Promise<void> {
     if (!this.view) {
       return;
@@ -823,22 +875,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (config && this.client && this.currentScreen === 'reviews') {
-      if (this.reviewsOwnerFilter !== 'all' && this.currentUserId === undefined) {
+      const needsCurrentUser = this.reviewsTab !== 'all' || this.reviewsOwnerFilter !== 'all';
+      if (needsCurrentUser && this.currentUserId === undefined) {
         this.currentUserId = await this.client.getCurrentUserId();
       }
       const now = Date.now();
-      const filterChanged =
-        this.lastReviewsStatusFilterFetched !== this.reviewsStatusFilter || this.lastReviewsOwnerFilterFetched !== this.reviewsOwnerFilter;
+      const filterKey = `${this.reviewsTab}|${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
+      const filterChanged = this.lastReviewsFilterKeyFetched !== filterKey;
       if (filterChanged || now - this.lastReviewsFetchAt >= REVIEWS_POLL_INTERVAL_MS) {
-        const creatorId = this.reviewsOwnerFilter === 'mine' && this.currentUserId ? this.currentUserId : undefined;
-        const reviewerId = this.reviewsOwnerFilter === 'assigned' && this.currentUserId ? this.currentUserId : undefined;
-        this.reviewsPullRequests = await this.client.listProjectPullRequests(config.organization, config.project, this.reviewsStatusFilter, {
-          creatorId,
-          reviewerId,
-        });
+        this.reviewsPullRequests = await this.fetchReviewsPullRequests(config);
         this.lastReviewsFetchAt = now;
-        this.lastReviewsStatusFilterFetched = this.reviewsStatusFilter;
-        this.lastReviewsOwnerFilterFetched = this.reviewsOwnerFilter;
+        this.lastReviewsFilterKeyFetched = filterKey;
       }
     }
 
@@ -865,7 +912,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         childrenCollapsed: this.childrenCollapsed,
         openBrainSegment: this.openBrainSegment,
         reviewsPullRequests: this.reviewsPullRequests,
-        reviewsStatusFilter: this.reviewsStatusFilter,
+        reviewsTab: this.reviewsTab,
+        reviewsStatusFilters: this.reviewsStatusFilters,
         reviewsOwnerFilter: this.reviewsOwnerFilter,
       }),
     );
@@ -1077,15 +1125,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-brain' });
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
-      } else if (target.dataset && target.dataset.action === 'set-reviews-status-filter' && !target.classList.contains('kb-search-tab-active')) {
-        disableReviewsFilterControls(target);
+      } else if (target.dataset && target.dataset.action === 'set-reviews-tab' && !target.classList.contains('kb-search-tab-active')) {
         const tabBar = target.closest('.kb-search-tabs');
         if (tabBar) {
           tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => btn.classList.remove('kb-search-tab-active'));
         }
         target.classList.add('kb-search-tab-active');
         setLoading(target);
-        vscode.postMessage({ type: 'set-reviews-status-filter', status: target.dataset.status });
+        vscode.postMessage({ type: 'set-reviews-tab', tab: target.dataset.tab });
+      } else if (target.dataset && target.dataset.action === 'toggle-reviews-status-filter') {
+        disableReviewsFilterControls(target);
+        target.classList.toggle('kb-search-tab-active');
+        setLoading(target);
+        vscode.postMessage({ type: 'toggle-reviews-status-filter', status: target.dataset.status });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
