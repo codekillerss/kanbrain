@@ -1333,7 +1333,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
       .kb-view-details-link { margin-left: auto; background: none; border: none; color: var(--vscode-textLink-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 11px; padding: 2px 4px; }
       .kb-view-details-link:hover { text-decoration: underline; }
-      #kb-search-input { box-sizing: border-box; width: 100%; flex: 1; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
+      #kb-search-input { box-sizing: border-box; width: 100%; flex: 0 0 auto; padding: 4px 6px; margin-bottom: 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); }
       .kb-footer-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; background: none; border: none; border-radius: 4px; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 14px; line-height: 1; }

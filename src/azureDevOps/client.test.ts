@@ -143,7 +143,7 @@ describe('AzureDevOpsClient', () => {
     expect(ids).toEqual([10, 20]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql/query-1?api-version=7.1&$top=50',
-      expect.objectContaining({ method: 'POST' }),
+      expect.anything(),
     );
   });
 

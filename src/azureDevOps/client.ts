@@ -163,7 +163,6 @@ export class AzureDevOpsClient {
   async runSavedQuery(organization: string, project: string, queryId: string): Promise<number[]> {
     const data = await this.request<{ workItems: { id: number }[] }>(
       `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql/${queryId}?api-version=7.1&$top=50`,
-      { method: 'POST' },
     );
     return (data.workItems ?? []).map(w => w.id);
   }
