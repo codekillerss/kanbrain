@@ -981,6 +981,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
             vscode.postMessage({ type: 'search-work-items', query: '' });
+            document.getElementById('kb-search-input')?.focus();
           }
         }
       } else if (target.id === 'kb-history-btn') {
