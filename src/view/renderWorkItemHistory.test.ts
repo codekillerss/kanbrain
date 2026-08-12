@@ -30,4 +30,23 @@ describe('renderWorkItemHistory', () => {
     expect(html.indexOf('kb-history-item-status')).toBeLessThan(html.indexOf('Jane Doe'));
     expect(html.indexOf('Jane Doe')).toBeLessThan(html.indexOf('View details'));
   });
+
+  it('disables the pick action and shows a badge for the current work item', () => {
+    const html = renderWorkItemHistory([item(2, 'Newest'), item(1, 'Older')], config, {}, 1);
+    expect(html).toContain('data-action="pick-work-item" data-id="1" disabled>');
+    expect(html).toContain('kb-current-badge');
+    expect(html).toContain('Current');
+    expect(html).not.toContain('data-action="pick-work-item" data-id="2" disabled>');
+  });
+
+  it('does not disable the "View details" button for the current work item', () => {
+    const html = renderWorkItemHistory([item(1, 'Older')], config, {}, 1);
+    expect(html).toContain('data-action="open-work-item-detail" data-id="1">View details');
+  });
+
+  it('disables no items when currentWorkItemId is omitted', () => {
+    const html = renderWorkItemHistory([item(2, 'Newest'), item(1, 'Older')], config);
+    expect(html).not.toContain('disabled');
+    expect(html).not.toContain('kb-current-badge');
+  });
 });
