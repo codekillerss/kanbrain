@@ -30,6 +30,7 @@ import { discoverLocalRepositories } from './git/discoverLocalRepositories';
 const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
 const WORK_ITEM_HISTORY_KEY = 'kanbrain.workItemHistoryIds';
+const SELECTED_SAVED_QUERY_KEY = 'kanbrain.selectedSavedQueryId';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -63,6 +64,8 @@ export function activate(context: vscode.ExtensionContext): void {
     team => context.workspaceState.update(SELECTED_TEAM_KEY, team),
     context.workspaceState.get<number[]>(WORK_ITEM_HISTORY_KEY, []),
     ids => context.workspaceState.update(WORK_ITEM_HISTORY_KEY, ids),
+    context.workspaceState.get<string>(SELECTED_SAVED_QUERY_KEY),
+    queryId => context.workspaceState.update(SELECTED_SAVED_QUERY_KEY, queryId),
   );
   providerRef = provider;
 

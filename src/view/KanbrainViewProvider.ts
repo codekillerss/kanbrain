@@ -45,6 +45,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastReviewsStatusFilterFetched: 'active' | 'completed' | 'abandoned' | undefined;
   private lastReviewsOwnerFilterFetched: 'all' | 'mine' | 'assigned' | undefined;
   private workItemHistoryIds: number[];
+  private selectedSavedQueryId: string | undefined;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -56,10 +57,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly persistSelectedTeam: (team: string | undefined) => void,
     initialWorkItemHistoryIds: number[] = [],
     private readonly persistWorkItemHistory: (ids: number[]) => void = () => {},
+    initialSelectedSavedQueryId: string | undefined = undefined,
+    private readonly persistSelectedSavedQueryId: (id: string | undefined) => void = () => {},
   ) {
     this.workItemHistoryIds = initialWorkItemHistoryIds
       .filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
       .slice(0, 50);
+    this.selectedSavedQueryId = initialSelectedSavedQueryId;
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -230,7 +234,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) return;
     try {
       const queries = await this.client.listQueries(config.organization, config.project);
-      const selected = config.selectedSavedQueryId ? queries.find(q => q.id === config.selectedSavedQueryId) : undefined;
+      const selected = this.selectedSavedQueryId ? queries.find(q => q.id === this.selectedSavedQueryId) : undefined;
       this.view.webview.postMessage({
         type: 'saved-queries',
         html: renderSavedQueryOptions(queries),
@@ -298,15 +302,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private setSelectedSavedQuery(queryId: string | undefined): void {
-    if (!this.workspaceRoot) {
-      return;
-    }
-    const config = readConfig(this.workspaceRoot);
-    if (!config) {
-      return;
-    }
-    config.selectedSavedQueryId = queryId;
-    writeConfig(this.workspaceRoot, config);
+    this.selectedSavedQueryId = queryId;
+    this.persistSelectedSavedQueryId(queryId);
   }
 
   showHomeScreen(): void {

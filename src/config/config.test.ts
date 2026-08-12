@@ -200,22 +200,6 @@ describe('machine-local config split', () => {
     expect(readConfig(workspaceRoot)).toEqual(config);
   });
 
-  it('writes selectedSavedQueryId to config.local.json, not config.json', () => {
-    writeConfig(workspaceRoot, { ...baseConfig, selectedSavedQueryId: 'query-1' });
-
-    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
-    expect(sharedRaw.selectedSavedQueryId).toBeUndefined();
-
-    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
-    expect(localRaw).toEqual({ selectedSavedQueryId: 'query-1' });
-  });
-
-  it('round-trips selectedSavedQueryId through readConfig', () => {
-    const config = { ...baseConfig, selectedSavedQueryId: 'query-1' };
-    writeConfig(workspaceRoot, config);
-    expect(readConfig(workspaceRoot)).toEqual(config);
-  });
-
   it('returns legacy inline values when config.local.json does not exist yet', () => {
     fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
     fs.writeFileSync(
