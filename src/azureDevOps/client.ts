@@ -1,4 +1,4 @@
-import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail, PullRequestThread, PullRequestSummary } from '../types';
+import type { AssignedTo, WorkItem, CardFieldSettings, PullRequestDetails, PullRequestDetail, PullRequestThread, PullRequestSummary, SavedQuery } from '../types';
 import { buildSearchQuery, buildTypeCountQuery } from './wiql';
 import { mapWorkItem } from './mapWorkItem';
 import type { WorkItemTypeLayout, WorkItemComment } from './workItemDetail';
@@ -131,6 +131,41 @@ export class AzureDevOpsClient {
       { method: 'POST', body: JSON.stringify({ query }) },
     );
     return data.workItems.length;
+  }
+
+  async listQueries(organization: string, project: string): Promise<SavedQuery[]> {
+    interface RawQueryNode {
+      id: string;
+      name: string;
+      isFolder?: boolean;
+      queryType?: string;
+      children?: RawQueryNode[];
+    }
+    const data = await this.request<{ value: RawQueryNode[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/queries?$depth=2&api-version=7.1`,
+    );
+    const result: SavedQuery[] = [];
+    const walk = (nodes: RawQueryNode[], parentPath: string) => {
+      for (const node of nodes) {
+        const path = parentPath ? `${parentPath}/${node.name}` : node.name;
+        if (node.isFolder) {
+          walk(node.children ?? [], path);
+        } else {
+          const queryType = node.queryType === 'tree' || node.queryType === 'oneHop' ? node.queryType : 'flat';
+          result.push({ id: node.id, path, queryType });
+        }
+      }
+    };
+    walk(data.value, '');
+    return result;
+  }
+
+  async runSavedQuery(organization: string, project: string, queryId: string): Promise<number[]> {
+    const data = await this.request<{ workItems: { id: number }[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql/${queryId}?api-version=7.1&$top=50`,
+      { method: 'POST' },
+    );
+    return (data.workItems ?? []).map(w => w.id);
   }
 
   async getWorkItems(organization: string, project: string, ids: number[]): Promise<WorkItem[]> {

@@ -93,6 +93,60 @@ describe('AzureDevOpsClient', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('lists saved queries, flattening nested folders into full paths', async () => {
+    const tree = {
+      value: [
+        {
+          id: 'folder-my',
+          name: 'My Queries',
+          isFolder: true,
+          children: [{ id: 'q1', name: 'My Bugs', isFolder: false, queryType: 'flat' }],
+        },
+        {
+          id: 'folder-shared',
+          name: 'Shared Queries',
+          isFolder: true,
+          children: [
+            {
+              id: 'folder-team',
+              name: 'Team X',
+              isFolder: true,
+              children: [{ id: 'q2', name: 'Sprint Board', isFolder: false }],
+            },
+            { id: 'q3', name: 'Bugs and Parents', isFolder: false, queryType: 'tree' },
+          ],
+        },
+      ],
+    };
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse(tree));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const queries = await client.listQueries('my-org', 'MyProject');
+
+    expect(queries).toEqual([
+      { id: 'q1', path: 'My Queries/My Bugs', queryType: 'flat' },
+      { id: 'q2', path: 'Shared Queries/Team X/Sprint Board', queryType: 'flat' },
+      { id: 'q3', path: 'Shared Queries/Bugs and Parents', queryType: 'tree' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/queries?$depth=2&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('runs a saved query by id and returns matched IDs', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [{ id: 10 }, { id: 20 }] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const ids = await client.runSavedQuery('my-org', 'MyProject', 'query-1');
+
+    expect(ids).toEqual([10, 20]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql/query-1?api-version=7.1&$top=50',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('returns an empty array from getWorkItems without calling fetch when ids is empty', async () => {
     const fetchImpl = vi.fn();
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
