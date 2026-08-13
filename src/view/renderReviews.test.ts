@@ -77,70 +77,6 @@ describe('renderReviews', () => {
     expect(content.trim()).toBe('Active, Completed');
   });
 
-  it('wraps the pull request groups in a scrollable list separate from the filters header', () => {
-    const html = renderReviews(
-      state({
-        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
-        reviewsStatusFilters: ['active'],
-      }),
-    );
-    const filtersIndex = html.indexOf('kb-reviews-filters');
-    const listIndex = html.indexOf('kb-reviews-list');
-    const groupIndex = html.indexOf('kb-review-repo-group');
-    expect(listIndex).toBeGreaterThan(filtersIndex);
-    expect(groupIndex).toBeGreaterThan(listIndex);
-  });
-
-  it('shows "My PRs" and "Assigned to me" checkboxes, both unchecked by default', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [] }));
-    expect(html).toContain('id="kb-reviews-filter-mine"');
-    expect(html).toContain('My PRs');
-    expect(html).toContain('id="kb-reviews-filter-assigned"');
-    expect(html).toContain('Assigned to me');
-
-    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
-    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
-    expect(mineTag).not.toContain('checked');
-
-    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
-    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
-    expect(assignedTag).not.toContain('checked');
-  });
-
-  it('checks only "My PRs" when reviewsOwnerFilter is "mine"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'mine' }));
-
-    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
-    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
-    expect(mineTag).toContain('checked');
-
-    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
-    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
-    expect(assignedTag).not.toContain('checked');
-  });
-
-  it('checks only "Assigned to me" when reviewsOwnerFilter is "assigned"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'assigned' }));
-
-    const assignedStart = html.indexOf('id="kb-reviews-filter-assigned"');
-    const assignedTag = html.slice(html.lastIndexOf('<input', assignedStart), html.indexOf('>', assignedStart));
-    expect(assignedTag).toContain('checked');
-
-    const mineStart = html.indexOf('id="kb-reviews-filter-mine"');
-    const mineTag = html.slice(html.lastIndexOf('<input', mineStart), html.indexOf('>', mineStart));
-    expect(mineTag).not.toContain('checked');
-  });
-
-  it('appends "created by you" to the empty message when reviewsOwnerFilter is "mine"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'mine' }));
-    expect(html).toContain('No active pull requests created by you.');
-  });
-
-  it('appends "assigned to you" to the empty message when reviewsOwnerFilter is "assigned"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'assigned' }));
-    expect(html).toContain('No active pull requests assigned to you.');
-  });
-
   it('checks the selected status in the dropdown', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
     const start = html.indexOf('data-status="completed"');
@@ -166,6 +102,120 @@ describe('renderReviews', () => {
     const completedStart = html.indexOf('data-status="completed"');
     const completedTag = html.slice(html.lastIndexOf('<input', completedStart), html.indexOf('>', completedStart));
     expect(completedTag).not.toContain('checked');
+  });
+
+  it('wraps the pull request groups in a scrollable list separate from the filters header', () => {
+    const html = renderReviews(
+      state({
+        reviewsPullRequests: [pr({ repositoryId: 'repo-1', repositoryName: 'kanbrain' })],
+        reviewsStatusFilters: ['active'],
+      }),
+    );
+    const filtersIndex = html.indexOf('kb-reviews-filters');
+    const listIndex = html.indexOf('kb-reviews-list');
+    const groupIndex = html.indexOf('kb-review-repo-group');
+    expect(listIndex).toBeGreaterThan(filtersIndex);
+    expect(groupIndex).toBeGreaterThan(listIndex);
+  });
+
+  it('shows all 5 owner-filter options as a single select', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [] }));
+    expect(html).not.toContain('<select');
+    expect(html).toContain('kb-status-select');
+    expect(html).toContain('data-action="set-reviews-owner-filter" data-value="all"');
+    expect(html).toContain('data-action="set-reviews-owner-filter" data-value="mine"');
+    expect(html).toContain('data-action="set-reviews-owner-filter" data-value="assigned"');
+    expect(html).toContain('data-action="set-reviews-owner-filter" data-value="fixed"');
+    expect(html).toContain('data-action="set-reviews-owner-filter" data-value="needsMyFix"');
+    expect(html).toContain('>My PRs<');
+    expect(html).toContain('>Assigned to me<');
+    expect(html).toContain('>Fixed<');
+    expect(html).toContain('>Needs my fix<');
+  });
+
+  it('shows "All" as the closed trigger label by default', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [] }));
+    const labelStart = html.indexOf('id="kb-reviews-owner-trigger-label"');
+    const content = html.slice(html.indexOf('>', labelStart) + 1, html.indexOf('</span>', labelStart));
+    expect(content.trim()).toBe('All');
+  });
+
+  it('shows the selected owner filter\'s label as the closed trigger label', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix' }));
+    const labelStart = html.indexOf('id="kb-reviews-owner-trigger-label"');
+    const content = html.slice(html.indexOf('>', labelStart) + 1, html.indexOf('</span>', labelStart));
+    expect(content.trim()).toBe('Needs my fix');
+  });
+
+  it('marks only the selected owner option as active', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'fixed' }));
+    const fixedStart = html.indexOf('data-value="fixed"');
+    const fixedTag = html.slice(html.lastIndexOf('<button', fixedStart), html.indexOf('>', fixedStart));
+    expect(fixedTag).toContain('kb-status-select-option-active');
+
+    const allStart = html.indexOf('data-value="all"');
+    const allTag = html.slice(html.lastIndexOf('<button', allStart), html.indexOf('>', allStart));
+    expect(allTag).not.toContain('kb-status-select-option-active');
+  });
+
+  it('appends "created by you" to the empty message when reviewsOwnerFilter is "mine"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'mine' }));
+    expect(html).toContain('No active pull requests created by you.');
+  });
+
+  it('appends "assigned to you" to the empty message when reviewsOwnerFilter is "assigned"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'], reviewsOwnerFilter: 'assigned' }));
+    expect(html).toContain('No active pull requests assigned to you.');
+  });
+
+  it('shows the status select when reviewsOwnerFilter is "all", "mine", or "assigned"', () => {
+    for (const ownerFilter of ['all', 'mine', 'assigned'] as const) {
+      const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: ownerFilter }));
+      expect(html).toContain('data-action="toggle-reviews-status-filter"');
+    }
+  });
+
+  it('hides the status select when reviewsOwnerFilter is "fixed" or "needsMyFix"', () => {
+    const onFixed = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'fixed' }));
+    expect(onFixed).not.toContain('data-action="toggle-reviews-status-filter"');
+
+    const onNeedsMyFix = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix' }));
+    expect(onNeedsMyFix).not.toContain('data-action="toggle-reviews-status-filter"');
+  });
+
+  it('shows a dedicated empty message when reviewsOwnerFilter is "fixed"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'fixed' }));
+    expect(html).toContain('No pull requests fixed and ready for re-review.');
+  });
+
+  it('shows a dedicated empty message when reviewsOwnerFilter is "needsMyFix"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix' }));
+    expect(html).toContain('No pull requests need your fix.');
+  });
+
+  it('still renders the pull request list normally when reviewsOwnerFilter is "fixed"/"needsMyFix"', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsOwnerFilter: 'fixed' }));
+    expect(html).toContain('kb-review-repo-group');
+    expect(html).toContain('#57');
+  });
+
+  it('shows a failure warning when reviewsOwnerFilter is "fixed"/"needsMyFix" and some per-PR thread fetches failed', () => {
+    const fixedHtml = renderReviews(state({ reviewsPullRequests: [pr()], reviewsOwnerFilter: 'fixed', reviewsFetchFailedCount: 2 }));
+    expect(fixedHtml).toContain('2 pull requests could not be checked');
+
+    const needsMyFixHtml = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix', reviewsFetchFailedCount: 1 }));
+    expect(needsMyFixHtml).toContain('1 pull request could not be checked');
+  });
+
+  it('does not show the failure warning on "all"/"mine"/"assigned" or when there are no failures', () => {
+    const onAllWithFailures = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'all', reviewsFetchFailedCount: 3 }));
+    expect(onAllWithFailures).not.toContain('could not be checked');
+
+    const onFixedNoFailures = renderReviews(state({ reviewsPullRequests: [pr()], reviewsOwnerFilter: 'fixed', reviewsFetchFailedCount: 0 }));
+    expect(onFixedNoFailures).not.toContain('could not be checked');
+
+    const onFixedUndefined = renderReviews(state({ reviewsPullRequests: [pr()], reviewsOwnerFilter: 'fixed' }));
+    expect(onFixedUndefined).not.toContain('could not be checked');
   });
 
   it('groups pull requests into a section card per repository, with the repo shown as a tag plus a count in the header', () => {
@@ -310,78 +360,5 @@ describe('renderReviews', () => {
     const newer = pr({ id: 2, creationDate: '2026-07-29T00:00:00Z', title: 'Newer' });
     const html = renderReviews(state({ reviewsPullRequests: [older, newer], reviewsStatusFilters: ['active'] }));
     expect(html.indexOf('Newer')).toBeLessThan(html.indexOf('Older'));
-  });
-
-  it('shows three top-level tabs: All, Fixed, Needs my fix', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [] }));
-    expect(html).toContain('data-action="set-reviews-tab" data-tab="all"');
-    expect(html).toContain('data-action="set-reviews-tab" data-tab="fixed"');
-    expect(html).toContain('data-action="set-reviews-tab" data-tab="needsMyFix"');
-    expect(html).toContain('>All<');
-    expect(html).toContain('>Fixed<');
-    expect(html).toContain('>Needs my fix<');
-  });
-
-  it('marks the "all" tab active by default', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [] }));
-    const tabStart = html.indexOf('data-tab="all"');
-    const tag = html.slice(html.lastIndexOf('<button', tabStart), html.indexOf('>', tabStart));
-    expect(tag).toContain('kb-search-tab-active');
-  });
-
-  it('marks the "fixed" tab active when reviewsTab is "fixed"', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
-    const tabStart = html.indexOf('data-tab="fixed"');
-    const tag = html.slice(html.lastIndexOf('<button', tabStart), html.indexOf('>', tabStart));
-    expect(tag).toContain('kb-search-tab-active');
-  });
-
-  it('shows the status multi-select and owner checkboxes only on the "all" tab', () => {
-    const onAll = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'all' }));
-    expect(onAll).toContain('data-action="toggle-reviews-status-filter"');
-    expect(onAll).toContain('id="kb-reviews-filter-mine"');
-
-    const onFixed = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
-    expect(onFixed).not.toContain('data-action="toggle-reviews-status-filter"');
-    expect(onFixed).not.toContain('id="kb-reviews-filter-mine"');
-
-    const onNeedsMyFix = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix' }));
-    expect(onNeedsMyFix).not.toContain('data-action="toggle-reviews-status-filter"');
-    expect(onNeedsMyFix).not.toContain('id="kb-reviews-filter-mine"');
-  });
-
-  it('shows a dedicated empty message on the "fixed" tab', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'fixed' }));
-    expect(html).toContain('No pull requests fixed and ready for re-review.');
-  });
-
-  it('shows a dedicated empty message on the "needsMyFix" tab', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix' }));
-    expect(html).toContain('No pull requests need your fix.');
-  });
-
-  it('still renders the pull request list normally on the "fixed"/"needsMyFix" tabs', () => {
-    const html = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed' }));
-    expect(html).toContain('kb-review-repo-group');
-    expect(html).toContain('#57');
-  });
-
-  it('shows a failure warning on the "fixed"/"needsMyFix" tabs when some per-PR thread fetches failed', () => {
-    const fixedHtml = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed', reviewsFetchFailedCount: 2 }));
-    expect(fixedHtml).toContain('2 pull requests could not be checked');
-
-    const needsMyFixHtml = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'needsMyFix', reviewsFetchFailedCount: 1 }));
-    expect(needsMyFixHtml).toContain('1 pull request could not be checked');
-  });
-
-  it('does not show the failure warning on the "all" tab or when there are no failures', () => {
-    const onAllWithFailures = renderReviews(state({ reviewsPullRequests: [], reviewsTab: 'all', reviewsFetchFailedCount: 3 }));
-    expect(onAllWithFailures).not.toContain('could not be checked');
-
-    const onFixedNoFailures = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed', reviewsFetchFailedCount: 0 }));
-    expect(onFixedNoFailures).not.toContain('could not be checked');
-
-    const onFixedUndefined = renderReviews(state({ reviewsPullRequests: [pr()], reviewsTab: 'fixed' }));
-    expect(onFixedUndefined).not.toContain('could not be checked');
   });
 });

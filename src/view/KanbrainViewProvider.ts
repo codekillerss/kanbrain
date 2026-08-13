@@ -38,9 +38,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
-  private reviewsTab: 'all' | 'fixed' | 'needsMyFix' = 'all';
   private reviewsStatusFilters: Array<'active' | 'completed' | 'abandoned'> = ['active'];
-  private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' = 'all';
+  private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' | 'fixed' | 'needsMyFix' = 'all';
   private reviewsPullRequests: PullRequestSummary[] = [];
   private reviewsFetchFailedCount = 0;
   private currentUserId: string | null | undefined;
@@ -154,8 +153,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.showBrainScreen();
       } else if (message.type === 'show-reviews') {
         this.showReviewsScreen();
-      } else if (message.type === 'set-reviews-tab') {
-        this.setReviewsTab(message.tab);
       } else if (message.type === 'toggle-reviews-status-filter') {
         this.toggleReviewsStatusFilter(message.status);
       } else if (message.type === 'set-reviews-owner-filter') {
@@ -341,19 +338,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private setReviewsTab(tab: unknown): void {
-    if (tab !== 'all' && tab !== 'fixed' && tab !== 'needsMyFix') {
-      return;
-    }
-    if (tab === this.reviewsTab) {
-      return;
-    }
-    this.reviewsTab = tab;
-    this.lastState = '';
-    this.lastReviewsFetchAt = 0;
-    void this.refresh();
-  }
-
   private toggleReviewsStatusFilter(status: unknown): void {
     if (status !== 'active' && status !== 'completed' && status !== 'abandoned') {
       return;
@@ -370,7 +354,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private setReviewsOwnerFilter(value: unknown): void {
-    if (value !== 'all' && value !== 'mine' && value !== 'assigned') {
+    if (value !== 'all' && value !== 'mine' && value !== 'assigned' && value !== 'fixed' && value !== 'needsMyFix') {
       return;
     }
     if (value === this.reviewsOwnerFilter) {
@@ -792,7 +776,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   ): Promise<{ pullRequests: PullRequestSummary[]; failedCount: number }> {
     if (!this.client) return { pullRequests: [], failedCount: 0 };
 
-    if (this.reviewsTab === 'all') {
+    if (this.reviewsOwnerFilter !== 'fixed' && this.reviewsOwnerFilter !== 'needsMyFix') {
       const creatorId = this.reviewsOwnerFilter === 'mine' && this.currentUserId ? this.currentUserId : undefined;
       const reviewerId = this.reviewsOwnerFilter === 'assigned' && this.currentUserId ? this.currentUserId : undefined;
       const perStatus = await Promise.all(
@@ -804,7 +788,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (!this.currentUserId) return { pullRequests: [], failedCount: 0 };
-    const isFixed = this.reviewsTab === 'fixed';
+    const isFixed = this.reviewsOwnerFilter === 'fixed';
     const base = await this.client.listProjectPullRequests(config.organization, config.project, 'active', {
       creatorId: isFixed ? undefined : this.currentUserId,
       reviewerId: isFixed ? this.currentUserId : undefined,
@@ -882,12 +866,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (config && this.client && this.currentScreen === 'reviews') {
-      const needsCurrentUser = this.reviewsTab !== 'all' || this.reviewsOwnerFilter !== 'all';
-      if (needsCurrentUser && this.currentUserId === undefined) {
+      if (this.reviewsOwnerFilter !== 'all' && this.currentUserId === undefined) {
         this.currentUserId = await this.client.getCurrentUserId();
       }
       const now = Date.now();
-      const filterKey = `${this.reviewsTab}|${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
+      const filterKey = `${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
       const filterChanged = this.lastReviewsFilterKeyFetched !== filterKey;
       if (filterChanged || now - this.lastReviewsFetchAt >= REVIEWS_POLL_INTERVAL_MS) {
         const { pullRequests, failedCount } = await this.fetchReviewsPullRequests(config);
@@ -922,7 +905,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         childrenCollapsed: this.childrenCollapsed,
         openBrainSegment: this.openBrainSegment,
         reviewsPullRequests: this.reviewsPullRequests,
-        reviewsTab: this.reviewsTab,
         reviewsStatusFilters: this.reviewsStatusFilters,
         reviewsOwnerFilter: this.reviewsOwnerFilter,
         reviewsFetchFailedCount: this.reviewsFetchFailedCount,
@@ -957,8 +939,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     function disableReviewsFilterControls(triggerEl) {
       const filtersContainer = triggerEl.closest('.kb-reviews-filters');
       if (!filtersContainer) return;
-      filtersContainer.querySelectorAll('.kb-search-tab').forEach((btn) => { btn.disabled = true; });
-      filtersContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.disabled = true; });
+      filtersContainer.querySelectorAll('input[type="checkbox"], .kb-status-select-option').forEach((el) => { el.disabled = true; });
     }
 
     function saveSkillRow(row) {
@@ -1051,30 +1032,27 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
-    const reviewsMineCheckbox = document.getElementById('kb-reviews-filter-mine');
-    const reviewsAssignedCheckbox = document.getElementById('kb-reviews-filter-assigned');
+    const ownerSelectTrigger = document.getElementById('kb-reviews-owner-trigger');
+    const ownerSelectIcon = document.getElementById('kb-reviews-owner-icon');
+    const ownerOptions = document.getElementById('kb-reviews-owner-options');
 
-    function applyReviewsOwnerFilter(checkbox, value) {
-      disableReviewsFilterControls(checkbox);
-      const label = checkbox.closest('.kb-checkbox-row');
-      if (label) setLoading(label);
-      vscode.postMessage({ type: 'set-reviews-owner-filter', value });
+    function toggleOwnerDropdown() {
+      if (ownerOptions) ownerOptions.classList.toggle('kb-hidden');
     }
 
-    if (reviewsMineCheckbox) {
-      reviewsMineCheckbox.addEventListener('change', () => {
-        if (reviewsMineCheckbox.checked && reviewsAssignedCheckbox) {
-          reviewsAssignedCheckbox.checked = false;
-        }
-        applyReviewsOwnerFilter(reviewsMineCheckbox, reviewsMineCheckbox.checked ? 'mine' : 'all');
-      });
+    function closeOwnerDropdown() {
+      if (ownerOptions) ownerOptions.classList.add('kb-hidden');
     }
-    if (reviewsAssignedCheckbox) {
-      reviewsAssignedCheckbox.addEventListener('change', () => {
-        if (reviewsAssignedCheckbox.checked && reviewsMineCheckbox) {
-          reviewsMineCheckbox.checked = false;
-        }
-        applyReviewsOwnerFilter(reviewsAssignedCheckbox, reviewsAssignedCheckbox.checked ? 'assigned' : 'all');
+
+    if (ownerSelectTrigger) {
+      ownerSelectTrigger.addEventListener('click', toggleOwnerDropdown);
+    }
+    if (ownerSelectIcon) {
+      ownerSelectIcon.addEventListener('click', toggleOwnerDropdown);
+    }
+    if (ownerOptions) {
+      ownerOptions.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeOwnerDropdown();
       });
     }
 
@@ -1179,14 +1157,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'show-brain' });
       } else if (target.id === 'kb-show-reviews-btn') {
         vscode.postMessage({ type: 'show-reviews' });
-      } else if (target.dataset && target.dataset.action === 'set-reviews-tab' && !target.classList.contains('kb-search-tab-active')) {
-        const tabBar = target.closest('.kb-search-tabs');
-        if (tabBar) {
-          tabBar.querySelectorAll('.kb-search-tab').forEach((btn) => btn.classList.remove('kb-search-tab-active'));
-        }
-        target.classList.add('kb-search-tab-active');
+      } else if (target.dataset && target.dataset.action === 'set-reviews-owner-filter' && !target.classList.contains('kb-status-select-option-active')) {
+        closeOwnerDropdown();
+        disableReviewsFilterControls(target);
         setLoading(target);
-        vscode.postMessage({ type: 'set-reviews-tab', tab: target.dataset.tab });
+        vscode.postMessage({ type: 'set-reviews-owner-filter', value: target.dataset.value });
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
@@ -1299,8 +1274,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         closeQueryDropdown();
       }
 
-      if (!target.closest || !target.closest('.kb-status-select')) {
+      // Both the status and owner selects share the .kb-status-select wrapper class (same
+      // widget, two instances), so scope each outside-click check to its own trigger/icon/
+      // dropdown trio by id rather than the shared class — otherwise a click inside one would
+      // also count as "inside" the other and never close it.
+      if (!target.closest || !target.closest('#kb-reviews-status-trigger, #kb-reviews-status-icon, #kb-reviews-status-options')) {
         closeStatusDropdown();
+      }
+
+      if (!target.closest || !target.closest('#kb-reviews-owner-trigger, #kb-reviews-owner-icon, #kb-reviews-owner-options')) {
+        closeOwnerDropdown();
       }
     });
 
@@ -1629,17 +1612,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-current-badge { flex-shrink: 0; margin-left: 6px; padding: 1px 5px; border-radius: 8px; font-size: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
-      .kb-status-select { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; margin-bottom: 10px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
+      .kb-status-select { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-status-select:hover { background: var(--vscode-list-hoverBackground); }
       .kb-status-select-trigger { padding: 4px 2px; cursor: pointer; }
-      .kb-status-select-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; color: var(--vscode-dropdown-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
+      .kb-status-select-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; color: var(--vscode-dropdown-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-status-select-icon { flex-shrink: 0; padding: 0 4px; font-size: 14px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }
       .kb-status-select-dropdown { position: absolute; top: 100%; left: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; min-width: 160px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-status-select-dropdown.kb-hidden { display: none; }
       .kb-status-select-dropdown .kb-checkbox-row { margin: 2px 0; white-space: nowrap; }
-      .kb-reviews-owner-filters { display: flex; gap: 14px; margin: 0 0 14px; }
-      .kb-reviews-owner-filters .kb-checkbox-row { margin: 0; }
-      .kb-reviews-filters { flex-shrink: 0; }
+      .kb-status-select-option { width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; }
+      .kb-status-select-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-status-select-option-active { font-weight: 600; }
+      .kb-status-select-option:disabled { opacity: 0.5; cursor: default; }
+      .kb-reviews-filters { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; margin-bottom: 10px; }
       .kb-reviews-list { flex: 1; min-height: 0; overflow-y: auto; }
       .kb-review-repo-group .kb-collapsible-body { max-height: 240px; overflow-y: auto; }
       .kb-review-repo-group:only-child .kb-collapsible-body { max-height: none; }

@@ -6,33 +6,21 @@ import { capitalize } from './renderDevelopment';
 import { renderBranchTag, renderRepoTag } from './renderRepoBranchTags';
 import { renderAvatarOrInitial } from './renderAssignee';
 
+type ReviewsOwnerFilter = 'all' | 'mine' | 'assigned' | 'fixed' | 'needsMyFix';
+
 const STATUS_FILTER_OPTIONS: { value: 'active' | 'completed' | 'abandoned'; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
   { value: 'abandoned', label: 'Abandoned' },
 ];
 
-const OWNER_FILTER_OPTIONS: { value: 'mine' | 'assigned'; id: string; label: string }[] = [
-  { value: 'mine', id: 'kb-reviews-filter-mine', label: 'My PRs' },
-  { value: 'assigned', id: 'kb-reviews-filter-assigned', label: 'Assigned to me' },
-];
-
-const TAB_OPTIONS: { value: 'all' | 'fixed' | 'needsMyFix'; label: string }[] = [
+const OWNER_FILTER_OPTIONS: { value: ReviewsOwnerFilter; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'mine', label: 'My PRs' },
+  { value: 'assigned', label: 'Assigned to me' },
   { value: 'fixed', label: 'Fixed' },
   { value: 'needsMyFix', label: 'Needs my fix' },
 ];
-
-function renderReviewsTopTabs(selected: 'all' | 'fixed' | 'needsMyFix'): string {
-  return `
-    <div class="kb-search-tabs">
-      ${TAB_OPTIONS.map(
-        o =>
-          `<button type="button" class="kb-search-tab${o.value === selected ? ' kb-search-tab-active' : ''}" data-action="set-reviews-tab" data-tab="${o.value}">${o.label}</button>`,
-      ).join('')}
-    </div>
-  `;
-}
 
 function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'abandoned')[]): string {
   const triggerLabel = STATUS_FILTER_OPTIONS.filter(o => selected.includes(o.value))
@@ -58,17 +46,20 @@ function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'aba
   `;
 }
 
-function renderReviewsOwnerFilters(selected: 'all' | 'mine' | 'assigned'): string {
+function renderReviewsOwnerSelect(selected: ReviewsOwnerFilter): string {
+  const selectedLabel = OWNER_FILTER_OPTIONS.find(o => o.value === selected)?.label ?? 'All';
   return `
-    <div class="kb-reviews-owner-filters">
-      ${OWNER_FILTER_OPTIONS.map(
-        o => `
-          <label class="kb-checkbox-row">
-            <input type="checkbox" id="${o.id}" ${selected === o.value ? 'checked' : ''}>
-            ${o.label}
-          </label>
-        `,
-      ).join('')}
+    <div class="kb-status-select">
+      <div id="kb-reviews-owner-trigger" class="kb-status-select-trigger">
+        <span id="kb-reviews-owner-trigger-label" class="kb-status-select-trigger-label">${escapeHtml(selectedLabel)}</span>
+      </div>
+      <span id="kb-reviews-owner-icon" class="kb-status-select-icon" aria-hidden="true">▼</span>
+      <div id="kb-reviews-owner-options" class="kb-status-select-dropdown kb-hidden">
+        ${OWNER_FILTER_OPTIONS.map(
+          o =>
+            `<button type="button" class="kb-status-select-option${o.value === selected ? ' kb-status-select-option-active' : ''}" data-action="set-reviews-owner-filter" data-value="${o.value}">${o.label}</button>`,
+        ).join('')}
+      </div>
     </div>
   `;
 }
@@ -127,23 +118,19 @@ function renderRepoGroup(group: RepoGroup, repositories: Record<string, Reposito
   `;
 }
 
-function renderFetchFailureNotice(tab: 'all' | 'fixed' | 'needsMyFix', failedCount: number): string {
-  if (tab === 'all' || !failedCount) {
+function renderFetchFailureNotice(ownerFilter: ReviewsOwnerFilter, failedCount: number): string {
+  if ((ownerFilter !== 'fixed' && ownerFilter !== 'needsMyFix') || !failedCount) {
     return '';
   }
   const plural = failedCount === 1 ? '' : 's';
   return `<div class="kb-empty">⚠ ${failedCount} pull request${plural} could not be checked and may be missing from this list.</div>`;
 }
 
-function renderEmptyMessage(
-  tab: 'all' | 'fixed' | 'needsMyFix',
-  statusFilters: ('active' | 'completed' | 'abandoned')[],
-  ownerFilter: 'all' | 'mine' | 'assigned',
-): string {
-  if (tab === 'fixed') {
+function renderEmptyMessage(ownerFilter: ReviewsOwnerFilter, statusFilters: ('active' | 'completed' | 'abandoned')[]): string {
+  if (ownerFilter === 'fixed') {
     return '<div class="kb-empty">No pull requests fixed and ready for re-review.</div>';
   }
-  if (tab === 'needsMyFix') {
+  if (ownerFilter === 'needsMyFix') {
     return '<div class="kb-empty">No pull requests need your fix.</div>';
   }
   const ownerSuffix = ownerFilter === 'mine' ? ' created by you' : ownerFilter === 'assigned' ? ' assigned to you' : '';
@@ -156,17 +143,17 @@ function renderEmptyMessage(
 export function renderReviews(state: RenderState): string {
   const config = state.config!;
   const repositories = config.repositories ?? {};
-  const tab = state.reviewsTab ?? 'all';
-  const statusFilters = state.reviewsStatusFilters ?? ['active'];
   const ownerFilter = state.reviewsOwnerFilter ?? 'all';
+  const statusFilters = state.reviewsStatusFilters ?? ['active'];
   const pullRequests = state.reviewsPullRequests ?? [];
   const sorted = [...pullRequests].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
-  const failureNoticeHtml = renderFetchFailureNotice(tab, state.reviewsFetchFailedCount ?? 0);
+  const showStatusFilter = ownerFilter !== 'fixed' && ownerFilter !== 'needsMyFix';
+  const failureNoticeHtml = renderFetchFailureNotice(ownerFilter, state.reviewsFetchFailedCount ?? 0);
 
   return `
-    ${renderReviewsTopTabs(tab)}
     <div class="kb-reviews-filters">
-      ${tab === 'all' ? `${renderReviewsStatusMultiSelect(statusFilters)}${renderReviewsOwnerFilters(ownerFilter)}` : ''}
+      ${showStatusFilter ? renderReviewsStatusMultiSelect(statusFilters) : ''}
+      ${renderReviewsOwnerSelect(ownerFilter)}
     </div>
     <div class="kb-reviews-list">
       ${failureNoticeHtml}
@@ -175,7 +162,7 @@ export function renderReviews(state: RenderState): string {
           ? groupByRepo(sorted)
               .map(group => renderRepoGroup(group, repositories))
               .join('')
-          : renderEmptyMessage(tab, statusFilters, ownerFilter)
+          : renderEmptyMessage(ownerFilter, statusFilters)
       }
     </div>
   `;
