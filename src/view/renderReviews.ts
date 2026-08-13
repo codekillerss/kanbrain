@@ -35,12 +35,25 @@ function renderReviewsTopTabs(selected: 'all' | 'fixed' | 'needsMyFix'): string 
 }
 
 function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'abandoned')[]): string {
+  const triggerLabel = STATUS_FILTER_OPTIONS.filter(o => selected.includes(o.value))
+    .map(o => o.label)
+    .join(', ');
   return `
-    <div class="kb-search-tabs">
-      ${STATUS_FILTER_OPTIONS.map(
-        o =>
-          `<button type="button" class="kb-search-tab${selected.includes(o.value) ? ' kb-search-tab-active' : ''}" data-action="toggle-reviews-status-filter" data-status="${o.value}">${o.label}</button>`,
-      ).join('')}
+    <div class="kb-status-select">
+      <div id="kb-reviews-status-trigger" class="kb-status-select-trigger">
+        <span id="kb-reviews-status-trigger-label" class="kb-status-select-trigger-label">${escapeHtml(triggerLabel)}</span>
+      </div>
+      <span id="kb-reviews-status-icon" class="kb-status-select-icon" aria-hidden="true">▼</span>
+      <div id="kb-reviews-status-options" class="kb-status-select-dropdown kb-hidden">
+        ${STATUS_FILTER_OPTIONS.map(
+          o => `
+            <label class="kb-checkbox-row">
+              <input type="checkbox" data-action="toggle-reviews-status-filter" data-status="${o.value}" data-label="${escapeHtml(o.label)}" ${selected.includes(o.value) ? 'checked' : ''}>
+              ${o.label}
+            </label>
+          `,
+        ).join('')}
+      </div>
     </div>
   `;
 }

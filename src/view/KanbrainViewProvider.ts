@@ -1078,6 +1078,49 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    const statusSelectTrigger = document.getElementById('kb-reviews-status-trigger');
+    const statusSelectIcon = document.getElementById('kb-reviews-status-icon');
+    const statusOptions = document.getElementById('kb-reviews-status-options');
+    const statusTriggerLabel = document.getElementById('kb-reviews-status-trigger-label');
+
+    function toggleStatusDropdown() {
+      if (statusOptions) statusOptions.classList.toggle('kb-hidden');
+    }
+
+    function closeStatusDropdown() {
+      if (statusOptions) statusOptions.classList.add('kb-hidden');
+    }
+
+    if (statusSelectTrigger) {
+      statusSelectTrigger.addEventListener('click', toggleStatusDropdown);
+    }
+    if (statusSelectIcon) {
+      statusSelectIcon.addEventListener('click', toggleStatusDropdown);
+    }
+    if (statusOptions) {
+      statusOptions.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeStatusDropdown();
+      });
+      statusOptions.querySelectorAll('input[data-status]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          const checkedBoxes = statusOptions.querySelectorAll('input[data-status]:checked');
+          if (!checkbox.checked && checkedBoxes.length === 0) {
+            // At least one status must always stay selected — revert instead of sending an
+            // update the server would reject anyway.
+            checkbox.checked = true;
+            return;
+          }
+          if (statusTriggerLabel) {
+            const labels = [...checkedBoxes].map((cb) => cb.dataset.label);
+            statusTriggerLabel.textContent = labels.join(', ');
+          }
+          disableReviewsFilterControls(checkbox);
+          setLoading(checkbox.closest('.kb-checkbox-row'));
+          vscode.postMessage({ type: 'toggle-reviews-status-filter', status: checkbox.dataset.status });
+        });
+      });
+    }
+
     document.addEventListener('click', (e) => {
       const target = e.target;
       if (target.id === 'kb-toggle-search-btn' || target.id === 'kb-footer-select-work-item-btn') {
@@ -1144,17 +1187,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         target.classList.add('kb-search-tab-active');
         setLoading(target);
         vscode.postMessage({ type: 'set-reviews-tab', tab: target.dataset.tab });
-      } else if (target.dataset && target.dataset.action === 'toggle-reviews-status-filter') {
-        const statusBar = target.closest('.kb-search-tabs');
-        const activeInBar = statusBar ? statusBar.querySelectorAll('.kb-search-tab-active').length : 0;
-        if (!(target.classList.contains('kb-search-tab-active') && activeInBar <= 1)) {
-          // At least one status must always stay selected. Mirror that invariant here so a
-          // click the server would reject never triggers the disable/loading UI in the first place.
-          disableReviewsFilterControls(target);
-          target.classList.toggle('kb-search-tab-active');
-          setLoading(target);
-          vscode.postMessage({ type: 'toggle-reviews-status-filter', status: target.dataset.status });
-        }
       } else if (target.dataset && target.dataset.action === 'pick-repository-folder') {
         const row = target.closest('.kb-repo-row');
         if (row) {
@@ -1265,6 +1297,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
       if (!target.closest || !target.closest('.kb-query-combobox')) {
         closeQueryDropdown();
+      }
+
+      if (!target.closest || !target.closest('.kb-status-select')) {
+        closeStatusDropdown();
       }
     });
 
@@ -1593,6 +1629,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-current-badge { flex-shrink: 0; margin-left: 6px; padding: 1px 5px; border-radius: 8px; font-size: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
+      .kb-status-select { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; margin-bottom: 10px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
+      .kb-status-select:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-status-select-trigger { padding: 4px 2px; cursor: pointer; }
+      .kb-status-select-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; color: var(--vscode-dropdown-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
+      .kb-status-select-icon { flex-shrink: 0; padding: 0 4px; font-size: 14px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }
+      .kb-status-select-dropdown { position: absolute; top: 100%; left: 0; z-index: 50; margin-top: 2px; display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; min-width: 160px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-status-select-dropdown.kb-hidden { display: none; }
+      .kb-status-select-dropdown .kb-checkbox-row { margin: 2px 0; white-space: nowrap; }
       .kb-reviews-owner-filters { display: flex; gap: 14px; margin: 0 0 14px; }
       .kb-reviews-owner-filters .kb-checkbox-row { margin: 0; }
       .kb-reviews-filters { flex-shrink: 0; }

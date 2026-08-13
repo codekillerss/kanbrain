@@ -61,11 +61,20 @@ describe('renderReviews', () => {
     expect(html).toContain('No pull requests match the selected status filters.');
   });
 
-  it('shows the status filter as tabs, not a select', () => {
+  it('shows the status filter as a select-style dropdown, not tabs', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active'] }));
     expect(html).not.toContain('<select');
-    expect(html).toContain('kb-search-tabs');
+    expect(html).toContain('kb-status-select');
+    expect(html).toContain('id="kb-reviews-status-trigger"');
+    expect(html).toContain('id="kb-reviews-status-options"');
     expect(html).toContain('data-action="toggle-reviews-status-filter"');
+  });
+
+  it('shows the joined labels of selected statuses in the closed trigger', () => {
+    const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active', 'completed'] }));
+    const labelStart = html.indexOf('id="kb-reviews-status-trigger-label"');
+    const content = html.slice(html.indexOf('>', labelStart) + 1, html.indexOf('</span>', labelStart));
+    expect(content.trim()).toBe('Active, Completed');
   });
 
   it('wraps the pull request groups in a scrollable list separate from the filters header', () => {
@@ -132,33 +141,31 @@ describe('renderReviews', () => {
     expect(html).toContain('No active pull requests assigned to you.');
   });
 
-  it('marks the selected status tab as active', () => {
+  it('checks the selected status in the dropdown', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
-    const tabStart = html.indexOf('data-status="completed"');
-    const tagStart = html.lastIndexOf('<button', tabStart);
-    const tag = html.slice(tagStart, html.indexOf('>', tabStart));
-    expect(tag).toContain('kb-search-tab-active');
+    const start = html.indexOf('data-status="completed"');
+    const tag = html.slice(html.lastIndexOf('<input', start), html.indexOf('>', start));
+    expect(tag).toContain('checked');
   });
 
-  it('does not mark non-selected status tabs as active', () => {
+  it('does not check non-selected statuses in the dropdown', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['completed'] }));
-    const tabStart = html.indexOf('data-status="active"');
-    const tagStart = html.lastIndexOf('<button', tabStart);
-    const tag = html.slice(tagStart, html.indexOf('>', tabStart));
-    expect(tag).not.toContain('kb-search-tab-active');
+    const start = html.indexOf('data-status="active"');
+    const tag = html.slice(html.lastIndexOf('<input', start), html.indexOf('>', start));
+    expect(tag).not.toContain('checked');
   });
 
-  it('marks multiple status tabs as active at once when multiple are selected', () => {
+  it('checks multiple statuses at once when multiple are selected', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsStatusFilters: ['active', 'abandoned'] }));
     const activeStart = html.indexOf('data-status="active"');
-    const activeTag = html.slice(html.lastIndexOf('<button', activeStart), html.indexOf('>', activeStart));
-    expect(activeTag).toContain('kb-search-tab-active');
+    const activeTag = html.slice(html.lastIndexOf('<input', activeStart), html.indexOf('>', activeStart));
+    expect(activeTag).toContain('checked');
     const abandonedStart = html.indexOf('data-status="abandoned"');
-    const abandonedTag = html.slice(html.lastIndexOf('<button', abandonedStart), html.indexOf('>', abandonedStart));
-    expect(abandonedTag).toContain('kb-search-tab-active');
+    const abandonedTag = html.slice(html.lastIndexOf('<input', abandonedStart), html.indexOf('>', abandonedStart));
+    expect(abandonedTag).toContain('checked');
     const completedStart = html.indexOf('data-status="completed"');
-    const completedTag = html.slice(html.lastIndexOf('<button', completedStart), html.indexOf('>', completedStart));
-    expect(completedTag).not.toContain('kb-search-tab-active');
+    const completedTag = html.slice(html.lastIndexOf('<input', completedStart), html.indexOf('>', completedStart));
+    expect(completedTag).not.toContain('checked');
   });
 
   it('groups pull requests into a section card per repository, with the repo shown as a tag plus a count in the header', () => {
