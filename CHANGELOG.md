@@ -2,6 +2,26 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.10.0] - 2026-08-12
+
+### Added
+
+- The work item search dialog now has a searchable select for your saved Azure DevOps queries. Picking one filters/orders the dialog's results by that query, and combines with the existing title/`#id` text filter. Only "flat" queries are selectable (tree/direct-link queries show up disabled); your last selection is remembered the next time you open the dialog.
+- The Reviews page has two new filters, alongside "My PRs"/"Assigned to me": **Fixed** (pull requests where every comment thread you opened is now resolved — time to re-review) and **Needs my fix** (your own open pull requests that still have an unresolved comment thread). These read the actual thread status on each PR, not the PR's own status or your vote, so they stay accurate even after Azure DevOps's own vote doesn't reset on new pushes.
+- The Reviews page's status filter (Active/Completed/Abandoned) is now a multi-select, so you can view more than one status at once.
+
+### Changed
+
+- The Reviews page's status and owner filters were redesigned as select-style dropdowns instead of checkboxes/tabs, all in a single filter row.
+
+### Fixed
+
+- The search dialog's title input is focused automatically when the dialog opens.
+- In the Work Item History dialog, the entry for your current work item is shown disabled (with a "Current" badge) since selecting it again has no effect — "View details" still works normally on it.
+- On the Home screen, the current work item's title is now clickable (opens its detail panel) and shows a hover state, matching the Flow screen.
+- On the Reviews page, a single remaining repository group (after filtering) now uses the full available height instead of staying capped at a fixed height meant for when multiple groups share the space.
+- In a work item's Development section, a pull request link that wraps onto its own line now indents under the repository tag instead of sitting flush against the left edge.
+
 ## [0.9.7] - 2026-08-06
 
 ### Fixed
