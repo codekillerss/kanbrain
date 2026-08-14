@@ -2,6 +2,16 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.11.0] - 2026-08-13
+
+### Added
+
+- The work item search dialog now has an "Assigned to me" checkbox that filters results to work items assigned to you, for both free-text search and saved-query results. Remembered per project.
+
+### Changed
+
+- On the Reviews page, the status filter stays visible (instead of disappearing) when the owner filter is **Fixed** or **Needs my fix** — it's shown locked to "Active" and disabled, since those two views always look at active pull requests. The two options are also relabeled to **Fixed (Me as reviewer)** and **Needs my fix (Me as author)** to make clear whose role each one reflects.
+
 ## [0.10.0] - 2026-08-12
 
 ### Added
