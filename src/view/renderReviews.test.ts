@@ -129,8 +129,8 @@ describe('renderReviews', () => {
     expect(html).toContain('data-action="set-reviews-owner-filter" data-value="needsMyFix"');
     expect(html).toContain('>My PRs<');
     expect(html).toContain('>Assigned to me<');
-    expect(html).toContain('>Fixed<');
-    expect(html).toContain('>Needs my fix<');
+    expect(html).toContain('>Fixed (Me as reviewer)<');
+    expect(html).toContain('>Needs my fix (Me as author)<');
   });
 
   it('shows "All" as the closed trigger label by default', () => {
@@ -144,7 +144,7 @@ describe('renderReviews', () => {
     const html = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix' }));
     const labelStart = html.indexOf('id="kb-reviews-owner-trigger-label"');
     const content = html.slice(html.indexOf('>', labelStart) + 1, html.indexOf('</span>', labelStart));
-    expect(content.trim()).toBe('Needs my fix');
+    expect(content.trim()).toBe('Needs my fix (Me as author)');
   });
 
   it('marks only the selected owner option as active', () => {
@@ -175,12 +175,20 @@ describe('renderReviews', () => {
     }
   });
 
-  it('hides the status select when reviewsOwnerFilter is "fixed" or "needsMyFix"', () => {
-    const onFixed = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'fixed' }));
-    expect(onFixed).not.toContain('data-action="toggle-reviews-status-filter"');
+  it('locks the status select to "Active" and disables it when reviewsOwnerFilter is "fixed" or "needsMyFix"', () => {
+    const onFixed = renderReviews(
+      state({ reviewsPullRequests: [], reviewsOwnerFilter: 'fixed', reviewsStatusFilters: ['completed', 'abandoned'] }),
+    );
+    expect(onFixed).toContain('kb-status-select-disabled');
+    const fixedLabelStart = onFixed.indexOf('id="kb-reviews-status-trigger-label"');
+    expect(onFixed.slice(fixedLabelStart, fixedLabelStart + 200)).toContain('>Active<');
+    const fixedCheckboxes = onFixed.match(/data-action="toggle-reviews-status-filter"[^>]*/g) ?? [];
+    expect(fixedCheckboxes).toHaveLength(3);
+    fixedCheckboxes.forEach(tag => expect(tag).toContain('disabled'));
 
     const onNeedsMyFix = renderReviews(state({ reviewsPullRequests: [], reviewsOwnerFilter: 'needsMyFix' }));
-    expect(onNeedsMyFix).not.toContain('data-action="toggle-reviews-status-filter"');
+    expect(onNeedsMyFix).toContain('kb-status-select-disabled');
+    expect(onNeedsMyFix).toContain('disabled');
   });
 
   it('shows a dedicated empty message when reviewsOwnerFilter is "fixed"', () => {

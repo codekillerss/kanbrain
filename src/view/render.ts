@@ -38,7 +38,7 @@ function renderHistoryDialog(): string {
   </div>`;
 }
 
-function renderSearchDialog(): string {
+function renderSearchDialog(config: KanbrainConfig): string {
   return `
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
@@ -57,6 +57,10 @@ function renderSearchDialog(): string {
           <button id="kb-search-close-btn">✕</button>
         </div>
         <input id="kb-search-input" placeholder="Search by title or #id...">
+        <label class="kb-checkbox-row">
+          <input type="checkbox" id="kb-search-assigned-to-me" ${config.searchAssignedToMe ? 'checked' : ''}>
+          Assigned to me
+        </label>
         <div id="kb-search-results"></div>
       </div>
     </div>
@@ -84,13 +88,13 @@ export function render(state: RenderState): string {
     `;
   }
   if (state.screen === 'home') {
-    return `${renderHome(state)}${renderSearchDialog()}${renderHistoryDialog()}${renderFooter(state)}`;
+    return `${renderHome(state)}${renderSearchDialog(state.config)}${renderHistoryDialog()}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
-    return `${renderConfig(state)}${renderSearchDialog()}${renderFooter(state)}`;
+    return `${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'brain') {
-    return `${renderBrain(state)}${renderSearchDialog()}${renderFooter(state)}`;
+    return `${renderBrain(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'reviews') {
     return `${renderReviews(state)}${renderFooter(state)}`;
@@ -100,6 +104,10 @@ export function render(state: RenderState): string {
     return `
       <div id="kb-search-section">
         <input id="kb-search-input" placeholder="Search by title or #id...">
+        <label class="kb-checkbox-row">
+          <input type="checkbox" id="kb-search-assigned-to-me" ${state.config.searchAssignedToMe ? 'checked' : ''}>
+          Assigned to me
+        </label>
         <div id="kb-search-results"></div>
       </div>
       ${renderFooter(state)}
@@ -125,7 +133,7 @@ export function render(state: RenderState): string {
     : '<div class="kb-empty">No child items.</div>';
 
   return `
-    ${renderSearchDialog()}
+    ${renderSearchDialog(state.config)}
     ${renderHistoryDialog()}
     ${parentSectionHtml}
     <div class="kb-section-card kb-section-card-current">

@@ -8,6 +8,7 @@ export const DEFAULT_REPO_SCAN_DEPTH = 2;
 interface LocalConfig {
   repositories?: Record<string, RepositoryPathEntry>;
   showAssignedTo?: boolean;
+  searchAssignedToMe?: boolean;
   selectedProfileId?: string;
 }
 
@@ -38,6 +39,9 @@ function extractLocalFields(config: KanbrainConfig): LocalConfig {
   }
   if (config.showAssignedTo !== undefined) {
     local.showAssignedTo = config.showAssignedTo;
+  }
+  if (config.searchAssignedToMe !== undefined) {
+    local.searchAssignedToMe = config.searchAssignedToMe;
   }
   if (config.selectedProfileId !== undefined) {
     local.selectedProfileId = config.selectedProfileId;
@@ -102,6 +106,9 @@ function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): Kanbr
   if ('showAssignedTo' in local) {
     result.showAssignedTo = local.showAssignedTo;
   }
+  if ('searchAssignedToMe' in local) {
+    result.searchAssignedToMe = local.searchAssignedToMe;
+  }
   if ('selectedProfileId' in local) {
     result.selectedProfileId = local.selectedProfileId;
   }
@@ -141,7 +148,7 @@ export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void
   const configPath = getConfigPath(workspaceRoot);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
-  const { repositories, showAssignedTo, selectedProfileId, ...shared } = config;
+  const { repositories, showAssignedTo, searchAssignedToMe, selectedProfileId, ...shared } = config;
   fs.writeFileSync(configPath, `${JSON.stringify(shared, null, 2)}\n`, 'utf-8');
 
   const local = extractLocalFields(config);

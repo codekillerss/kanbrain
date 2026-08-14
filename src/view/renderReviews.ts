@@ -18,16 +18,17 @@ const OWNER_FILTER_OPTIONS: { value: ReviewsOwnerFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'mine', label: 'My PRs' },
   { value: 'assigned', label: 'Assigned to me' },
-  { value: 'fixed', label: 'Fixed' },
-  { value: 'needsMyFix', label: 'Needs my fix' },
+  { value: 'fixed', label: 'Fixed (Me as reviewer)' },
+  { value: 'needsMyFix', label: 'Needs my fix (Me as author)' },
 ];
 
-function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'abandoned')[]): string {
-  const triggerLabel = STATUS_FILTER_OPTIONS.filter(o => selected.includes(o.value))
+function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'abandoned')[], locked: boolean): string {
+  const effectiveSelected = locked ? ['active'] : selected;
+  const triggerLabel = STATUS_FILTER_OPTIONS.filter(o => effectiveSelected.includes(o.value))
     .map(o => o.label)
     .join(', ');
   return `
-    <div class="kb-status-select">
+    <div class="kb-status-select${locked ? ' kb-status-select-disabled' : ''}">
       <div id="kb-reviews-status-trigger" class="kb-status-select-trigger">
         <span id="kb-reviews-status-trigger-label" class="kb-status-select-trigger-label">${escapeHtml(triggerLabel)}</span>
       </div>
@@ -36,7 +37,7 @@ function renderReviewsStatusMultiSelect(selected: ('active' | 'completed' | 'aba
         ${STATUS_FILTER_OPTIONS.map(
           o => `
             <label class="kb-checkbox-row">
-              <input type="checkbox" data-action="toggle-reviews-status-filter" data-status="${o.value}" data-label="${escapeHtml(o.label)}" ${selected.includes(o.value) ? 'checked' : ''}>
+              <input type="checkbox" data-action="toggle-reviews-status-filter" data-status="${o.value}" data-label="${escapeHtml(o.label)}" ${effectiveSelected.includes(o.value) ? 'checked' : ''} ${locked ? 'disabled' : ''}>
               ${o.label}
             </label>
           `,
@@ -147,12 +148,12 @@ export function renderReviews(state: RenderState): string {
   const statusFilters = state.reviewsStatusFilters ?? ['active'];
   const pullRequests = state.reviewsPullRequests ?? [];
   const sorted = [...pullRequests].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
-  const showStatusFilter = ownerFilter !== 'fixed' && ownerFilter !== 'needsMyFix';
+  const statusFilterLocked = ownerFilter === 'fixed' || ownerFilter === 'needsMyFix';
   const failureNoticeHtml = renderFetchFailureNotice(ownerFilter, state.reviewsFetchFailedCount ?? 0);
 
   return `
     <div class="kb-reviews-filters">
-      ${showStatusFilter ? renderReviewsStatusMultiSelect(statusFilters) : ''}
+      ${renderReviewsStatusMultiSelect(statusFilters, statusFilterLocked)}
       ${renderReviewsOwnerSelect(ownerFilter)}
     </div>
     <div class="kb-reviews-list">

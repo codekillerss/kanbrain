@@ -109,6 +109,39 @@ describe('render', () => {
     expect(html).toContain('id="kb-search-results"');
   });
 
+  it('shows an unchecked "Assigned to me" checkbox in the search dialog by default', () => {
+    const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+    const start = html.indexOf('id="kb-search-assigned-to-me"');
+    expect(start).toBeGreaterThan(-1);
+    expect(html.slice(start, html.indexOf('>', start))).not.toContain('checked');
+  });
+
+  it('checks the "Assigned to me" checkbox when config.searchAssignedToMe is true', () => {
+    const html = render({
+      hasWorkspace: true,
+      config: { ...config, searchAssignedToMe: true },
+      workItem: workItem(),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+    });
+    const start = html.indexOf('id="kb-search-assigned-to-me"');
+    expect(html.slice(start, html.indexOf('>', start))).toContain('checked');
+  });
+
+  it('also shows the "Assigned to me" checkbox in the inline search box when there is no active work item', () => {
+    const html = render({
+      hasWorkspace: true,
+      config: { ...config, searchAssignedToMe: true },
+      workItem: null,
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+    });
+    const start = html.indexOf('id="kb-search-assigned-to-me"');
+    expect(html.slice(start, html.indexOf('>', start))).toContain('checked');
+  });
+
   it('escapes HTML in the work item title', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('Fix &lt;bug&gt; in login');

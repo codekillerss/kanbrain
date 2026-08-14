@@ -118,6 +118,7 @@ export interface KanbrainConfig {
   cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
   taskBacklogTypesByTeam?: Record<string, string[]>;
   showAssignedTo?: boolean;
+  searchAssignedToMe?: boolean;
   lastSyncedVersion?: string;
   repositories?: Record<string, RepositoryPathEntry>;
   globalSkills?: Record<string, SkillEntry>;

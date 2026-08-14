@@ -113,8 +113,8 @@ export class AzureDevOpsClient {
     return data.value.map(p => ({ id: p.id, name: p.name }));
   }
 
-  async searchWorkItems(organization: string, project: string, searchText: string): Promise<number[]> {
-    const query = buildSearchQuery(searchText);
+  async searchWorkItems(organization: string, project: string, searchText: string, assignedToMe = false): Promise<number[]> {
+    const query = buildSearchQuery(searchText, assignedToMe);
     const data = await this.request<{ workItems: { id: number }[] }>(
       `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1&$top=50`,
       { method: 'POST', body: JSON.stringify({ query }) },

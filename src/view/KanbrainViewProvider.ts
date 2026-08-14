@@ -16,7 +16,7 @@ import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
-import { filterWorkItemsByText, countItemsByType } from '../azureDevOps/wiql';
+import { filterWorkItemsByText, filterByAssignedTo, countItemsByType } from '../azureDevOps/wiql';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 
 const POLL_INTERVAL_MS = 5000;
@@ -81,6 +81,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
         await this.searchWorkItems(String(message.query ?? ''), message.queryId ? String(message.queryId) : undefined);
+      } else if (message.type === 'set-search-assigned-to-me') {
+        await this.setSearchAssignedToMe(
+          Boolean(message.value),
+          String(message.query ?? ''),
+          message.queryId ? String(message.queryId) : undefined,
+        );
       } else if (message.type === 'pick-work-item') {
         this.setActiveWorkItem(Number(message.id));
       } else if (message.type === 'clear-work-item') {
@@ -342,6 +348,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (status !== 'active' && status !== 'completed' && status !== 'abandoned') {
       return;
     }
+    if (this.reviewsOwnerFilter === 'fixed' || this.reviewsOwnerFilter === 'needsMyFix') {
+      // The status select is locked to "active" (and disabled client-side) for these owner
+      // filters, since fixed/needsMyFix always fetch active PRs regardless of this setting.
+      return;
+    }
     const isSelected = this.reviewsStatusFilters.includes(status);
     if (isSelected && this.reviewsStatusFilters.length === 1) {
       // At least one status must always stay selected.
@@ -381,6 +392,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const assignedToMe = config.searchAssignedToMe === true;
+
     let html: string;
     try {
       let items: WorkItem[];
@@ -390,11 +403,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const queryItems = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
         typeCounts = countItemsByType(queryItems);
         items = filterWorkItemsByText(queryItems, query);
+        if (assignedToMe) {
+          const userId = await this.resolveCurrentUserId();
+          items = userId ? filterByAssignedTo(items, userId) : [];
+        }
       } else {
         if (query.trim() === '') {
           this.typeCounts = await this.fetchTypeCounts(this.client, config);
         }
-        const ids = await this.client.searchWorkItems(config.organization, config.project, query);
+        const ids = await this.client.searchWorkItems(config.organization, config.project, query, assignedToMe);
         items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
         typeCounts = this.typeCounts;
       }
@@ -406,6 +423,26 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     this.view.webview.postMessage({ type: 'search-results', html });
+  }
+
+  private async setSearchAssignedToMe(value: boolean, query: string, queryId?: string): Promise<void> {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.searchAssignedToMe = value;
+    writeConfig(this.workspaceRoot, config);
+    await this.searchWorkItems(query, queryId);
+  }
+
+  private async resolveCurrentUserId(): Promise<string | null> {
+    if (this.currentUserId === undefined) {
+      this.currentUserId = this.client ? await this.client.getCurrentUserId() : null;
+    }
+    return this.currentUserId ?? null;
   }
 
   private async fetchTypeCounts(client: AzureDevOpsClient, config: KanbrainConfig): Promise<Record<string, number>> {
@@ -1342,6 +1379,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       searchInput.addEventListener('input', triggerSearch);
     }
 
+    const assignedToMeCheckbox = document.getElementById('kb-search-assigned-to-me');
+    if (assignedToMeCheckbox) {
+      assignedToMeCheckbox.addEventListener('change', () => {
+        vscode.postMessage({
+          type: 'set-search-assigned-to-me',
+          value: assignedToMeCheckbox.checked,
+          query: searchInput ? searchInput.value : '',
+          queryId: activeQueryId || undefined,
+        });
+      });
+    }
+
     if (queryTrigger) {
       queryTrigger.addEventListener('click', toggleQueryDropdown);
     }
@@ -1614,6 +1663,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
       .kb-status-select { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-status-select:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-status-select-disabled { opacity: 0.5; pointer-events: none; }
       .kb-status-select-trigger { padding: 4px 2px; cursor: pointer; }
       .kb-status-select-trigger-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; color: var(--vscode-dropdown-foreground); font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-status-select-icon { flex-shrink: 0; padding: 0 4px; font-size: 14px; opacity: 0.7; color: var(--vscode-dropdown-foreground); cursor: pointer; }

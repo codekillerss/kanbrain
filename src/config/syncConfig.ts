@@ -63,6 +63,7 @@ export function syncConfig(
     cardSettingsByTeam: freshCardSettingsByTeam,
     taskBacklogTypesByTeam: freshTaskBacklogTypesByTeam,
     showAssignedTo: config.showAssignedTo,
+    searchAssignedToMe: config.searchAssignedToMe,
     repositories: mergeRepositories(config.repositories, freshRepositories),
     globalSkills: config.globalSkills,
     profiles: config.profiles,

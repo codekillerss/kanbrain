@@ -124,6 +124,11 @@ describe('syncConfig', () => {
     expect(result.showAssignedTo).toBeUndefined();
   });
 
+  it('preserves searchAssignedToMe across a sync', () => {
+    const result = syncConfig(config({ searchAssignedToMe: true }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.searchAssignedToMe).toBe(true);
+  });
+
   it('preserves globalSkills unchanged across a sync', () => {
     const withGlobal = config({ globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } } });
     const result = syncConfig(withGlobal, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});

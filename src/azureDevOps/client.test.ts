@@ -70,6 +70,16 @@ describe('AzureDevOpsClient', () => {
     );
   });
 
+  it('includes an assigned-to-me clause in the WIQL query when requested', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.searchWorkItems('my-org', 'MyProject', 'login', true);
+
+    const [, options] = fetchImpl.mock.calls[0];
+    expect(JSON.parse(options.body).query).toContain('[System.AssignedTo] = @Me');
+  });
+
   it('counts work items by type without fetching full details', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [{ id: 1 }, { id: 2 }, { id: 3 }] }));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
