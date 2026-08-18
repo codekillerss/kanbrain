@@ -5,8 +5,11 @@ import * as path from 'node:path';
 import {
   EXPLAIN_CARD_SKILL_ID,
   EXPLAIN_CARD_SKILL_RELATIVE_PATH,
+  VALIDATION_COMMENT_SKILL_ID,
+  VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
+  ensureValidationCommentGlobalSkill,
   isBootstrapContentMissing,
   DEFAULT_PROFILES,
   ensureDefaultProfiles,
@@ -32,6 +35,30 @@ describe('ensureExplainCardGlobalSkill', () => {
   it('leaves an existing explain-card entry untouched, including user customizations', () => {
     const existing: Record<string, SkillEntry> = { [EXPLAIN_CARD_SKILL_ID]: { path: 'custom.md', label: 'Custom' } };
     const result = ensureExplainCardGlobalSkill(existing);
+
+    expect(result).toEqual(existing);
+  });
+});
+
+describe('ensureValidationCommentGlobalSkill', () => {
+  it('adds the validation-comment entry when there is no existing map', () => {
+    const result = ensureValidationCommentGlobalSkill(undefined);
+
+    expect(Object.keys(result)).toEqual([VALIDATION_COMMENT_SKILL_ID]);
+    expect(result[VALIDATION_COMMENT_SKILL_ID].path).toBe(VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
+  });
+
+  it('keeps existing entries, including explain-card, and adds validation-comment when it is missing', () => {
+    const existing = ensureExplainCardGlobalSkill(undefined);
+    const result = ensureValidationCommentGlobalSkill(existing);
+
+    expect(result[EXPLAIN_CARD_SKILL_ID].path).toBe(EXPLAIN_CARD_SKILL_RELATIVE_PATH);
+    expect(result[VALIDATION_COMMENT_SKILL_ID].path).toBe(VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
+  });
+
+  it('leaves an existing validation-comment entry untouched, including user customizations', () => {
+    const existing: Record<string, SkillEntry> = { [VALIDATION_COMMENT_SKILL_ID]: { path: 'custom.md', label: 'Custom' } };
+    const result = ensureValidationCommentGlobalSkill(existing);
 
     expect(result).toEqual(existing);
   });
@@ -111,15 +138,25 @@ describe('isBootstrapContentMissing', () => {
   it('is false once USAGE.md exists, the explain-card entry, and the default profiles are all configured', () => {
     fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
-    const withEntry = config(ensureExplainCardGlobalSkill(undefined), ensureDefaultProfiles(undefined));
+    const withEntry = config(ensureValidationCommentGlobalSkill(ensureExplainCardGlobalSkill(undefined)), ensureDefaultProfiles(undefined));
 
     expect(isBootstrapContentMissing(workspaceRoot, withEntry)).toBe(false);
+  });
+
+  it('is true when everything else is configured but the validation-comment entry is missing', () => {
+    fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
+    const withoutValidationComment = config(ensureExplainCardGlobalSkill(undefined), ensureDefaultProfiles(undefined));
+
+    expect(isBootstrapContentMissing(workspaceRoot, withoutValidationComment)).toBe(true);
   });
 
   it('is true when USAGE.md and the explain-card entry are present but a default profile is missing', () => {
     fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
-    const withPartialProfiles = config(ensureExplainCardGlobalSkill(undefined), { developer: DEFAULT_PROFILES.developer });
+    const withPartialProfiles = config(ensureValidationCommentGlobalSkill(ensureExplainCardGlobalSkill(undefined)), {
+      developer: DEFAULT_PROFILES.developer,
+    });
 
     expect(isBootstrapContentMissing(workspaceRoot, withPartialProfiles)).toBe(true);
   });
