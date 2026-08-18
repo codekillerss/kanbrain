@@ -12,9 +12,12 @@ import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLoca
 import {
   EXPLAIN_CARD_SKILL_CONTENT,
   EXPLAIN_CARD_SKILL_RELATIVE_PATH,
+  VALIDATION_COMMENT_SKILL_CONTENT,
+  VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureExplainCardGlobalSkill,
+  ensureValidationCommentGlobalSkill,
   ensureDefaultProfiles,
 } from '../skills/bootstrapContent';
 
@@ -133,6 +136,11 @@ export function registerSetupCommand(
       fs.writeFileSync(explainCardSkillPath, EXPLAIN_CARD_SKILL_CONTENT, 'utf-8');
     }
 
+    const validationCommentSkillPath = path.join(workspaceRoot, VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
+    if (!fs.existsSync(validationCommentSkillPath)) {
+      fs.writeFileSync(validationCommentSkillPath, VALIDATION_COMMENT_SKILL_CONTENT, 'utf-8');
+    }
+
     const usageGuidePath = path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH);
     if (!fs.existsSync(usageGuidePath)) {
       fs.writeFileSync(usageGuidePath, USAGE_GUIDE_CONTENT, 'utf-8');
@@ -149,7 +157,7 @@ export function registerSetupCommand(
       cardSettingsByTeam,
       taskBacklogTypesByTeam,
       repositories,
-      globalSkills: ensureExplainCardGlobalSkill(undefined),
+      globalSkills: ensureValidationCommentGlobalSkill(ensureExplainCardGlobalSkill(undefined)),
       profiles: ensureDefaultProfiles(undefined),
       lastSyncedVersion: extensionVersion,
       repoScanDepth: DEFAULT_REPO_SCAN_DEPTH,
