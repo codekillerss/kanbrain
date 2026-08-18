@@ -131,3 +131,46 @@ Run: `npm run compile`, `npx vitest run`, and the integration suite from a termi
 Code. Then exercise Setup and Sync against a real Azure DevOps project: Setup seeds both entries
 and writes the file; deleting the file and the entry and running Sync restores both while leaving
 `explain-card` untouched; running Sync again reports "already up to date".
+
+---
+
+### Task 5: Seed global skills from a table instead of chaining ensure helpers
+
+**Files:**
+- Modify: `src/skills/bootstrapContent.ts`
+- Modify: `src/skills/bootstrapContent.test.ts`
+- Modify: `src/commands/setup.ts`
+- Modify: `src/commands/syncBoardConfig.ts`
+
+Task 2 left both call sites composing the two helpers by nesting —
+`ensureValidationCommentGlobalSkill(ensureExplainCardGlobalSkill(...))`. That reads as if one skill
+wrapped the other when they are siblings, duplicated the composition across two commands, and would
+grow a level per future skill. It is also not how this repo aggregates seeded things: `DEFAULT_PROFILES`
+and `migrations` are both a table plus a loop.
+
+**Interfaces:**
+- `ensureSeededGlobalSkills(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry>`,
+  driven by a private `SEEDED_GLOBAL_SKILLS` table — mirroring `ensureDefaultProfiles`.
+- `ensureExplainCardGlobalSkill` and `ensureValidationCommentGlobalSkill` are removed: the table makes
+  them dead, and leaving two ways to do one thing is worse than deleting one pre-existing export. Their
+  behaviour (never overwrite a customized entry) moves to the new helper's tests.
+
+- [ ] **Step 1: Rewrite the tests first**
+
+Replace both `describe` blocks with one for `ensureSeededGlobalSkills`: seeds both from `undefined`,
+keeps a custom non-seeded skill, leaves a customized seeded entry untouched while adding the missing
+one, and changes nothing when both are already present.
+
+- [ ] **Step 2: Add the table and the helper, remove the two individual ones**
+
+- [ ] **Step 3: Simplify `isBootstrapContentMissing`**
+
+Two per-skill checks collapse into `Object.keys(SEEDED_GLOBAL_SKILLS).some(...)`, mirroring the
+`defaultProfilesMissing` line. A future seeded skill needs no edit here at all.
+
+- [ ] **Step 4: Collapse both call sites to a single call**
+
+- [ ] **Step 5: Verify**
+
+`npm run compile` and `npx vitest run` green, and the Setup/Sync behaviour unchanged end to end.
+
