@@ -16,8 +16,7 @@ import {
   VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
-  ensureExplainCardGlobalSkill,
-  ensureValidationCommentGlobalSkill,
+  ensureSeededGlobalSkills,
   ensureDefaultProfiles,
 } from '../skills/bootstrapContent';
 
@@ -157,7 +156,7 @@ export function registerSetupCommand(
       cardSettingsByTeam,
       taskBacklogTypesByTeam,
       repositories,
-      globalSkills: ensureValidationCommentGlobalSkill(ensureExplainCardGlobalSkill(undefined)),
+      globalSkills: ensureSeededGlobalSkills(undefined),
       profiles: ensureDefaultProfiles(undefined),
       lastSyncedVersion: extensionVersion,
       repoScanDepth: DEFAULT_REPO_SCAN_DEPTH,

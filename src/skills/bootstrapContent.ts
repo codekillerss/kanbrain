@@ -22,13 +22,6 @@ export function buildExplainCardSkillEntry(): SkillEntry {
   };
 }
 
-export function ensureExplainCardGlobalSkill(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
-  if (existing?.[EXPLAIN_CARD_SKILL_ID]) {
-    return existing;
-  }
-  return { ...(existing ?? {}), [EXPLAIN_CARD_SKILL_ID]: buildExplainCardSkillEntry() };
-}
-
 export const VALIDATION_COMMENT_SKILL_ID = 'validation-comment';
 export const VALIDATION_COMMENT_SKILL_RELATIVE_PATH = '.kanbrain/skills/validation-comment.md';
 const VALIDATION_COMMENT_BUTTON_COLOR = '4c8c4a';
@@ -231,11 +224,19 @@ export function buildValidationCommentSkillEntry(): SkillEntry {
   };
 }
 
-export function ensureValidationCommentGlobalSkill(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
-  if (existing?.[VALIDATION_COMMENT_SKILL_ID]) {
-    return existing;
+const SEEDED_GLOBAL_SKILLS: Record<string, SkillEntry> = {
+  [EXPLAIN_CARD_SKILL_ID]: buildExplainCardSkillEntry(),
+  [VALIDATION_COMMENT_SKILL_ID]: buildValidationCommentSkillEntry(),
+};
+
+export function ensureSeededGlobalSkills(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
+  const merged = { ...(existing ?? {}) };
+  for (const [id, entry] of Object.entries(SEEDED_GLOBAL_SKILLS)) {
+    if (!(id in merged)) {
+      merged[id] = entry;
+    }
   }
-  return { ...(existing ?? {}), [VALIDATION_COMMENT_SKILL_ID]: buildValidationCommentSkillEntry() };
+  return merged;
 }
 
 export const DEFAULT_PROFILES: Record<string, ProfileEntry> = {
@@ -310,8 +311,7 @@ Edit skills directly, or use the Config screen in the Kanbrain panel — both st
 
 export function isBootstrapContentMissing(workspaceRoot: string, config: KanbrainConfig): boolean {
   const usageGuideMissing = !fs.existsSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH));
-  const explainCardEntryMissing = !config.globalSkills?.[EXPLAIN_CARD_SKILL_ID];
-  const validationCommentEntryMissing = !config.globalSkills?.[VALIDATION_COMMENT_SKILL_ID];
+  const seededSkillsMissing = Object.keys(SEEDED_GLOBAL_SKILLS).some(id => !config.globalSkills?.[id]);
   const defaultProfilesMissing = Object.keys(DEFAULT_PROFILES).some(id => !config.profiles?.[id]);
-  return usageGuideMissing || explainCardEntryMissing || validationCommentEntryMissing || defaultProfilesMissing;
+  return usageGuideMissing || seededSkillsMissing || defaultProfilesMissing;
 }
