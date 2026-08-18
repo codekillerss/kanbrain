@@ -55,6 +55,6 @@ describe('diffBoardConfig', () => {
 
   it('mentions the missing bootstrap content in the summary', () => {
     const diff = diffBoardConfig(config(), discovered, true);
-    expect(summarizeDiff(diff)).toContain('global skill setup');
+    expect(summarizeDiff(diff)).toContain('missing seeded content');
   });
 });
