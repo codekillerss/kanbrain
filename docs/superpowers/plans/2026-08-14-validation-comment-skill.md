@@ -84,20 +84,50 @@ These two files have no unit tests, by the same precedent as the rest of `comman
 
 ---
 
-### Task 3: Changelog and version
+### Task 3: Widen the sync/check summary
+
+**Files:**
+- Modify: `src/azureDevOps/checkBoardConfig.ts`
+- Modify: `src/azureDevOps/checkBoardConfig.test.ts`
+
+Surfaced while verifying Task 2 against a real project: `summarizeDiff` enumerated what could be
+missing — `'missing global skill setup (explain-card skill / USAGE.md)'` — so once a second skill
+is seeded, a missing `validation-comment` is reported as a missing `explain-card`. The message was
+already incomplete before this change, since `isBootstrapContentMissing` has also covered the
+default profiles since 0.7.5 without the message ever saying so.
+
+- [ ] **Step 1: Replace the enumeration with a phrasing that will not rot**
+
+`'missing seeded content (global skills, USAGE.md, or default profiles)'`.
+
+- [ ] **Step 2: Update the assertion that pinned the old wording**
+
+`checkBoardConfig.test.ts` asserts `toContain('global skill setup')`; the test's stated intent is
+that the summary mentions the missing bootstrap content, so assert on the new phrasing instead.
+
+- [ ] **Step 3: Verify**
+
+Run: `npx vitest run` — expected green.
+
+---
+
+### Task 4: Changelog
 
 **Files:**
 - Modify: `CHANGELOG.md`
-- Modify: `package.json`
 
-- [ ] **Step 1: Add the 0.12.0 entry**
+- [ ] **Step 1: Add the entry under `## [Unreleased]`**
 
 `### Added`, narrative in the style of the existing entries: what the skill does, that it is seeded on Setup and backfilled by Sync, that it is global and why, and that Kanbrain still never writes to Azure DevOps — the agent publishes, after approval.
 
-- [ ] **Step 2: Bump the version**
+**No version bump.** Cutting a release is the maintainer's call, and the entry sits under
+`[Unreleased]` so the number stays theirs to choose. The sync-summary change in Task 3 gets no
+`### Fixed` entry of its own: the message only became wrong because of this same unreleased
+change, so it is covered by the `### Added` entry.
 
-`package.json` to `0.12.0`. Minor, not patch: it is a user-facing addition.
+- [ ] **Step 2: Full verification**
 
-- [ ] **Step 3: Full verification**
-
-Run: `npm run compile`, `npx vitest run`, and the integration suite from a terminal outside VS Code.
+Run: `npm run compile`, `npx vitest run`, and the integration suite from a terminal outside VS
+Code. Then exercise Setup and Sync against a real Azure DevOps project: Setup seeds both entries
+and writes the file; deleting the file and the entry and running Sync restores both while leaving
+`explain-card` untouched; running Sync again reports "already up to date".
