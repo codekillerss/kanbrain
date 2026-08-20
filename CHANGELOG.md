@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.11.1] - 2026-08-20
+
+### Fixed
+
+- Child work items with a Removed status no longer show up under a work item's children, on the Flow screen or in the work item detail panel. This is based on Azure DevOps's fixed state category (not the state's display name, which can be customized per process template), so it works regardless of process (Agile, Scrum, CMMI, Basic, or custom).
+
 ## [0.11.0] - 2026-08-13
 
 ### Added
