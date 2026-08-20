@@ -35,6 +35,21 @@ describe('syncConfig', () => {
     expect(result.defaultTeam).toBe('MyProject Team');
   });
 
+  it('persists the discovered status categories by type', () => {
+    const result = syncConfig(
+      config(),
+      { Task: { 'To Do': 'Proposed', Done: 'Completed', Cancelled: 'Removed' } },
+      {},
+      {},
+      {},
+      'MyProject Team',
+      {},
+      {},
+      {},
+    );
+    expect(result.statusCategoriesByType).toEqual({ Task: { 'To Do': 'Proposed', Done: 'Completed', Cancelled: 'Removed' } });
+  });
+
   it('keeps organization and project unchanged', () => {
     const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
     expect(result.organization).toBe('org');

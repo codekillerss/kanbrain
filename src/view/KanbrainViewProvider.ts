@@ -18,6 +18,7 @@ import { renderWorkItemHistory } from './renderWorkItemHistory';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { filterWorkItemsByText, filterByAssignedTo, countItemsByType } from '../azureDevOps/wiql';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
+import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -759,7 +760,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const [parent] = workItem.parentId
       ? await this.client.getWorkItems(config.organization, config.project, [workItem.parentId])
       : [];
-    const subtasks = await this.client.getChildren(config.organization, config.project, workItem);
+    const subtasks = filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config);
     const branch = await this.getCurrentBranch();
 
     const profile = resolveActiveProfile(config);
@@ -876,7 +877,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const [fetched] = await this.client.getWorkItems(config.organization, config.project, [activeWorkItemIdAtStart]);
         workItem = fetched ?? null;
         if (workItem) {
-          subtasks = await this.client.getChildren(config.organization, config.project, workItem);
+          subtasks = filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config);
           if (workItem.parentId) {
             const [fetchedParent] = await this.client.getWorkItems(config.organization, config.project, [workItem.parentId]);
             parent = fetchedParent ?? null;

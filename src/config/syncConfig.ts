@@ -58,6 +58,7 @@ export function syncConfig(
     defaultTeam: freshDefaultTeam,
     skills,
     statusColors: freshStatusColors,
+    statusCategoriesByType: discoveredStatusesByType,
     typeColors: freshTypeColors,
     typeIcons: freshTypeIcons,
     cardSettingsByTeam: freshCardSettingsByTeam,
