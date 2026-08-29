@@ -7,6 +7,7 @@ import { readConfig } from '../config/config';
 import { renderWorkItemDetail } from './renderWorkItemDetail';
 import { detailPanelCss } from './detailPanelCss';
 import { extractImageUrls } from './inlineImages';
+import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -113,6 +114,7 @@ export class WorkItemDetailPanelManager {
     } catch {
       return; // Transient failure — skip this refresh, retry next poll.
     }
+    children = filterOutRemoved(children, config);
     const parent = parentResult[0] ?? null;
     const currentWorkItemId = this.getActiveWorkItemId();
 

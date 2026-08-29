@@ -113,6 +113,7 @@ export interface KanbrainConfig {
   defaultTeam: string;
   skills: Record<string, Record<string, SkillEntry | null>>;
   statusColors: Record<string, string>;
+  statusCategoriesByType?: Record<string, Record<string, string>>;
   typeColors: Record<string, string>;
   typeIcons: Record<string, string>;
   cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
