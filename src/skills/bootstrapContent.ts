@@ -224,19 +224,36 @@ export function buildValidationCommentSkillEntry(): SkillEntry {
   };
 }
 
-const SEEDED_GLOBAL_SKILLS: Record<string, SkillEntry> = {
-  [EXPLAIN_CARD_SKILL_ID]: buildExplainCardSkillEntry(),
-  [VALIDATION_COMMENT_SKILL_ID]: buildValidationCommentSkillEntry(),
+interface SeededGlobalSkill {
+  entry: SkillEntry;
+  content: string;
+}
+
+const SEEDED_GLOBAL_SKILLS: Record<string, SeededGlobalSkill> = {
+  [EXPLAIN_CARD_SKILL_ID]: { entry: buildExplainCardSkillEntry(), content: EXPLAIN_CARD_SKILL_CONTENT },
+  [VALIDATION_COMMENT_SKILL_ID]: { entry: buildValidationCommentSkillEntry(), content: VALIDATION_COMMENT_SKILL_CONTENT },
 };
 
 export function ensureSeededGlobalSkills(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
   const merged = { ...(existing ?? {}) };
-  for (const [id, entry] of Object.entries(SEEDED_GLOBAL_SKILLS)) {
+  for (const [id, skill] of Object.entries(SEEDED_GLOBAL_SKILLS)) {
     if (!(id in merged)) {
-      merged[id] = entry;
+      merged[id] = skill.entry;
     }
   }
   return merged;
+}
+
+// Setup mkdirs .kanbrain/skills earlier in its flow; Sync never did, so without this a workspace with
+// that directory deleted would throw instead of having the file restored.
+export function writeMissingSeededSkillFiles(workspaceRoot: string): void {
+  for (const skill of Object.values(SEEDED_GLOBAL_SKILLS)) {
+    const fullPath = path.join(workspaceRoot, skill.entry.path);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, skill.content, 'utf-8');
+    }
+  }
 }
 
 export const DEFAULT_PROFILES: Record<string, ProfileEntry> = {
