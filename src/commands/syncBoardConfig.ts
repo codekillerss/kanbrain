@@ -10,13 +10,10 @@ import { readConfigWithDiagnostics, writeConfig, DEFAULT_REPO_SCAN_DEPTH } from 
 import { discoverLocalRepositories } from '../git/discoverLocalRepositories';
 import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLocalPaths';
 import {
-  EXPLAIN_CARD_SKILL_CONTENT,
-  EXPLAIN_CARD_SKILL_RELATIVE_PATH,
-  VALIDATION_COMMENT_SKILL_CONTENT,
-  VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureSeededGlobalSkills,
+  writeMissingSeededSkillFiles,
   ensureDefaultProfiles,
   isBootstrapContentMissing,
 } from '../skills/bootstrapContent';
@@ -45,15 +42,8 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       );
       return;
     }
-    const explainCardSkillPath = path.join(workspaceRoot, EXPLAIN_CARD_SKILL_RELATIVE_PATH);
-    if (!fs.existsSync(explainCardSkillPath)) {
-      fs.writeFileSync(explainCardSkillPath, EXPLAIN_CARD_SKILL_CONTENT, 'utf-8');
-    }
 
-    const validationCommentSkillPath = path.join(workspaceRoot, VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
-    if (!fs.existsSync(validationCommentSkillPath)) {
-      fs.writeFileSync(validationCommentSkillPath, VALIDATION_COMMENT_SKILL_CONTENT, 'utf-8');
-    }
+    writeMissingSeededSkillFiles(workspaceRoot);
 
     const usageGuidePath = path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH);
     if (!fs.existsSync(usageGuidePath)) {
