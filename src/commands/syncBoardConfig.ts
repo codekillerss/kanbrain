@@ -12,9 +12,11 @@ import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLoca
 import {
   EXPLAIN_CARD_SKILL_CONTENT,
   EXPLAIN_CARD_SKILL_RELATIVE_PATH,
+  VALIDATION_COMMENT_SKILL_CONTENT,
+  VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
-  ensureExplainCardGlobalSkill,
+  ensureSeededGlobalSkills,
   ensureDefaultProfiles,
   isBootstrapContentMissing,
 } from '../skills/bootstrapContent';
@@ -46,6 +48,11 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     const explainCardSkillPath = path.join(workspaceRoot, EXPLAIN_CARD_SKILL_RELATIVE_PATH);
     if (!fs.existsSync(explainCardSkillPath)) {
       fs.writeFileSync(explainCardSkillPath, EXPLAIN_CARD_SKILL_CONTENT, 'utf-8');
+    }
+
+    const validationCommentSkillPath = path.join(workspaceRoot, VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
+    if (!fs.existsSync(validationCommentSkillPath)) {
+      fs.writeFileSync(validationCommentSkillPath, VALIDATION_COMMENT_SKILL_CONTENT, 'utf-8');
     }
 
     const usageGuidePath = path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH);
@@ -80,7 +87,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     );
     writeConfig(workspaceRoot, {
       ...updated,
-      globalSkills: ensureExplainCardGlobalSkill(updated.globalSkills),
+      globalSkills: ensureSeededGlobalSkills(updated.globalSkills),
       profiles: ensureDefaultProfiles(updated.profiles),
       lastSyncedVersion: extensionVersion,
     });

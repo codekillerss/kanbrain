@@ -60,6 +60,6 @@ export function summarizeDiff(diff: BoardConfigDiff): string {
   if (diff.typesRemoved.length) parts.push(`${diff.typesRemoved.length} work item type(s) no longer found`);
   if (diff.statusesAdded.length) parts.push(`${diff.statusesAdded.length} new status(es)`);
   if (diff.statusesRemoved.length) parts.push(`${diff.statusesRemoved.length} status(es) no longer found (skill mappings preserved)`);
-  if (diff.missingBootstrapContent) parts.push('missing global skill setup (explain-card skill / USAGE.md)');
+  if (diff.missingBootstrapContent) parts.push('missing seeded content (global skills, USAGE.md, or default profiles)');
   return parts.join(', ');
 }
