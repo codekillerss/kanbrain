@@ -4,11 +4,14 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   EXPLAIN_CARD_SKILL_ID,
+  EXPLAIN_CARD_SKILL_CONTENT,
   EXPLAIN_CARD_SKILL_RELATIVE_PATH,
   VALIDATION_COMMENT_SKILL_ID,
+  VALIDATION_COMMENT_SKILL_CONTENT,
   VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_RELATIVE_PATH,
   ensureSeededGlobalSkills,
+  writeMissingSeededSkillFiles,
   isBootstrapContentMissing,
   DEFAULT_PROFILES,
   ensureDefaultProfiles,
@@ -44,6 +47,47 @@ describe('ensureSeededGlobalSkills', () => {
     const existing = ensureSeededGlobalSkills(undefined);
 
     expect(ensureSeededGlobalSkills(existing)).toEqual(existing);
+  });
+});
+
+describe('writeMissingSeededSkillFiles', () => {
+  let workspaceRoot: string;
+
+  beforeEach(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kanbrain-seeded-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  const read = (relativePath: string) => fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+
+  it('writes every seeded skill file, creating the skills directory', () => {
+    writeMissingSeededSkillFiles(workspaceRoot);
+
+    expect(read(EXPLAIN_CARD_SKILL_RELATIVE_PATH)).toBe(EXPLAIN_CARD_SKILL_CONTENT);
+    expect(read(VALIDATION_COMMENT_SKILL_RELATIVE_PATH)).toBe(VALIDATION_COMMENT_SKILL_CONTENT);
+  });
+
+  it('leaves a skill file the user has edited untouched', () => {
+    writeMissingSeededSkillFiles(workspaceRoot);
+    fs.writeFileSync(path.join(workspaceRoot, VALIDATION_COMMENT_SKILL_RELATIVE_PATH), '# mine', 'utf-8');
+
+    writeMissingSeededSkillFiles(workspaceRoot);
+
+    expect(read(VALIDATION_COMMENT_SKILL_RELATIVE_PATH)).toBe('# mine');
+  });
+
+  it('restores only the file that is missing', () => {
+    writeMissingSeededSkillFiles(workspaceRoot);
+    fs.writeFileSync(path.join(workspaceRoot, EXPLAIN_CARD_SKILL_RELATIVE_PATH), '# mine', 'utf-8');
+    fs.rmSync(path.join(workspaceRoot, VALIDATION_COMMENT_SKILL_RELATIVE_PATH));
+
+    writeMissingSeededSkillFiles(workspaceRoot);
+
+    expect(read(EXPLAIN_CARD_SKILL_RELATIVE_PATH)).toBe('# mine');
+    expect(read(VALIDATION_COMMENT_SKILL_RELATIVE_PATH)).toBe(VALIDATION_COMMENT_SKILL_CONTENT);
   });
 });
 
