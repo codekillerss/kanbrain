@@ -62,8 +62,24 @@ describe('generateContextFile', () => {
     expect(written).toBe(`${cardInfoBlock}\n\n---\n\n## Instructions\nDo the thing.`);
   });
 
-  it('names the file with the work item id and a filesystem-safe timestamp', () => {
+  it('names the file with the work item id, the skill name and a filesystem-safe timestamp', () => {
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+
+    expect(path.basename(relativePath)).toBe('482-fix-2026-07-14T10-00-00-000Z.md');
+  });
+
+  it('slugifies a skill name with spaces, accents and capitals', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'skills', 'Validação Final.md'), '## Instructions\nDo it.');
+
+    const relativePath = generateContextFile(workspaceRoot, 'skills/Validação Final.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+
+    expect(path.basename(relativePath)).toBe('482-validacao-final-2026-07-14T10-00-00-000Z.md');
+  });
+
+  it('falls back to id and timestamp when the skill name has nothing usable in it', () => {
+    fs.writeFileSync(path.join(workspaceRoot, 'skills', '___.md'), '## Instructions\nDo it.');
+
+    const relativePath = generateContextFile(workspaceRoot, 'skills/___.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(path.basename(relativePath)).toBe('482-2026-07-14T10-00-00-000Z.md');
   });

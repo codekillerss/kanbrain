@@ -21,6 +21,18 @@ function prependProfileBlock(content: string, profile: ProfileEntry | null): str
   return `## Requester profile\n**${profile.label}** — ${profile.description}\n\n---\n\n${content}`;
 }
 
+// The skill path is user-supplied, so its basename can carry anything a file name can — spaces,
+// accents, capitals. Strip it down to what is safe and readable in a generated file name.
+function toSkillSlug(skillTemplatePath: string): string {
+  return path
+    .basename(skillTemplatePath, '.md')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export function generateContextFile(
   workspaceRoot: string,
   skillTemplatePath: string,
@@ -36,7 +48,8 @@ export function generateContextFile(
   const withProfile = prependProfileBlock(withCardInfo, profile);
 
   const timestamp = now.toISOString().replace(/[:.]/g, '-');
-  const fileName = `${context.workItem.id}-${timestamp}.md`;
+  const slug = toSkillSlug(skillTemplatePath);
+  const fileName = slug ? `${context.workItem.id}-${slug}-${timestamp}.md` : `${context.workItem.id}-${timestamp}.md`;
 
   return writeGeneratedFile(workspaceRoot, fileName, withProfile);
 }
