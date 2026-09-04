@@ -211,6 +211,17 @@ export class AzureDevOpsClient {
     return data.fields ?? {};
   }
 
+  async updateWorkItemStatus(organization: string, project: string, id: number, status: string): Promise<void> {
+    await this.fetchWithAuth(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json-patch+json' },
+        body: JSON.stringify([{ op: 'add', path: '/fields/System.State', value: status }]),
+      },
+    );
+  }
+
   async getComments(organization: string, project: string, id: number): Promise<WorkItemComment[]> {
     interface RawComment {
       id: number;

@@ -1083,6 +1083,32 @@ describe('AzureDevOpsClient.listTeams', () => {
   });
 });
 
+describe('AzureDevOpsClient.updateWorkItemStatus', () => {
+  it('patches System.State with the chosen status', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 42 }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItemStatus('my-org', 'MyProject', 42, 'Active');
+
+    const [url, options] = fetchImpl.mock.calls[0];
+    expect(url).toBe('https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/42?api-version=7.1');
+    expect(options.method).toBe('PATCH');
+    expect(options.headers['Content-Type']).toBe('application/json-patch+json');
+    expect(JSON.parse(options.body)).toEqual([{ op: 'add', path: '/fields/System.State', value: 'Active' }]);
+  });
+
+  it('rejects when Azure DevOps refuses the transition, so the caller can surface it', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(textResponse('The state transition is not valid', false, 400));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await expect(client.updateWorkItemStatus('my-org', 'MyProject', 42, 'Closed')).rejects.toThrow(
+      'The state transition is not valid',
+    );
+  });
+});
+
 describe('AzureDevOpsClient request headers', () => {
   it('lets a caller override the default Content-Type', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
