@@ -36,6 +36,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
+  private statusWriteInFlight = false;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
@@ -78,6 +79,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async message => {
       if (message.type === 'run-skill') {
         await this.runSkill(Number(message.id));
+      } else if (message.type === 'set-work-item-status') {
+        await this.setWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'run-global-skill') {
         await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
@@ -734,6 +737,29 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     await this.executeSkill(found.workItem, skill);
   }
 
+  private async setWorkItemStatus(id: number, status: string): Promise<void> {
+    if (!this.workspaceRoot || !this.client || !status) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    this.statusWriteInFlight = true;
+    try {
+      await this.client.updateWorkItemStatus(config.organization, config.project, id, status);
+    } catch (error) {
+      vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      this.statusWriteInFlight = false;
+      this.view?.webview.postMessage({ type: 'command-finished' });
+      // The board is the authority on what the write produced: a process rule may have changed
+      // other fields alongside the state, and on failure the control must snap back.
+      this.lastState = '';
+      await this.refresh();
+    }
+  }
+
   private async loadWorkItemForSkill(id: number): Promise<{ config: KanbrainConfig; workItem: WorkItem } | null> {
     if (!this.workspaceRoot || !this.client) {
       return null;
@@ -853,6 +879,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private async refresh(): Promise<void> {
     if (!this.view) {
+      return;
+    }
+    // A poll already in flight when the user picks a status would come back with the old value
+    // and revert the dropdown under their cursor. The write re-renders when it settles.
+    if (this.statusWriteInFlight) {
       return;
     }
     const config = this.workspaceRoot ? readConfig(this.workspaceRoot) : null;
@@ -1136,6 +1167,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         });
       });
     }
+
+    document.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.dataset && target.dataset.action === 'set-work-item-status') {
+        setLoading(target);
+        vscode.postMessage({ type: 'set-work-item-status', id: target.dataset.id, status: target.value });
+      }
+    });
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -1513,6 +1552,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
       .kb-type-icon svg { width: 100%; height: 100%; }
       .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }
+      .kb-status-select { background-color: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; padding: 1px 4px; cursor: pointer; }
+      .kb-status-select:disabled { opacity: 0.6; cursor: default; }
       .kb-title { font-weight: 600; margin-left: 6px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-title-clickable { cursor: pointer; }
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
