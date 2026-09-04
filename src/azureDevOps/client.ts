@@ -66,9 +66,9 @@ export class AzureDevOpsClient {
     const response = await this.deps.fetchImpl(url, {
       ...init,
       headers: {
+        'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
     });
     if (!response.ok) {

@@ -1082,3 +1082,34 @@ describe('AzureDevOpsClient.listTeams', () => {
     );
   });
 });
+
+describe('AzureDevOpsClient request headers', () => {
+  it('lets a caller override the default Content-Type', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await (client as unknown as { fetchWithAuth: (url: string, init?: RequestInit) => Promise<Response> }).fetchWithAuth(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/1?api-version=7.1',
+      { headers: { 'Content-Type': 'application/json-patch+json' } },
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/1?api-version=7.1',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json-patch+json' }) }),
+    );
+  });
+
+  it('still defaults to Content-Type: application/json when the caller sets none', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await (client as unknown as { fetchWithAuth: (url: string, init?: RequestInit) => Promise<Response> }).fetchWithAuth(
+      'https://dev.azure.com/my-org/_apis/projects?api-version=7.1',
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/projects?api-version=7.1',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+    );
+  });
+});
