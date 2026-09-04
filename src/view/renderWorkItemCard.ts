@@ -71,6 +71,21 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
   `;
 }
 
+function renderStatusRow(workItem: WorkItem, config: KanbrainConfig, editable: boolean): string {
+  const dot = renderStatusDot(workItem.status, config.statusColors ?? {});
+  const statuses = Object.keys(config.skills?.[workItem.type] ?? {});
+  if (!editable || statuses.length === 0) {
+    return `<div class="kb-status-row">${dot}${escapeHtml(workItem.status)}</div>`;
+  }
+  const options = statuses
+    .map(status => {
+      const selected = status === workItem.status ? ' selected' : '';
+      return `<option value="${escapeHtml(status)}"${selected}>${escapeHtml(status)}</option>`;
+    })
+    .join('');
+  return `<div class="kb-status-row">${dot}<select class="kb-status-select" data-action="set-work-item-status" data-id="${workItem.id}">${options}</select></div>`;
+}
+
 export function renderWorkItemCard(
   workItem: WorkItem,
   config: KanbrainConfig,
@@ -82,6 +97,7 @@ export function renderWorkItemCard(
   showParent = false,
   selectedTeam: string | undefined = undefined,
   showPickButton = false,
+  options: { editableStatus?: boolean } = {},
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
@@ -100,7 +116,7 @@ export function renderWorkItemCard(
         <span class="kb-id">#${workItem.id}</span>
         <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       </div>
-      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${renderStatusRow(workItem, config, options.editableStatus === true)}
       ${assigneeHtml}
       ${parentHtml}
       ${developmentHtml}

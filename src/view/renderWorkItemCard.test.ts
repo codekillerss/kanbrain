@@ -244,3 +244,56 @@ describe('renderWorkItemCard', () => {
     expect(html).not.toContain('kb-action-btn-placeholder');
   });
 });
+
+describe('renderWorkItemCard editable status', () => {
+  const statuses: KanbrainConfig = {
+    ...config,
+    skills: { Task: { New: null, Active: { path: 'skills/fix.md' }, Closed: null } },
+  };
+
+  it('renders the status as a select carrying the action and the work item id', () => {
+    const html = renderWorkItemCard(workItem(), statuses, 'kb-main-card', true, {}, false, null, false, undefined, false, {
+      editableStatus: true,
+    });
+
+    expect(html).toContain('data-action="set-work-item-status"');
+    expect(html).toContain('data-id="482"');
+  });
+
+  it('renders one option per status of the type, with the current one selected', () => {
+    const html = renderWorkItemCard(workItem(), statuses, 'kb-main-card', true, {}, false, null, false, undefined, false, {
+      editableStatus: true,
+    });
+
+    expect(html).toContain('<option value="New"');
+    expect(html).toContain('<option value="Closed"');
+    expect(html).toContain('<option value="Active" selected');
+  });
+
+  it('keeps the status dot beside the select', () => {
+    const coloured: KanbrainConfig = { ...statuses, statusColors: { Active: '#00ff00' } };
+    const html = renderWorkItemCard(workItem(), coloured, 'kb-main-card', true, {}, false, null, false, undefined, false, {
+      editableStatus: true,
+    });
+
+    expect(html).toContain('kb-status-dot');
+    expect(html.indexOf('kb-status-dot')).toBeLessThan(html.indexOf('kb-status-select'));
+  });
+
+  it('renders the plain status row when the flag is not passed', () => {
+    const html = renderWorkItemCard(workItem(), statuses, 'kb-main-card');
+
+    expect(html).not.toContain('set-work-item-status');
+    expect(html).toContain('<div class="kb-status-row">');
+  });
+
+  it('renders the plain status row for a type missing from config.skills', () => {
+    const unknownType: KanbrainConfig = { ...statuses, skills: {} };
+    const html = renderWorkItemCard(workItem(), unknownType, 'kb-main-card', true, {}, false, null, false, undefined, false, {
+      editableStatus: true,
+    });
+
+    expect(html).not.toContain('set-work-item-status');
+    expect(html).toContain('Active');
+  });
+});

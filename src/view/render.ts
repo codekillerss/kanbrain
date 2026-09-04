@@ -145,7 +145,7 @@ export function render(state: RenderState): string {
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>
       </div>
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam, false, { editableStatus: true })}
     </div>
     <div class="kb-section-card kb-section-card-children">
       ${
