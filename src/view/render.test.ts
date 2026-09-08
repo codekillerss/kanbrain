@@ -242,6 +242,21 @@ describe('render', () => {
     expect(mainCardHtml).not.toContain('kb-pick-btn');
   });
 
+  it('makes the status editable on the main card and on every child', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
+    const html = render({ hasWorkspace: true, config, workItem: workItem({ id: 482 }), parent: null, subtasks, screen: 'flow' });
+
+    expect(html).toContain('data-action="set-work-item-status" data-id="482"');
+    expect(html).toContain('data-action="set-work-item-status" data-id="101"');
+  });
+
+  it('leaves the parent card status as plain text', () => {
+    const parent = workItem({ id: 900, title: 'Parent', status: 'Active' });
+    const html = render({ hasWorkspace: true, config, workItem: workItem({ id: 482 }), parent, subtasks: [], screen: 'flow' });
+
+    expect(html).not.toContain('data-action="set-work-item-status" data-id="900"');
+  });
+
   it('shows an empty message when there are no children', () => {
     const html = render({ hasWorkspace: true, config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
     expect(html).toContain('No child items');

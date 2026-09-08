@@ -36,7 +36,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
-  private statusWriteInFlight = false;
+  private statusWritesInFlight = 0;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
@@ -745,18 +745,22 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
-    this.statusWriteInFlight = true;
+    this.statusWritesInFlight += 1;
     try {
       await this.client.updateWorkItemStatus(config.organization, config.project, id, status);
     } catch (error) {
       vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
-      this.statusWriteInFlight = false;
-      this.view?.webview.postMessage({ type: 'command-finished' });
-      // The board is the authority on what the write produced: a process rule may have changed
-      // other fields alongside the state, and on failure the control must snap back.
-      this.lastState = '';
-      await this.refresh();
+      this.statusWritesInFlight -= 1;
+      // Several cards can be written at once, so only the last one to settle re-renders — a
+      // re-render mid-flight would drop the other controls' loading state. The full re-render is
+      // also what clears the loading, which is why no command-finished is posted here.
+      if (this.statusWritesInFlight === 0) {
+        // The board is the authority on what the write produced: a process rule may have changed
+        // other fields alongside the state, and on failure the control must snap back.
+        this.lastState = '';
+        await this.refresh();
+      }
     }
   }
 
@@ -883,7 +887,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     // A poll already in flight when the user picks a status would come back with the old value
     // and revert the dropdown under their cursor. The write re-renders when it settles.
-    if (this.statusWriteInFlight) {
+    if (this.statusWritesInFlight > 0) {
       return;
     }
     const config = this.workspaceRoot ? readConfig(this.workspaceRoot) : null;
