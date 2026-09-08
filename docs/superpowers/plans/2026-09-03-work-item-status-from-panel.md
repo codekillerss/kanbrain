@@ -167,13 +167,46 @@ One for changing the status from the main card and seeing it on the real board; 
 
 ---
 
+---
+
+### Task 7: Extend the control to the children (added after manual testing)
+
+Manual testing showed the restriction to the main card was the wrong call: closing the Tasks of the story
+you are working on required switching the active work item for each one. The design doc carries the full
+revision and its reasoning; the original argument ("a stray click becomes a write") does not hold for a
+`<select>`, which needs two deliberate gestures. The owner's request was about the cards, plural.
+
+**Files:**
+- Modify: `src/view/render.ts`
+- Modify: `src/view/render.test.ts`
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [x] **Step 1: Pass the flag to the children** — the `kb-subtask-card` call in the Children section gets
+  `{ editableStatus: true }`. The parent card, Home and search results stay untouched: there the card is
+  for navigating, not working.
+
+- [x] **Step 2: Make the in-flight guard count, not toggle** — several writes can now overlap, and a
+  boolean would be cleared by the first one to settle, reopening the poll window while the others are
+  still in transit. `statusWritesInFlight` counts; only the write that brings it back to zero re-renders.
+
+- [x] **Step 3: Drop the `command-finished` post** — it clears *every* `.kb-loading` on the page, so one
+  write finishing would release the other controls. The forced re-render is what clears the loading now.
+
+- [x] **Step 4: Cover it** — `render.test.ts` asserts the action is present for the main card and for each
+  child, and absent for the parent card.
+
+- [x] **Step 5: Verify** — `npx vitest run` and `npm run compile` green.
+
+---
+
 ## Manual verification (nothing here is covered by tests)
 
 Run in an Extension Development Host (F5) against a real Azure DevOps project:
 
-- [ ] The main card on Flow shows the status as a dropdown; children, Home and search results still show plain text.
+- [ ] The main card and each child on Flow show the status as a dropdown, each listing its own type's statuses; the parent card, Home and search results still show plain text.
 - [ ] Changing it writes to the board — confirm in the browser.
 - [ ] The panel does not revert the choice on the next 5s poll.
+- [ ] Two children changed in quick succession both write, and neither control leaves its loading state early.
 - [ ] An invalid transition shows the Azure DevOps message in a VS Code error notification, and the control returns to the board's real value.
 - [ ] A work item whose type is missing from `config.skills` still renders, with the plain status row.
 

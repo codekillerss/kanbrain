@@ -74,9 +74,21 @@ arquivo continua lendo a promessa antiga.
 modelo seguro do repo, e ligar script neles para caber um dropdown troca uma garantia de segurança por
 conveniência de UI. Fica fora, e se ele quiser lá depois é decisão própria.
 
-Dentro da sidebar, só no **card principal da tela Flow** (`kb-main-card`). Não nos filhos, não no card da
-Home, não nos resultados de busca — a ação precisa de intenção, e espalhar o dropdown por todo card
-transforma clique acidental em escrita no board.
+Dentro da sidebar, no **card principal da tela Flow** (`kb-main-card`) **e nos filhos**
+(`kb-subtask-card` da seção Children). Não no card do parent, não no card da Home, não nos resultados de
+busca.
+
+> **Revisão desta decisão, depois do teste manual.** A primeira versão restringia o controle ao card
+> principal, com o argumento de que espalhar o dropdown transformaria clique acidental em escrita no
+> board. O argumento não se sustenta para um `<select>`: trocar o valor exige abrir e escolher, dois
+> gestos deliberados, ao contrário de um botão que dispara no primeiro clique. E a restrição custava
+> caro justamente no fluxo mais comum — trabalhar numa User Story e ir fechando as Tasks dela, que
+> passava a exigir trocar o work item ativo a cada Task. O pedido original do dono era "alterar status e
+> assignee dos **cards** pelo painel"; restringir ao card principal era escolha nossa, não dele, e é a
+> escolha que estamos revisando aqui.
+>
+> Ficam de fora, e de propósito: o **card do parent** (fechar o pai é ação consequente, não de
+> passagem), a **Home** e a **busca** (ali o card é de navegação, não de trabalho).
 
 **Restrição de assinatura:** `renderWorkItemCard` já tem 10 parâmetros posicionais. Um 11º booleano é
 inaceitável. A flag nova entra como objeto `options` no fim (`{ editableStatus?: boolean }`), sem tocar em
@@ -119,15 +131,20 @@ O `refresh()` roda a cada 5s e reescreve o HTML inteiro. Há um guard para o wor
 durante o fetch, mas nenhum para escrita em voo. Sem proteção: você escolhe "Active", um poll que já estava
 em trânsito volta com "New" e o dropdown reverte sozinho na sua frente.
 
-Proteção mínima: um campo `statusWriteInFlight` na provider, setado antes do PATCH e limpo depois. Enquanto
-verdadeiro, `refresh()` retorna cedo. Depois da escrita, força `lastState = ''` e chama `refresh()` para
-buscar o estado real — não assume que o valor escrito é o que o board tem (o processo pode ter regra que
-altera outros campos junto).
+Proteção mínima: um contador `statusWritesInFlight` na provider, incrementado antes do PATCH e
+decrementado depois. Enquanto for maior que zero, `refresh()` retorna cedo. Quando chega a zero, força
+`lastState = ''` e chama `refresh()` para buscar o estado real — não assume que o valor escrito é o que o
+board tem (o processo pode ter regra que altera outros campos junto).
+
+**Por que contador e não booleano:** com o dropdown nos filhos, várias escritas podem estar em voo ao
+mesmo tempo. Um booleano seria limpo pela primeira que terminasse, reabrindo a janela do poll enquanto as
+outras ainda estão em trânsito. Pelo mesmo motivo o re-render só acontece na última a assentar.
 
 ## Falha e feedback
 
-O poll trata falha como transiente e silencia. **Escrita não pode.** Reaproveitar o par que já existe:
-`kb-loading` no controle enquanto está em voo, e a mensagem `command-finished` para liberar. Em erro,
+O poll trata falha como transiente e silencia. **Escrita não pode.** `kb-loading` no controle enquanto
+está em voo, liberado pelo próprio re-render — não pela mensagem `command-finished`, que limpa *todos* os
+`.kb-loading` da página e, com vários dropdowns, um write terminando liberaria os outros ainda em voo. Em erro,
 `vscode.window.showErrorMessage` com a mensagem do Azure DevOps — que é onde vem "transição inválida",
 "campo obrigatório não preenchido" e afins.
 

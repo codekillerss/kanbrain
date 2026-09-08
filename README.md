@@ -95,8 +95,9 @@ Run these by hand in an Extension Development Host (press F5) against a real Azu
 - [ ] Clicking the action button opens/reuses a "Kanbrain" terminal and sends `Read the file .kanbrain/generated/<id>-<timestamp>.md and follow the instructions in it.`
 - [ ] The generated file's placeholders are correctly resolved with real work item data.
 - [ ] Changing the work item's status directly in Azure DevOps Boards is reflected in the panel within ~5 seconds (polling).
-- [ ] The Flow screen's main card shows the status as a dropdown listing that type's statuses; picking one writes it to the real board (confirm in the browser). Children, the Home card, and search results still show the status as plain text.
+- [ ] The Flow screen's main card and each child card show the status as a dropdown listing that type's statuses (a Task child offers Task's statuses, not the parent type's); picking one writes it to the real board (confirm in the browser). The parent card, the Home card, and search results still show the status as plain text.
 - [ ] After picking a status, the next ~5s poll does not revert the dropdown to the previous value.
+- [ ] Changing the status of two different children in quick succession writes both, and neither control drops out of its loading state before its own write finishes.
 - [ ] Picking a status the process does not allow from the current one shows the Azure DevOps message in a VS Code error notification, and the dropdown returns to the board's real value instead of failing silently.
 - [ ] Reopening the workspace restores the previously selected work item (via `workspaceState`).
 - [ ] `Kanbrain: Check Board Configuration` reports "up to date" when the board hasn't changed since Setup, and never writes to `.kanbrain/config.json`.
