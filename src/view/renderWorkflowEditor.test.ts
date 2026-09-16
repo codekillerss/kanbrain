@@ -29,13 +29,16 @@ describe('renderWorkflowEditor', () => {
     expect(html).toContain('data-status="Done"');
   });
 
-  it('selects a visually distinct "no skill" option when the step is null or has no skillId', () => {
+  it('shows a visually distinct "no skill" trigger label and option when the step is null or has no skillId', () => {
     const html = renderWorkflowEditor(config({ workflowSteps: { Task: { 'To Do': null } } }));
 
-    expect(html).toContain('<option value="" class="kb-select-none-option" selected>— No skill —</option>');
+    expect(html).toContain('<span class="kb-skill-picker-trigger-label kb-select-none-option">— No skill —</span>');
+    expect(html).toContain('data-action="select-skill" data-skill-id=""');
+    expect(html).toContain('<span class="kb-skill-picker-option-label kb-select-none-option">— No skill —</span>');
+    expect(html).toContain('data-field="skillId" value=""');
   });
 
-  it('populates the skill select from the registry and marks the configured one selected', () => {
+  it('populates the skill picker options from the registry, marks the configured one active, and shows it as the trigger label', () => {
     const html = renderWorkflowEditor(
       config({
         skills: { 'skill-1': { path: '.kanbrain/skills/task-todo.md', label: 'Refine' } },
@@ -43,7 +46,22 @@ describe('renderWorkflowEditor', () => {
       }),
     );
 
-    expect(html).toContain('<option value="skill-1" selected>Refine</option>');
+    expect(html).toContain('<span class="kb-skill-picker-trigger-label">Refine</span>');
+    expect(html).toContain('data-field="skillId" value="skill-1"');
+    expect(html).toContain('data-action="select-skill" data-skill-id="skill-1"');
+    expect(html).toContain('kb-skill-picker-option-active');
+  });
+
+  it('shows the skill file name, muted, under its label in the options list', () => {
+    const html = renderWorkflowEditor(
+      config({
+        skills: { 'skill-1': { path: '.kanbrain/skills/task-todo.md', label: 'Refine' }, 'skill-2': { path: '.kanbrain/skills/pbi-todo.md', label: 'Refine' } },
+        workflowSteps: { Task: { 'To Do': { skillId: 'skill-1' } } },
+      }),
+    );
+
+    expect(html).toContain('<span class="kb-skill-picker-option-path">task-todo.md</span>');
+    expect(html).toContain('<span class="kb-skill-picker-option-path">pbi-todo.md</span>');
   });
 
   it('fills definitionOfDone and artifacts as newline-joined textarea content', () => {

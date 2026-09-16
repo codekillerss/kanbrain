@@ -1,25 +1,25 @@
-import * as vscode from 'vscode';
 import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig, SkillEntry, WorkflowStepConfig, PullRequestSummary } from '../types';
+import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
+import { countItemsByType, filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
+import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { readConfig, writeConfig } from '../config/config';
+import { resolveActiveProfile } from '../config/resolveActiveProfile';
 import { resolveSkill } from '../config/resolveSkill';
 import { resolveWorkflowStep } from '../config/resolveWorkflowStep';
-import { resolveActiveProfile } from '../config/resolveActiveProfile';
 import { cloneRepository } from '../git/cloneRepository';
-import { render } from './render';
-import { renderSearchResults } from './renderSearchResults';
-import { escapeHtml } from './escapeHtml';
-import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
-import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
-import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
-import { renderWorkItemHistory } from './renderWorkItemHistory';
+import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig, WorkItem } from '../types';
+import { escapeHtml } from './escapeHtml';
+import { hasStateChanged, serializeState } from './hasStateChanged';
+import { render } from './render';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
-import { filterWorkItemsByText, filterByAssignedTo, countItemsByType } from '../azureDevOps/wiql';
-import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
-import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { renderSearchResults } from './renderSearchResults';
+import { renderWorkItemHistory } from './renderWorkItemHistory';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -1037,15 +1037,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
-    document.querySelectorAll('.kb-workflow-row input, .kb-workflow-row textarea, .kb-workflow-row select').forEach((field) => {
-      const eventName = field.tagName === 'SELECT' ? 'change' : 'blur';
-      field.addEventListener(eventName, () => {
+    document.querySelectorAll('.kb-workflow-row textarea').forEach((field) => {
+      field.addEventListener('blur', () => {
         const row = field.closest('.kb-workflow-row');
         if (row) {
           saveWorkflowStepRow(row);
         }
       });
     });
+
+    function closeAllSkillPickers() {
+      document.querySelectorAll('.kb-skill-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
 
     function saveRepositoryRow(row) {
       vscode.postMessage({
@@ -1322,6 +1325,39 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.dataset && target.dataset.action === 'run-global-skill') {
         vscode.postMessage({ type: 'run-skill-by-id', workItemId: target.dataset.id, skillId: target.dataset.skillId });
         closeAllGlobalSkillMenus();
+      } else if (target.closest && target.closest('[data-action="toggle-skill-picker"]')) {
+        const picker = target.closest('.kb-skill-picker');
+        const menu = picker ? picker.querySelector('.kb-skill-picker-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllSkillPickers();
+          if (!isOpen) {
+            const rect = picker.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.width = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.closest && target.closest('[data-action="select-skill"]')) {
+        const option = target.closest('[data-action="select-skill"]');
+        const picker = option.closest('.kb-skill-picker');
+        const row = option.closest('.kb-workflow-row');
+        if (picker && row) {
+          const skillId = option.dataset.skillId;
+          const hiddenInput = picker.querySelector('[data-field="skillId"]');
+          if (hiddenInput) hiddenInput.value = skillId;
+          picker.querySelectorAll('.kb-skill-picker-option').forEach((opt) => {
+            opt.classList.toggle('kb-skill-picker-option-active', opt === option);
+          });
+          const triggerLabel = picker.querySelector('.kb-skill-picker-trigger-label');
+          if (triggerLabel) {
+            triggerLabel.textContent = option.querySelector('.kb-skill-picker-option-label').textContent;
+            triggerLabel.classList.toggle('kb-select-none-option', !skillId);
+          }
+          closeAllSkillPickers();
+          saveWorkflowStepRow(row);
+        }
       }
 
       if (
@@ -1329,6 +1365,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         (!target.closest || !target.closest('.kb-global-skill-menu'))
       ) {
         closeAllGlobalSkillMenus();
+      }
+
+      if (!target.closest || !target.closest('.kb-skill-picker')) {
+        closeAllSkillPickers();
       }
 
       if (!target.closest || !target.closest('.kb-query-combobox')) {
@@ -1357,6 +1397,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       closeAllGlobalSkillMenus();
+      if (!(event.target && event.target.closest && event.target.closest('.kb-skill-picker-menu'))) {
+        closeAllSkillPickers();
+      }
     }, true);
 
     const searchInput = document.getElementById('kb-search-input');
@@ -1623,6 +1666,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-icon-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-select-none-option { font-style: italic; color: var(--vscode-descriptionForeground); }
+      .kb-skill-picker { position: relative; }
+      .kb-skill-picker-trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; cursor: pointer; text-align: left; }
+      .kb-skill-picker-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .kb-skill-picker-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+      .kb-skill-picker-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 260px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-skill-picker-menu.kb-hidden { display: none; }
+      .kb-skill-picker-option { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-skill-picker-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-skill-picker-option-active { background: var(--vscode-list-inactiveSelectionBackground); }
+      .kb-skill-picker-option-label { font-size: 12px; }
+      .kb-skill-picker-option-path { font-size: 11px; color: var(--vscode-descriptionForeground); }
       .kb-textarea { min-height: 60px; resize: vertical; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
