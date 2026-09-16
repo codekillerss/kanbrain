@@ -2,7 +2,7 @@
   "name": "kanbrain-vscode",
   "displayName": "Kanbrain — Azure DevOps",
   "description": "Azure DevOps work item flow panel for VS Code",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "publisher": "CodeKillers",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -31,6 +31,7 @@
       { "command": "kanbrain.configureWithAi", "title": "Kanbrain: Configure with AI" },
       { "command": "kanbrain.configureRepositoriesWithAi", "title": "Kanbrain: Configure Repositories with AI" },
       { "command": "kanbrain.configureSkillsWithAi", "title": "Kanbrain: Configure Skills with AI" },
+      { "command": "kanbrain.configureWorkflowWithAi", "title": "Kanbrain: Configure Workflow with AI" },
       { "command": "kanbrain.configureProfilesWithAi", "title": "Kanbrain: Configure Profiles with AI" },
       { "command": "kanbrain.connect", "title": "Kanbrain: Connect to Azure DevOps" }
     ],

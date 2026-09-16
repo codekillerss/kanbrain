@@ -23,9 +23,13 @@ const config: KanbrainConfig = {
   project: 'proj',
   defaultTeam: 'MyProject Team',
   skills: {
+    proposed: { path: '.kanbrain/skills/stories-proposed.md' },
+    inprogress: { path: '.kanbrain/skills/stories-inprogress.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' },
+  },
+  workflowSteps: {
     'User Story': {
-      New: { path: '.kanbrain/skills/stories-proposed.md' },
-      Committed: { path: '.kanbrain/skills/stories-inprogress.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' },
+      New: { skillId: 'proposed' },
+      Committed: { skillId: 'inprogress' },
       Done: null,
     },
   },
@@ -48,15 +52,31 @@ describe('resolveSkill', () => {
     });
   });
 
-  it('returns null when the work item type has no skill mapping at all', () => {
+  it('returns null when the work item type has no workflow step mapping at all', () => {
     expect(resolveSkill(config, workItem({ type: 'Impediment' }))).toBeNull();
   });
 
-  it('returns null when the status has no skill mapped for that type', () => {
+  it('returns null when the status has no step mapped for that type', () => {
     expect(resolveSkill(config, workItem({ status: 'Unknown Status' }))).toBeNull();
   });
 
   it('returns null when the type explicitly maps the status to null', () => {
     expect(resolveSkill(config, workItem({ status: 'Done' }))).toBeNull();
+  });
+
+  it('returns null when the step has no skillId set', () => {
+    const withEmptyStep: KanbrainConfig = {
+      ...config,
+      workflowSteps: { 'User Story': { New: { skillId: null } } },
+    };
+    expect(resolveSkill(withEmptyStep, workItem({ status: 'New' }))).toBeNull();
+  });
+
+  it('returns null when the step references a skillId missing from the registry', () => {
+    const withDanglingSkillId: KanbrainConfig = {
+      ...config,
+      workflowSteps: { 'User Story': { New: { skillId: 'ghost' } } },
+    };
+    expect(resolveSkill(withDanglingSkillId, workItem({ status: 'New' }))).toBeNull();
   });
 });

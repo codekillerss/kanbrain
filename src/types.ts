@@ -84,6 +84,13 @@ export interface SkillEntry {
   label?: string;
   textColor?: string;
   buttonColor?: string;
+  isGlobal?: boolean;
+}
+
+export interface WorkflowStepConfig {
+  skillId: string | null;
+  definitionOfDone?: string[];
+  artifacts?: string[];
 }
 
 export interface CardFieldSettings {
@@ -111,7 +118,8 @@ export interface KanbrainConfig {
   organization: string;
   project: string;
   defaultTeam: string;
-  skills: Record<string, Record<string, SkillEntry | null>>;
+  skills: Record<string, SkillEntry>;
+  workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>>;
   statusColors: Record<string, string>;
   statusCategoriesByType?: Record<string, Record<string, string>>;
   typeColors: Record<string, string>;
@@ -122,7 +130,6 @@ export interface KanbrainConfig {
   searchAssignedToMe?: boolean;
   lastSyncedVersion?: string;
   repositories?: Record<string, RepositoryPathEntry>;
-  globalSkills?: Record<string, SkillEntry>;
   repoScanDepth?: number;
   profiles?: Record<string, ProfileEntry>;
   selectedProfileId?: string;

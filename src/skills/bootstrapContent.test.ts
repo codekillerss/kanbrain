@@ -10,7 +10,7 @@ import {
   VALIDATION_COMMENT_SKILL_CONTENT,
   VALIDATION_COMMENT_SKILL_RELATIVE_PATH,
   USAGE_GUIDE_RELATIVE_PATH,
-  ensureSeededGlobalSkills,
+  ensureSeededSkills,
   writeMissingSeededSkillFiles,
   isBootstrapContentMissing,
   DEFAULT_PROFILES,
@@ -18,9 +18,9 @@ import {
 } from './bootstrapContent';
 import type { KanbrainConfig, SkillEntry, ProfileEntry } from '../types';
 
-describe('ensureSeededGlobalSkills', () => {
+describe('ensureSeededSkills', () => {
   it('seeds both explain-card and validation-comment when there is no existing map', () => {
-    const result = ensureSeededGlobalSkills(undefined);
+    const result = ensureSeededSkills(undefined);
 
     expect(Object.keys(result).sort()).toEqual([EXPLAIN_CARD_SKILL_ID, VALIDATION_COMMENT_SKILL_ID].sort());
     expect(result[EXPLAIN_CARD_SKILL_ID].path).toBe(EXPLAIN_CARD_SKILL_RELATIVE_PATH);
@@ -29,24 +29,31 @@ describe('ensureSeededGlobalSkills', () => {
 
   it('keeps a custom, non-seeded skill untouched', () => {
     const existing: Record<string, SkillEntry> = { 'other-skill': { path: 'x.md' } };
-    const result = ensureSeededGlobalSkills(existing);
+    const result = ensureSeededSkills(existing);
 
     expect(result['other-skill']).toEqual({ path: 'x.md' });
     expect(result[EXPLAIN_CARD_SKILL_ID].path).toBe(EXPLAIN_CARD_SKILL_RELATIVE_PATH);
   });
 
-  it('leaves a customized seeded entry untouched and adds only the missing one', () => {
-    const existing: Record<string, SkillEntry> = { [EXPLAIN_CARD_SKILL_ID]: { path: 'custom.md', label: 'Custom' } };
-    const result = ensureSeededGlobalSkills(existing);
+  it('leaves a customized seeded entry\'s path/label untouched and adds only the missing skill', () => {
+    const existing: Record<string, SkillEntry> = { [EXPLAIN_CARD_SKILL_ID]: { path: 'custom.md', label: 'Custom', isGlobal: true } };
+    const result = ensureSeededSkills(existing);
 
-    expect(result[EXPLAIN_CARD_SKILL_ID]).toEqual({ path: 'custom.md', label: 'Custom' });
+    expect(result[EXPLAIN_CARD_SKILL_ID]).toEqual({ path: 'custom.md', label: 'Custom', isGlobal: true });
     expect(result[VALIDATION_COMMENT_SKILL_ID].path).toBe(VALIDATION_COMMENT_SKILL_RELATIVE_PATH);
   });
 
   it('changes nothing when both seeded skills are already present', () => {
-    const existing = ensureSeededGlobalSkills(undefined);
+    const existing = ensureSeededSkills(undefined);
 
-    expect(ensureSeededGlobalSkills(existing)).toEqual(existing);
+    expect(ensureSeededSkills(existing)).toEqual(existing);
+  });
+
+  it('backfills isGlobal onto a seeded entry that predates that field, without touching its path/label', () => {
+    const existing: Record<string, SkillEntry> = { [EXPLAIN_CARD_SKILL_ID]: { path: 'custom.md', label: 'Custom' } };
+    const result = ensureSeededSkills(existing);
+
+    expect(result[EXPLAIN_CARD_SKILL_ID]).toEqual({ path: 'custom.md', label: 'Custom', isGlobal: true });
   });
 });
 
@@ -120,16 +127,16 @@ describe('ensureDefaultProfiles', () => {
   });
 });
 
-function config(globalSkills?: Record<string, SkillEntry>, profiles?: Record<string, ProfileEntry>): KanbrainConfig {
+function config(skills: Record<string, SkillEntry> = {}, profiles?: Record<string, ProfileEntry>): KanbrainConfig {
   return {
     organization: 'org',
     project: 'proj',
     defaultTeam: 'MyProject Team',
-    skills: {},
+    skills,
+    workflowSteps: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
-    globalSkills,
     profiles,
   };
 }
@@ -165,7 +172,7 @@ describe('isBootstrapContentMissing', () => {
   it('is false once USAGE.md exists, the explain-card entry, and the default profiles are all configured', () => {
     fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
-    const withEntry = config(ensureSeededGlobalSkills(undefined), ensureDefaultProfiles(undefined));
+    const withEntry = config(ensureSeededSkills(undefined), ensureDefaultProfiles(undefined));
 
     expect(isBootstrapContentMissing(workspaceRoot, withEntry)).toBe(false);
   });
@@ -181,7 +188,7 @@ describe('isBootstrapContentMissing', () => {
   it('is true when USAGE.md and the explain-card entry are present but a default profile is missing', () => {
     fs.mkdirSync(path.join(workspaceRoot, '.kanbrain'), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH), '# guide', 'utf-8');
-    const withPartialProfiles = config(ensureSeededGlobalSkills(undefined), { developer: DEFAULT_PROFILES.developer });
+    const withPartialProfiles = config(ensureSeededSkills(undefined), { developer: DEFAULT_PROFILES.developer });
 
     expect(isBootstrapContentMissing(workspaceRoot, withPartialProfiles)).toBe(true);
   });

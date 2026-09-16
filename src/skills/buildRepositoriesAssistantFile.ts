@@ -23,7 +23,7 @@ Project: \`${project}\`
 
 ## Scope
 
-This file is scoped to **repositories only** — don't touch \`.kanbrain/config.json\`'s \`skills\`, \`globalSkills\`, or \`profiles\` while following it.
+This file is scoped to **repositories only** — don't touch \`.kanbrain/config.json\`'s \`skills\`, \`workflowSteps\`, or \`profiles\` while following it.
 
 ## Repositories found locally
 

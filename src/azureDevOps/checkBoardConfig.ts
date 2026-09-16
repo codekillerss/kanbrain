@@ -4,7 +4,7 @@ export interface BoardConfigDiff {
   typesAdded: string[];
   typesRemoved: string[];
   statusesAdded: { type: string; status: string }[];
-  statusesRemoved: { type: string; status: string; skillPath: string | null }[];
+  statusesRemoved: { type: string; status: string; skillId: string | null }[];
   missingBootstrapContent: boolean;
 }
 
@@ -16,26 +16,26 @@ export function diffBoardConfig(
   const typesAdded: string[] = [];
   const typesRemoved: string[] = [];
   const statusesAdded: { type: string; status: string }[] = [];
-  const statusesRemoved: { type: string; status: string; skillPath: string | null }[] = [];
+  const statusesRemoved: { type: string; status: string; skillId: string | null }[] = [];
 
-  for (const type of Object.keys(config.skills)) {
+  for (const type of Object.keys(config.workflowSteps)) {
     if (!(type in discovered)) {
       typesRemoved.push(type);
       continue;
     }
-    for (const status of Object.keys(config.skills[type])) {
+    for (const status of Object.keys(config.workflowSteps[type])) {
       if (!(status in discovered[type])) {
-        statusesRemoved.push({ type, status, skillPath: config.skills[type][status]?.path ?? null });
+        statusesRemoved.push({ type, status, skillId: config.workflowSteps[type][status]?.skillId ?? null });
       }
     }
   }
   for (const [type, statuses] of Object.entries(discovered)) {
-    if (!(type in config.skills)) {
+    if (!(type in config.workflowSteps)) {
       typesAdded.push(type);
       continue;
     }
     for (const status of Object.keys(statuses)) {
-      if (!(status in config.skills[type])) {
+      if (!(status in config.workflowSteps[type])) {
         statusesAdded.push({ type, status });
       }
     }

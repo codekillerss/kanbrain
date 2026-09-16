@@ -39,7 +39,8 @@ describe('readConfig', () => {
       organization: 'my-org',
       project: 'MyProject',
       defaultTeam: 'MyProject Team',
-      skills: { Task: { New: { path: '.kanbrain/skills/a.md' } } },
+      skills: { 'skill-1': { path: '.kanbrain/skills/a.md' } },
+      workflowSteps: { Task: { New: { skillId: 'skill-1' } } },
       statusColors: { New: 'b2b2b2' },
       typeColors: { Task: 'f2cb1d' },
       typeIcons: { Task: '<svg></svg>' },
@@ -69,7 +70,8 @@ describe('readConfig', () => {
 
     const config = readConfig(workspaceRoot);
 
-    expect(config?.skills).toEqual({ Task: { New: { path: '.kanbrain/skills/a.md' } } });
+    expect(config?.skills).toEqual({ 'skill-1': { path: '.kanbrain/skills/a.md' } });
+    expect(config?.workflowSteps).toEqual({ Task: { New: { skillId: 'skill-1' } } });
     expect(config?.defaultTeam).toBe('');
   });
 });
@@ -81,6 +83,7 @@ describe('writeConfig', () => {
       project: 'p',
       defaultTeam: '',
       skills: {},
+      workflowSteps: {},
       statusColors: {},
       typeColors: {},
       typeIcons: {},
@@ -122,6 +125,7 @@ describe('readConfigWithDiagnostics', () => {
       project: 'MyProject',
       defaultTeam: '',
       skills: {},
+      workflowSteps: {},
       statusColors: {},
       typeColors: {},
       typeIcons: {},
@@ -145,6 +149,7 @@ describe('machine-local config split', () => {
     project: 'MyProject',
     defaultTeam: 'MyProject Team',
     skills: {},
+    workflowSteps: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -257,6 +262,7 @@ describe('profiles (shared field)', () => {
       project: 'MyProject',
       defaultTeam: 'MyProject Team',
       skills: {},
+      workflowSteps: {},
       statusColors: {},
       typeColors: {},
       typeIcons: {},
@@ -298,6 +304,7 @@ describe('migrateLegacyLocalConfigIfNeeded', () => {
     project: 'MyProject',
     defaultTeam: 'MyProject Team',
     skills: {},
+    workflowSteps: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},

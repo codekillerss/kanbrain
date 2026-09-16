@@ -2,10 +2,11 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
-## [Unreleased]
+## [0.12.0] - 2026-09-16
 
 ### Added
 
+- Split skill configuration into two concerns: a flat **skill registry** (`.kanbrain/config.json`'s `skills`, one entry per skill file with its own path/label/colors and an `isGlobal` flag), and a separate **Workflow** tab that maps each work item type/status to a skill from that registry plus an optional Definition of Done and expected artifacts list — both injected into the generated context file whenever that status's skill runs. Existing configs are migrated automatically the first time they're read. The Skills tab now only manages the registry (with a "Global" checkbox controlling whether a skill shows in the card's "▾" menu regardless of status), and the Workflow tab has its own **Configure with AI** button, which checks whether skills already exist before proposing a status → skill mapping.
 - A second global skill, **Validation Comment**, is now seeded alongside `explain-card` (and backfilled into existing projects by `Kanbrain: Sync Board Configuration`). It turns "prove this delivery works" into a repeatable step: before writing anything, the agent re-reads the diff and the acceptance criteria, asks what the change touches that whoever tested may not have covered, and presents the gaps for you to decide on. It then produces the validation as a narrative walkthrough in reproduction order, with `[screenshot-NN-...]` markers where you paste the evidence, formatted as HTML with the inline styles Azure DevOps comments need (the comment view collapses default paragraph margins, so unstyled HTML saves as one solid block). It works in both directions — write the walkthrough first and follow it as a test script, or record a validation already done — and in the first case every result is labelled as an expectation derived from the code, so a real result that differs gets the text corrected instead of the screenshot quietly hidden. It is a global skill because it spans the journey rather than a single phase: the walkthrough is wanted before the card reaches validation, the record after. As with everything else here, Kanbrain never writes to Azure DevOps — the agent publishes the comment with its own tooling, and only after you approve the draft.
 
 ## [0.11.1] - 2026-08-20

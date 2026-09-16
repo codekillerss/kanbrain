@@ -1,24 +1,25 @@
-import * as vscode from 'vscode';
 import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
-import type { WorkItem, KanbrainConfig, SkillEntry, PullRequestSummary } from '../types';
+import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
+import { countItemsByType, filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
+import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { readConfig, writeConfig } from '../config/config';
-import { resolveSkill } from '../config/resolveSkill';
 import { resolveActiveProfile } from '../config/resolveActiveProfile';
+import { resolveSkill } from '../config/resolveSkill';
+import { resolveWorkflowStep } from '../config/resolveWorkflowStep';
 import { cloneRepository } from '../git/cloneRepository';
-import { render } from './render';
-import { renderSearchResults } from './renderSearchResults';
-import { escapeHtml } from './escapeHtml';
-import { serializeState, hasStateChanged } from './hasStateChanged';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommand } from '../terminal/kanbrainTerminal';
-import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
-import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
-import { renderWorkItemHistory } from './renderWorkItemHistory';
+import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig, WorkItem } from '../types';
+import { escapeHtml } from './escapeHtml';
+import { hasStateChanged, serializeState } from './hasStateChanged';
+import { render } from './render';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
-import { filterWorkItemsByText, filterByAssignedTo, countItemsByType } from '../azureDevOps/wiql';
-import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
-import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { renderSearchResults } from './renderSearchResults';
+import { renderWorkItemHistory } from './renderWorkItemHistory';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -38,7 +39,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private avatarCache = new Map<string, string | null>();
   private parentCollapsed = false;
   private childrenCollapsed = false;
-  private openBrainSegment: 'repositories' | 'skills' | 'profiles' | null = 'skills';
+  private openBrainSegment: 'repositories' | 'skills' | 'workflow' | 'profiles' | null = 'skills';
   private reviewsStatusFilters: Array<'active' | 'completed' | 'abandoned'> = ['active'];
   private reviewsOwnerFilter: 'all' | 'mine' | 'assigned' | 'fixed' | 'needsMyFix' = 'all';
   private reviewsPullRequests: PullRequestSummary[] = [];
@@ -52,6 +53,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly workspaceRoot: string | undefined,
     private readonly client: AzureDevOpsClient | undefined,
+    private readonly extensionVersion: string,
     private readonly getCurrentBranch: () => Promise<string>,
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
@@ -78,8 +80,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async message => {
       if (message.type === 'run-skill') {
         await this.runSkill(Number(message.id));
-      } else if (message.type === 'run-global-skill') {
-        await this.runGlobalSkill(Number(message.workItemId), String(message.skillId ?? ''));
+      } else if (message.type === 'run-skill-by-id') {
+        await this.runSkillById(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
         await this.searchWorkItems(String(message.query ?? ''), message.queryId ? String(message.queryId) : undefined);
       } else if (message.type === 'set-search-assigned-to-me') {
@@ -121,29 +123,27 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.showConfigScreen();
       } else if (message.type === 'save-skill-entry') {
         this.saveSkillEntry(
-          String(message.level ?? ''),
-          String(message.status ?? ''),
-          String(message.path ?? ''),
-          String(message.label ?? ''),
-          String(message.textColor ?? ''),
-          String(message.buttonColor ?? ''),
-        );
-      } else if (message.type === 'pick-skill-file') {
-        await this.pickSkillFile(String(message.level ?? ''), String(message.status ?? ''));
-      } else if (message.type === 'add-global-skill') {
-        this.addGlobalSkill();
-      } else if (message.type === 'save-global-skill-entry') {
-        this.saveGlobalSkillEntry(
           String(message.id ?? ''),
           String(message.path ?? ''),
           String(message.label ?? ''),
           String(message.textColor ?? ''),
           String(message.buttonColor ?? ''),
+          Boolean(message.isGlobal),
         );
-      } else if (message.type === 'remove-global-skill') {
-        this.removeGlobalSkill(String(message.id ?? ''));
-      } else if (message.type === 'pick-global-skill-file') {
-        await this.pickGlobalSkillFile(String(message.id ?? ''));
+      } else if (message.type === 'pick-skill-file') {
+        await this.pickSkillFile(String(message.id ?? ''));
+      } else if (message.type === 'add-skill') {
+        this.addSkill();
+      } else if (message.type === 'remove-skill') {
+        await this.removeSkill(String(message.id ?? ''));
+      } else if (message.type === 'save-workflow-step') {
+        this.saveWorkflowStep(
+          String(message.level ?? ''),
+          String(message.status ?? ''),
+          String(message.skillId ?? ''),
+          String(message.definitionOfDone ?? ''),
+          String(message.artifacts ?? ''),
+        );
       } else if (message.type === 'add-profile') {
         this.addProfile();
       } else if (message.type === 'save-profile-entry') {
@@ -271,13 +271,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private setOpenBrainSegment(segment: string | null): void {
-    this.openBrainSegment = segment === 'repositories' || segment === 'skills' || segment === 'profiles' ? segment : null;
+    this.openBrainSegment =
+      segment === 'repositories' || segment === 'skills' || segment === 'workflow' || segment === 'profiles' ? segment : null;
   }
 
   private async runSegmentAi(segment: string): Promise<void> {
     const commandBySegment: Record<string, string> = {
       repositories: 'kanbrain.configureRepositoriesWithAi',
       skills: 'kanbrain.configureSkillsWithAi',
+      workflow: 'kanbrain.configureWorkflowWithAi',
       profiles: 'kanbrain.configureProfilesWithAi',
     };
     const command = commandBySegment[segment];
@@ -486,53 +488,34 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private saveSkillEntry(level: string, status: string, filePath: string, label: string, textColor: string, buttonColor: string): void {
+  private saveWorkflowStep(level: string, status: string, skillId: string, definitionOfDone: string, artifacts: string): void {
     if (!this.workspaceRoot) {
       return;
     }
     const config = readConfig(this.workspaceRoot);
-    if (!config || !config.skills[level] || !(status in config.skills[level])) {
+    if (!config || !config.workflowSteps[level] || !(status in config.workflowSteps[level])) {
       return;
     }
 
-    const trimmedPath = filePath.trim();
-    if (!trimmedPath) {
-      config.skills[level][status] = null;
-    } else {
-      const entry: SkillEntry = { path: trimmedPath };
-      if (label.trim()) {
-        entry.label = label.trim();
-      }
-      if (textColor.trim()) {
-        entry.textColor = textColor.trim();
-      }
-      if (buttonColor.trim()) {
-        entry.buttonColor = buttonColor.trim();
-      }
-      config.skills[level][status] = entry;
-    }
+    const trimmedSkillId = skillId.trim();
+    const parseLines = (value: string): string[] | undefined => {
+      const lines = value
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+      return lines.length > 0 ? lines : undefined;
+    };
+
+    config.workflowSteps[level][status] = {
+      skillId: trimmedSkillId || null,
+      definitionOfDone: parseLines(definitionOfDone),
+      artifacts: parseLines(artifacts),
+    };
 
     writeConfig(this.workspaceRoot, config);
   }
 
-  private async pickSkillFile(level: string, status: string): Promise<void> {
-    if (!this.workspaceRoot || !this.view) {
-      return;
-    }
-    const uris = await vscode.window.showOpenDialog({
-      defaultUri: vscode.Uri.file(this.workspaceRoot),
-      canSelectMany: false,
-      filters: { Markdown: ['md'] },
-    });
-    const picked = uris?.[0];
-    if (!picked) {
-      return;
-    }
-    const relativePath = path.relative(this.workspaceRoot, picked.fsPath).split(path.sep).join('/');
-    this.view.webview.postMessage({ type: 'skill-file-picked', level, status, path: relativePath });
-  }
-
-  private addGlobalSkill(): void {
+  private addSkill(): void {
     if (!this.workspaceRoot) {
       return;
     }
@@ -540,19 +523,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
-    const id = `global-skill-${Date.now()}`;
-    config.globalSkills = { ...(config.globalSkills ?? {}), [id]: { path: '' } };
+    const id = `skill-${Date.now()}`;
+    config.skills = { ...config.skills, [id]: { path: '' } };
     writeConfig(this.workspaceRoot, config);
     this.lastState = '';
     void this.refresh();
   }
 
-  private saveGlobalSkillEntry(id: string, filePath: string, label: string, textColor: string, buttonColor: string): void {
+  private saveSkillEntry(id: string, filePath: string, label: string, textColor: string, buttonColor: string, isGlobal: boolean): void {
     if (!this.workspaceRoot) {
       return;
     }
     const config = readConfig(this.workspaceRoot);
-    if (!config?.globalSkills?.[id]) {
+    if (!config?.skills?.[id]) {
       return;
     }
     const entry: SkillEntry = { path: filePath.trim() };
@@ -565,20 +548,38 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (buttonColor.trim()) {
       entry.buttonColor = buttonColor.trim();
     }
-    config.globalSkills[id] = entry;
+    if (isGlobal) {
+      entry.isGlobal = true;
+    }
+    config.skills[id] = entry;
     writeConfig(this.workspaceRoot, config);
   }
 
-  private removeGlobalSkill(id: string): void {
+  private async removeSkill(id: string): Promise<void> {
     if (!this.workspaceRoot) {
       return;
     }
     const config = readConfig(this.workspaceRoot);
-    if (!config?.globalSkills?.[id]) {
+    const entry = config?.skills?.[id];
+    if (!entry) {
       return;
     }
-    delete config.globalSkills[id];
-    writeConfig(this.workspaceRoot, config);
+    const label = entry.label || entry.path || id;
+    const confirmed = await vscode.window.showWarningMessage(
+      `Remove the skill "${label}"? This only removes it from the registry and any workflow steps it's wired to — the skill file itself is not deleted.`,
+      { modal: true },
+      'Remove',
+    );
+    if (confirmed !== 'Remove') {
+      return;
+    }
+    // Re-read in case config changed while the modal was open, and bail if the skill is already gone.
+    const latest = readConfig(this.workspaceRoot);
+    if (!latest?.skills?.[id]) {
+      return;
+    }
+    delete latest.skills[id];
+    writeConfig(this.workspaceRoot, latest);
     this.lastState = '';
     void this.refresh();
   }
@@ -624,7 +625,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private async pickGlobalSkillFile(id: string): Promise<void> {
+  private async pickSkillFile(id: string): Promise<void> {
     if (!this.workspaceRoot || !this.view) {
       return;
     }
@@ -638,7 +639,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const relativePath = path.relative(this.workspaceRoot, picked.fsPath).split(path.sep).join('/');
-    this.view.webview.postMessage({ type: 'global-skill-file-picked', id, path: relativePath });
+    this.view.webview.postMessage({ type: 'skill-file-picked', id, path: relativePath });
   }
 
   private saveRepositoryPath(repositoryId: string, newPath: string): void {
@@ -719,19 +720,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!skill) {
       return;
     }
-    await this.executeSkill(found.workItem, skill);
+    const workflowStep = resolveWorkflowStep(found.config, found.workItem);
+    await this.executeSkill(found.workItem, skill, workflowStep);
   }
 
-  private async runGlobalSkill(id: number, skillId: string): Promise<void> {
+  private async runSkillById(id: number, skillId: string): Promise<void> {
     const found = await this.loadWorkItemForSkill(id);
     if (!found) {
       return;
     }
-    const skill = found.config.globalSkills?.[skillId];
+    const skill = found.config.skills[skillId];
     if (!skill) {
       return;
     }
-    await this.executeSkill(found.workItem, skill);
+    await this.executeSkill(found.workItem, skill, null);
   }
 
   private async loadWorkItemForSkill(id: number): Promise<{ config: KanbrainConfig; workItem: WorkItem } | null> {
@@ -749,7 +751,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return { config, workItem };
   }
 
-  private async executeSkill(workItem: WorkItem, skill: SkillEntry): Promise<void> {
+  private async executeSkill(workItem: WorkItem, skill: SkillEntry, workflowStep: WorkflowStepConfig | null): Promise<void> {
     if (!this.workspaceRoot || !this.client) {
       return;
     }
@@ -769,6 +771,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       skill.path,
       { workItem, parent: parent ?? null, subtasks, branch },
       profile,
+      workflowStep,
     );
 
     sendReadCommand(relativePath);
@@ -800,6 +803,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       render({
         hasWorkspace: !!this.workspaceRoot,
         config,
+        extensionVersion: this.extensionVersion,
         workItem: null,
         parent: null,
         subtasks: [],
@@ -933,6 +937,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       render({
         hasWorkspace: !!this.workspaceRoot,
         config,
+        extensionVersion: this.extensionVersion,
         workItem,
         parent,
         subtasks,
@@ -982,16 +987,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     function saveSkillRow(row) {
       const label = row.querySelector('[data-field="label"]').value;
-      if (row.dataset.globalSkillId) {
-        vscode.postMessage({
-          type: 'save-global-skill-entry',
-          id: row.dataset.globalSkillId,
-          path: row.querySelector('[data-field="path"]').value,
-          label,
-          textColor: row.querySelector('[data-field="textColor"]').value,
-          buttonColor: row.querySelector('[data-field="buttonColor"]').value,
-        });
-      } else if (row.dataset.profileId) {
+      if (row.dataset.profileId) {
         vscode.postMessage({
           type: 'save-profile-entry',
           id: row.dataset.profileId,
@@ -999,19 +995,31 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           description: row.querySelector('[data-field="description"]').value,
         });
       } else {
+        const isGlobalField = row.querySelector('[data-field="isGlobal"]');
         vscode.postMessage({
           type: 'save-skill-entry',
-          level: row.dataset.level,
-          status: row.dataset.status,
+          id: row.dataset.skillId,
           path: row.querySelector('[data-field="path"]').value,
           label,
           textColor: row.querySelector('[data-field="textColor"]').value,
           buttonColor: row.querySelector('[data-field="buttonColor"]').value,
+          isGlobal: isGlobalField ? isGlobalField.checked : false,
         });
       }
     }
 
-    document.querySelectorAll('.kb-config-row input, .kb-config-row textarea').forEach((input) => {
+    function saveWorkflowStepRow(row) {
+      vscode.postMessage({
+        type: 'save-workflow-step',
+        level: row.dataset.level,
+        status: row.dataset.status,
+        skillId: row.querySelector('[data-field="skillId"]').value,
+        definitionOfDone: row.querySelector('[data-field="definitionOfDone"]').value,
+        artifacts: row.querySelector('[data-field="artifacts"]').value,
+      });
+    }
+
+    document.querySelectorAll('.kb-config-row:not(.kb-workflow-row) input, .kb-config-row:not(.kb-workflow-row) textarea').forEach((input) => {
       input.addEventListener('blur', () => {
         const row = input.closest('.kb-config-row');
         if (row) {
@@ -1019,6 +1027,28 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         }
       });
     });
+
+    document.querySelectorAll('.kb-config-row:not(.kb-workflow-row) input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const row = checkbox.closest('.kb-config-row');
+        if (row) {
+          saveSkillRow(row);
+        }
+      });
+    });
+
+    document.querySelectorAll('.kb-workflow-row textarea').forEach((field) => {
+      field.addEventListener('blur', () => {
+        const row = field.closest('.kb-workflow-row');
+        if (row) {
+          saveWorkflowStepRow(row);
+        }
+      });
+    });
+
+    function closeAllSkillPickers() {
+      document.querySelectorAll('.kb-skill-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
 
     function saveRepositoryRow(row) {
       vscode.postMessage({
@@ -1265,16 +1295,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.dataset && target.dataset.action === 'pick-skill-file') {
         const row = target.closest('.kb-config-row');
         if (row) {
-          if (row.dataset.globalSkillId) {
-            vscode.postMessage({ type: 'pick-global-skill-file', id: row.dataset.globalSkillId });
-          } else {
-            vscode.postMessage({ type: 'pick-skill-file', level: row.dataset.level, status: row.dataset.status });
-          }
+          vscode.postMessage({ type: 'pick-skill-file', id: row.dataset.skillId });
         }
-      } else if (target.dataset && target.dataset.action === 'add-global-skill') {
-        vscode.postMessage({ type: 'add-global-skill' });
-      } else if (target.dataset && target.dataset.action === 'remove-global-skill') {
-        vscode.postMessage({ type: 'remove-global-skill', id: target.dataset.globalSkillId });
+      } else if (target.dataset && target.dataset.action === 'add-skill') {
+        vscode.postMessage({ type: 'add-skill' });
+      } else if (target.dataset && target.dataset.action === 'remove-skill') {
+        vscode.postMessage({ type: 'remove-skill', id: target.dataset.skillId });
       } else if (target.dataset && target.dataset.action === 'run-segment-ai') {
         setLoading(target);
         vscode.postMessage({ type: 'run-segment-ai', segment: target.dataset.segment });
@@ -1297,8 +1323,41 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           }
         }
       } else if (target.dataset && target.dataset.action === 'run-global-skill') {
-        vscode.postMessage({ type: 'run-global-skill', workItemId: target.dataset.id, skillId: target.dataset.skillId });
+        vscode.postMessage({ type: 'run-skill-by-id', workItemId: target.dataset.id, skillId: target.dataset.skillId });
         closeAllGlobalSkillMenus();
+      } else if (target.closest && target.closest('[data-action="toggle-skill-picker"]')) {
+        const picker = target.closest('.kb-skill-picker');
+        const menu = picker ? picker.querySelector('.kb-skill-picker-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllSkillPickers();
+          if (!isOpen) {
+            const rect = picker.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.width = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.closest && target.closest('[data-action="select-skill"]')) {
+        const option = target.closest('[data-action="select-skill"]');
+        const picker = option.closest('.kb-skill-picker');
+        const row = option.closest('.kb-workflow-row');
+        if (picker && row) {
+          const skillId = option.dataset.skillId;
+          const hiddenInput = picker.querySelector('[data-field="skillId"]');
+          if (hiddenInput) hiddenInput.value = skillId;
+          picker.querySelectorAll('.kb-skill-picker-option').forEach((opt) => {
+            opt.classList.toggle('kb-skill-picker-option-active', opt === option);
+          });
+          const triggerLabel = picker.querySelector('.kb-skill-picker-trigger-label');
+          if (triggerLabel) {
+            triggerLabel.textContent = option.querySelector('.kb-skill-picker-option-label').textContent;
+            triggerLabel.classList.toggle('kb-select-none-option', !skillId);
+          }
+          closeAllSkillPickers();
+          saveWorkflowStepRow(row);
+        }
       }
 
       if (
@@ -1306,6 +1365,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         (!target.closest || !target.closest('.kb-global-skill-menu'))
       ) {
         closeAllGlobalSkillMenus();
+      }
+
+      if (!target.closest || !target.closest('.kb-skill-picker')) {
+        closeAllSkillPickers();
       }
 
       if (!target.closest || !target.closest('.kb-query-combobox')) {
@@ -1334,6 +1397,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       closeAllGlobalSkillMenus();
+      if (!(event.target && event.target.closest && event.target.closest('.kb-skill-picker-menu'))) {
+        closeAllSkillPickers();
+      }
     }, true);
 
     const searchInput = document.getElementById('kb-search-input');
@@ -1458,17 +1524,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
-          if (row.dataset.level === event.data.level && row.dataset.status === event.data.status) {
-            const pathInput = row.querySelector('[data-field="path"]');
-            pathInput.value = event.data.path;
-            saveSkillRow(row);
-            break;
-          }
-        }
-      } else if (event.data.type === 'global-skill-file-picked') {
-        const rows = document.querySelectorAll('.kb-config-row');
-        for (const row of rows) {
-          if (row.dataset.globalSkillId === event.data.id) {
+          if (row.dataset.skillId === event.data.id) {
             const pathInput = row.querySelector('[data-field="path"]');
             pathInput.value = event.data.path;
             saveSkillRow(row);
@@ -1557,7 +1613,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-toggle { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 0; margin: 12px 0 0; font-size: 11px; font-weight: 400; text-transform: uppercase; opacity: 0.7; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
-      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 640px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
       .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-query-combobox:hover { background: var(--vscode-list-hoverBackground); }
@@ -1609,6 +1665,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
       .kb-icon-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-input { box-sizing: border-box; width: 100%; padding: 4px 6px; margin-bottom: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-select-none-option { font-style: italic; color: var(--vscode-descriptionForeground); }
+      .kb-skill-picker { position: relative; }
+      .kb-skill-picker-trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; cursor: pointer; text-align: left; }
+      .kb-skill-picker-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .kb-skill-picker-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+      .kb-skill-picker-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; max-height: 260px; overflow-y: auto; overflow-x: hidden; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-skill-picker-menu.kb-hidden { display: none; }
+      .kb-skill-picker-option { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); }
+      .kb-skill-picker-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-skill-picker-option-active { background: var(--vscode-list-inactiveSelectionBackground); }
+      .kb-skill-picker-option-label { font-size: 12px; }
+      .kb-skill-picker-option-path { font-size: 11px; color: var(--vscode-descriptionForeground); }
       .kb-textarea { min-height: 60px; resize: vertical; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
@@ -1619,9 +1687,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-parent-section-expanded { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       .kb-config-parent-section-expanded > .kb-collapsible-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       .kb-segment-scroll { flex: 1; min-height: 0; overflow-y: auto; }
-      .kb-config-level { border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
-      .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; }
+      .kb-config-level { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
+      .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 32px 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-remove-skill-btn { position: absolute; top: 3px; right: 4px; }
+      .kb-icon-btn-danger { color: var(--vscode-errorForeground, #f14c4c); background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-foreground); border-radius: 3px; }
+      .kb-icon-btn-danger:hover { filter: brightness(1.2); }
+      .kb-info-icon { cursor: help; color: var(--vscode-descriptionForeground); margin-left: 2px; }
       .kb-global-skill-header { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); }
       .kb-global-skill-header:hover { background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 45%, rgba(0, 0, 0, 0.3)); filter: brightness(1.12); }
       .kb-config-level-body { padding: 6px 8px; }

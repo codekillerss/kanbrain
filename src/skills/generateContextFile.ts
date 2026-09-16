@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { resolvePlaceholders, type SkillTemplateContext } from './resolvePlaceholders';
 import { writeGeneratedFile } from './writeGeneratedFile';
-import type { ProfileEntry } from '../types';
+import type { ProfileEntry, WorkflowStepConfig } from '../types';
 
 const CARD_INFO_TEMPLATE = `Work item: {{title}} (#{{id}})
 Type: {{type}}
@@ -19,6 +19,20 @@ function prependProfileBlock(content: string, profile: ProfileEntry | null): str
     return content;
   }
   return `## Requester profile\n**${profile.label}** — ${profile.description}\n\n---\n\n${content}`;
+}
+
+function appendWorkflowStepBlock(content: string, workflowStep: WorkflowStepConfig | null): string {
+  const sections: string[] = [];
+  if (workflowStep?.definitionOfDone?.length) {
+    sections.push(`## Definition of Done\n${workflowStep.definitionOfDone.map(item => `- ${item}`).join('\n')}`);
+  }
+  if (workflowStep?.artifacts?.length) {
+    sections.push(`## Expected artifacts\n${workflowStep.artifacts.map(item => `- ${item}`).join('\n')}`);
+  }
+  if (sections.length === 0) {
+    return content;
+  }
+  return `${content}\n\n---\n\n${sections.join('\n\n')}`;
 }
 
 // The skill path is user-supplied, so its basename can carry anything a file name can — spaces,
@@ -38,6 +52,7 @@ export function generateContextFile(
   skillTemplatePath: string,
   context: SkillTemplateContext,
   profile: ProfileEntry | null,
+  workflowStep: WorkflowStepConfig | null = null,
   now: Date = new Date(),
 ): string {
   const templateFullPath = path.join(workspaceRoot, skillTemplatePath);
@@ -45,7 +60,8 @@ export function generateContextFile(
   const resolved = resolvePlaceholders(template, context);
   const cardInfo = resolvePlaceholders(CARD_INFO_TEMPLATE, context);
   const withCardInfo = `${cardInfo}\n\n---\n\n${resolved}`;
-  const withProfile = prependProfileBlock(withCardInfo, profile);
+  const withWorkflowStep = appendWorkflowStepBlock(withCardInfo, workflowStep);
+  const withProfile = prependProfileBlock(withWorkflowStep, profile);
 
   const timestamp = now.toISOString().replace(/[:.]/g, '-');
   const slug = toSkillSlug(skillTemplatePath);

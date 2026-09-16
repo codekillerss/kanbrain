@@ -22,7 +22,8 @@ const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
   defaultTeam: 'MyProject Team',
-  skills: { Task: { Active: { path: 'skills/fix.md' } } },
+  skills: { 'skill-1': { path: 'skills/fix.md' } },
+  workflowSteps: { Task: { Active: { skillId: 'skill-1' } } },
   statusColors: {},
   typeColors: {},
   typeIcons: {},
@@ -195,50 +196,63 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('>2<');
   });
 
-  it('does not show the global skill trigger when no global skills are configured', () => {
-    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+  it('does not show the global skill trigger when no registry entry is marked global', () => {
+    const noGlobalSkills: KanbrainConfig = {
+      ...config,
+      skills: { 'skill-1': { path: 'skills/fix.md' }, 'skill-2': { path: 'effort.md' } },
+    };
+    const html = renderWorkItemCard(workItem(), noGlobalSkills, 'kb-main-card');
     expect(html).not.toContain('kb-global-skill-trigger');
     expect(html).not.toContain('kb-global-skill-menu');
   });
 
-  it('shows the global skill trigger and menu with an option per entry when global skills are configured', () => {
-    const withGlobal: KanbrainConfig = {
+  it('shows the global skill trigger and menu with an option per entry marked isGlobal', () => {
+    const withGlobalSkill: KanbrainConfig = {
       ...config,
-      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+      skills: { 'skill-1': { path: 'skills/fix.md' }, 'skill-2': { path: 'effort.md', label: 'Avaliar Effort', isGlobal: true } },
     };
-    const html = renderWorkItemCard(workItem(), withGlobal, 'kb-main-card');
+    const html = renderWorkItemCard(workItem(), withGlobalSkill, 'kb-main-card');
     expect(html).toContain('kb-global-skill-trigger');
     expect(html).toContain('data-action="toggle-global-skill-menu"');
     expect(html).toContain('data-action="run-global-skill"');
-    expect(html).toContain('data-skill-id="global-skill-1"');
+    expect(html).toContain('data-skill-id="skill-2"');
     expect(html).toContain('data-id="482"');
     expect(html).toContain('Avaliar Effort');
+  });
+
+  it('excludes non-global entries from the menu even when a global one is also present', () => {
+    const mixed: KanbrainConfig = {
+      ...config,
+      skills: { 'skill-1': { path: 'skills/fix.md' }, 'skill-2': { path: 'effort.md', label: 'Avaliar Effort', isGlobal: true } },
+    };
+    const html = renderWorkItemCard(workItem(), mixed, 'kb-main-card');
+    expect(html).not.toContain('data-skill-id="skill-1"');
   });
 
   it('shows the global skill trigger even when the card has no status skill', () => {
     const noStatusSkill: KanbrainConfig = {
       ...config,
-      skills: { Task: { Active: null } },
-      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+      workflowSteps: { Task: { Active: null } },
+      skills: { 'skill-2': { path: 'effort.md', label: 'Avaliar Effort', isGlobal: true } },
     };
     const html = renderWorkItemCard(workItem(), noStatusSkill, 'kb-main-card');
     expect(html).not.toContain('data-action="run-skill"');
     expect(html).toContain('data-action="run-global-skill"');
   });
 
-  it('shows a disabled placeholder button when the status has no skill but global skills exist', () => {
+  it('shows a disabled placeholder button when the status has no skill but a global entry exists', () => {
     const noStatusSkill: KanbrainConfig = {
       ...config,
-      skills: { Task: { Active: null } },
-      globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } },
+      workflowSteps: { Task: { Active: null } },
+      skills: { 'skill-2': { path: 'effort.md', label: 'Avaliar Effort', isGlobal: true } },
     };
     const html = renderWorkItemCard(workItem(), noStatusSkill, 'kb-main-card');
     expect(html).toContain('kb-action-btn-placeholder');
     expect(html).toContain('disabled');
   });
 
-  it('renders no action group at all when there is neither a status skill nor global skills', () => {
-    const noSkillsAtAll: KanbrainConfig = { ...config, skills: { Task: { Active: null } }, globalSkills: {} };
+  it('renders no action group at all when there is neither a status skill nor any global entries', () => {
+    const noSkillsAtAll: KanbrainConfig = { ...config, workflowSteps: { Task: { Active: null } }, skills: {} };
     const html = renderWorkItemCard(workItem(), noSkillsAtAll, 'kb-main-card');
     expect(html).not.toContain('kb-action-group');
     expect(html).not.toContain('kb-action-btn-placeholder');

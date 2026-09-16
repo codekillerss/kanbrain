@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { generateContextFile } from './generateContextFile';
 import type { SkillTemplateContext } from './resolvePlaceholders';
-import type { WorkItem, ProfileEntry } from '../types';
+import type { WorkItem, ProfileEntry, WorkflowStepConfig } from '../types';
 
 let workspaceRoot: string;
 
@@ -47,7 +47,7 @@ const cardInfoBlock = [
 
 describe('generateContextFile', () => {
   it('writes the resolved template under .kanbrain/generated', () => {
-    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(relativePath.startsWith(path.join('.kanbrain', 'generated'))).toBe(true);
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
@@ -56,14 +56,14 @@ describe('generateContextFile', () => {
 
   it('always prepends the card info block, even for a skill file with no placeholders of its own', () => {
     fs.writeFileSync(path.join(workspaceRoot, 'skills', 'fix.md'), '## Instructions\nDo the thing.');
-    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
     expect(written).toBe(`${cardInfoBlock}\n\n---\n\n## Instructions\nDo the thing.`);
   });
 
   it('names the file with the work item id, the skill name and a filesystem-safe timestamp', () => {
-    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(path.basename(relativePath)).toBe('482-fix-2026-07-14T10-00-00-000Z.md');
   });
@@ -71,7 +71,14 @@ describe('generateContextFile', () => {
   it('slugifies a skill name with spaces, accents and capitals', () => {
     fs.writeFileSync(path.join(workspaceRoot, 'skills', 'Validação Final.md'), '## Instructions\nDo it.');
 
-    const relativePath = generateContextFile(workspaceRoot, 'skills/Validação Final.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/Validação Final.md',
+      context,
+      null,
+      null,
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
 
     expect(path.basename(relativePath)).toBe('482-validacao-final-2026-07-14T10-00-00-000Z.md');
   });
@@ -79,20 +86,20 @@ describe('generateContextFile', () => {
   it('falls back to id and timestamp when the skill name has nothing usable in it', () => {
     fs.writeFileSync(path.join(workspaceRoot, 'skills', '___.md'), '## Instructions\nDo it.');
 
-    const relativePath = generateContextFile(workspaceRoot, 'skills/___.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/___.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(path.basename(relativePath)).toBe('482-2026-07-14T10-00-00-000Z.md');
   });
 
   it('creates the .kanbrain/generated directory if it does not exist', () => {
-    generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(fs.existsSync(path.join(workspaceRoot, '.kanbrain', 'generated'))).toBe(true);
   });
 
   it('prepends a Requester profile block when a profile is given', () => {
     const profile: ProfileEntry = { label: 'Developer', description: 'I am a developer.' };
-    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, profile, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, profile, null, new Date('2026-07-14T10:00:00.000Z'));
 
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
     expect(written).toBe(
@@ -101,9 +108,89 @@ describe('generateContextFile', () => {
   });
 
   it('does not add a Requester profile block when profile is null', () => {
-    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, new Date('2026-07-14T10:00:00.000Z'));
+    const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
     expect(written).not.toContain('Requester profile');
+  });
+
+  it('appends a Definition of Done section when the workflow step has one', () => {
+    const workflowStep: WorkflowStepConfig = { skillId: 'skill-1', definitionOfDone: ['Tests passing', 'PR opened'] };
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/fix.md',
+      context,
+      null,
+      workflowStep,
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written).toBe(
+      `${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)\n\n---\n\n## Definition of Done\n- Tests passing\n- PR opened`,
+    );
+  });
+
+  it('appends an Expected artifacts section when the workflow step has one', () => {
+    const workflowStep: WorkflowStepConfig = { skillId: 'skill-1', artifacts: ['Pull request'] };
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/fix.md',
+      context,
+      null,
+      workflowStep,
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written).toContain('## Expected artifacts\n- Pull request');
+  });
+
+  it('appends both sections, Definition of Done before Expected artifacts, separated by a blank line', () => {
+    const workflowStep: WorkflowStepConfig = { skillId: 'skill-1', definitionOfDone: ['Tests passing'], artifacts: ['Pull request'] };
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/fix.md',
+      context,
+      null,
+      workflowStep,
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written).toBe(
+      `${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)\n\n---\n\n## Definition of Done\n- Tests passing\n\n## Expected artifacts\n- Pull request`,
+    );
+  });
+
+  it('does not add a workflow step section when the step is null or has empty lists', () => {
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/fix.md',
+      context,
+      null,
+      { skillId: 'skill-1' },
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written).toBe(`${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`);
+  });
+
+  it('places the profile block before everything else, even when a workflow step is also present', () => {
+    const profile: ProfileEntry = { label: 'Developer', description: 'I am a developer.' };
+    const workflowStep: WorkflowStepConfig = { skillId: 'skill-1', artifacts: ['Pull request'] };
+    const relativePath = generateContextFile(
+      workspaceRoot,
+      'skills/fix.md',
+      context,
+      profile,
+      workflowStep,
+      new Date('2026-07-14T10:00:00.000Z'),
+    );
+
+    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    expect(written.startsWith('## Requester profile')).toBe(true);
+    expect(written.endsWith('## Expected artifacts\n- Pull request')).toBe(true);
   });
 });

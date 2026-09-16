@@ -55,7 +55,7 @@ function renderSkillPlaceholderButton(): string {
 
 function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string {
   const skill = resolveSkill(config, workItem);
-  const globalSkills = config.globalSkills ?? {};
+  const globalSkills = Object.fromEntries(Object.entries(config.skills ?? {}).filter(([, entry]) => entry.isGlobal));
   const hasGlobalSkills = Object.keys(globalSkills).length > 0;
   if (!skill && !hasGlobalSkills) {
     return '';

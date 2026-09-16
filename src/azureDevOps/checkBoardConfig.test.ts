@@ -7,7 +7,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
     organization: 'org',
     project: 'proj',
     defaultTeam: 'MyProject Team',
-    skills: { Task: { 'To Do': null, Done: null } },
+    skills: {},
+    workflowSteps: { Task: { 'To Do': null, Done: null } },
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -24,7 +25,11 @@ describe('diffBoardConfig', () => {
   });
 
   it('reports a type removed (no longer discovered)', () => {
-    const diff = diffBoardConfig(config({ skills: { Task: { 'To Do': null, Done: null }, Bug: { New: null } } }), discovered, false);
+    const diff = diffBoardConfig(
+      config({ workflowSteps: { Task: { 'To Do': null, Done: null }, Bug: { New: null } } }),
+      discovered,
+      false,
+    );
     expect(diff.typesRemoved).toEqual(['Bug']);
   });
 
@@ -34,17 +39,17 @@ describe('diffBoardConfig', () => {
   });
 
   it('reports a status added within an existing type', () => {
-    const diff = diffBoardConfig(config({ skills: { Task: { 'To Do': null } } }), discovered, false);
+    const diff = diffBoardConfig(config({ workflowSteps: { Task: { 'To Do': null } } }), discovered, false);
     expect(diff.statusesAdded).toEqual([{ type: 'Task', status: 'Done' }]);
   });
 
-  it('reports a status removed within an existing type, including its skill path', () => {
+  it('reports a status removed within an existing type, including its skill id', () => {
     const diff = diffBoardConfig(
-      config({ skills: { Task: { 'To Do': null, Done: null, Cancelled: { path: '.kanbrain/skills/task-cancelled.md' } } } }),
+      config({ workflowSteps: { Task: { 'To Do': null, Done: null, Cancelled: { skillId: 'skill-1' } } } }),
       discovered,
       false,
     );
-    expect(diff.statusesRemoved).toEqual([{ type: 'Task', status: 'Cancelled', skillPath: '.kanbrain/skills/task-cancelled.md' }]);
+    expect(diff.statusesRemoved).toEqual([{ type: 'Task', status: 'Cancelled', skillId: 'skill-1' }]);
   });
 
   it('is not empty when missingBootstrapContent is true even if nothing else changed', () => {

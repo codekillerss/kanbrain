@@ -24,6 +24,7 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
     project: 'proj',
     defaultTeam: 'MyProject Team',
     skills: {},
+    workflowSteps: {},
     statusColors: {},
     typeColors: {},
     typeIcons: {},
@@ -96,7 +97,7 @@ describe('renderSearchResults', () => {
 
   it('renders a tab per work item type, in config order, plus an "all" tab first', () => {
     const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
-    const html = renderSearchResults(items, config({ skills: { Epic: {}, Task: {} } }), { Epic: 3, Task: 7 });
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 3, Task: 7 });
 
     const allIndex = html.indexOf('data-tab="all"');
     const epicIndex = html.indexOf('data-tab="Epic"');
@@ -110,13 +111,13 @@ describe('renderSearchResults', () => {
 
   it('shows the type tab count from typeCounts, not from the filtered item list', () => {
     const items = [workItem({ id: 1, type: 'Epic' })];
-    const html = renderSearchResults(items, config({ skills: { Epic: {} } }), { Epic: 12 });
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {} } }), { Epic: 12 });
 
     expect(html).toContain('Epic (12)');
   });
 
   it('marks a type tab as empty when its count is 0', () => {
-    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ skills: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
+    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
 
     expect(html).toContain('kb-search-tab-empty');
     expect(html).toContain('Task (0)');
@@ -124,7 +125,7 @@ describe('renderSearchResults', () => {
 
   it("scopes each type panel to only that type's items", () => {
     const items = [workItem({ id: 1, type: 'Epic', title: 'An epic' }), workItem({ id: 2, type: 'Task', title: 'A task' })];
-    const html = renderSearchResults(items, config({ skills: { Epic: {}, Task: {} } }), { Epic: 1, Task: 1 });
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 1, Task: 1 });
 
     const epicPanelStart = html.indexOf('data-tab-panel="Epic"');
     const taskPanelStart = html.indexOf('data-tab-panel="Task"');
