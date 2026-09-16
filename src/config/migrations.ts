@@ -1,4 +1,4 @@
-import type { KanbrainConfig, SkillEntry } from '../types';
+import type { KanbrainConfig, SkillEntry, WorkflowStepConfig } from '../types';
 
 export interface ConfigMigration {
   version: string;
@@ -64,7 +64,64 @@ const migrateSkillsByType: ConfigMigration = {
   },
 };
 
-export const migrations: ConfigMigration[] = [migrateSkillsByType];
+interface PreWorkflowStepsConfig {
+  skills: Record<string, Record<string, SkillEntry | null>>;
+  globalSkills?: Record<string, SkillEntry>;
+  lastSyncedVersion?: string;
+  [key: string]: unknown;
+}
+
+function isPreWorkflowStepsShape(raw: unknown): raw is PreWorkflowStepsConfig {
+  return !!raw && typeof raw === 'object' && 'skills' in raw && !('workflowSteps' in raw);
+}
+
+// Introduced in 0.12.0: split the per-(type, status) skill mapping (skills) in two — a flat,
+// id-keyed skill registry (skills, replacing the old flat globalSkills) and a per-(type, status)
+// workflow-step mapping (workflowSteps) that references a skill by id and adds a Definition of
+// Done / expected artifacts. Skill entries that were identical (same path, label, colors) across
+// multiple status cells collapse into a single registry entry; anything else gets its own id so no
+// per-status label/color override is lost. Former globalSkills entries carry isGlobal forward so
+// they keep showing in the card's "other skills" menu after migrating.
+const migrateWorkflowSteps: ConfigMigration = {
+  version: '0.12.0',
+  detect: raw => isPreWorkflowStepsShape(raw) && isOlderThan(raw.lastSyncedVersion, '0.12.0'),
+  migrate: raw => {
+    const legacy = raw as PreWorkflowStepsConfig;
+    const skills: Record<string, SkillEntry> = {};
+    for (const [id, entry] of Object.entries(legacy.globalSkills ?? {})) {
+      skills[id] = { ...entry, isGlobal: true };
+    }
+    const idByEntryKey = new Map<string, string>(Object.entries(skills).map(([id, entry]) => [JSON.stringify(entry), id]));
+    let nextIndex = 1;
+
+    const workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>> = {};
+    for (const [type, statuses] of Object.entries(legacy.skills)) {
+      const steps: Record<string, WorkflowStepConfig | null> = {};
+      for (const [status, entry] of Object.entries(statuses)) {
+        if (!entry) {
+          steps[status] = null;
+          continue;
+        }
+        const entryKey = JSON.stringify(entry);
+        let id = idByEntryKey.get(entryKey);
+        if (!id) {
+          do {
+            id = `skill-${nextIndex++}`;
+          } while (id in skills);
+          skills[id] = entry;
+          idByEntryKey.set(entryKey, id);
+        }
+        steps[status] = { skillId: id };
+      }
+      workflowSteps[type] = steps;
+    }
+
+    const { globalSkills: _globalSkills, skills: _oldSkills, ...rest } = legacy;
+    return { ...rest, skills, workflowSteps };
+  },
+};
+
+export const migrations: ConfigMigration[] = [migrateSkillsByType, migrateWorkflowSteps];
 
 export function runMigrations(raw: unknown): KanbrainConfig {
   let current = raw;

@@ -7,7 +7,8 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
     organization: 'org',
     project: 'proj',
     defaultTeam: 'MyProject Team',
-    skills: { Task: { 'To Do': { path: '.kanbrain/skills/task-todo.md' }, Done: null } },
+    skills: { 'skill-1': { path: '.kanbrain/skills/task-todo.md' } },
+    workflowSteps: { Task: { 'To Do': { skillId: 'skill-1' }, Done: null } },
     statusColors: { 'To Do': 'old-color' },
     typeColors: { Task: 'old-color' },
     typeIcons: { Task: '<svg>old</svg>' },
@@ -56,10 +57,10 @@ describe('syncConfig', () => {
     expect(result.project).toBe('proj');
   });
 
-  it('preserves an existing skill mapping for a status that still exists for that type', () => {
+  it('preserves an existing workflow step mapping for a status that still exists for that type', () => {
     const result = syncConfig(config(), { Task: { 'To Do': 'Proposed', Done: 'Completed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.skills.Task['To Do']).toEqual({ path: '.kanbrain/skills/task-todo.md' });
-    expect(result.skills.Task.Done).toBeNull();
+    expect(result.workflowSteps.Task['To Do']).toEqual({ skillId: 'skill-1' });
+    expect(result.workflowSteps.Task.Done).toBeNull();
   });
 
   it('defaults a brand new status to null', () => {
@@ -74,28 +75,28 @@ describe('syncConfig', () => {
       {},
       {},
     );
-    expect(result.skills.Task.Cancelled).toBeNull();
+    expect(result.workflowSteps.Task.Cancelled).toBeNull();
   });
 
   it('preserves an orphaned status mapping instead of deleting it', () => {
     const withOrphan = config({
-      skills: {
-        Task: { 'To Do': { path: '.kanbrain/skills/task-todo.md' }, Legacy: { path: '.kanbrain/skills/legacy.md' } },
+      workflowSteps: {
+        Task: { 'To Do': { skillId: 'skill-1' }, Legacy: { skillId: 'skill-legacy' } },
       },
     });
     const result = syncConfig(withOrphan, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
 
-    expect(result.skills.Task.Legacy).toEqual({ path: '.kanbrain/skills/legacy.md' });
-    expect(result.skills.Task['To Do']).toEqual({ path: '.kanbrain/skills/task-todo.md' });
+    expect(result.workflowSteps.Task.Legacy).toEqual({ skillId: 'skill-legacy' });
+    expect(result.workflowSteps.Task['To Do']).toEqual({ skillId: 'skill-1' });
   });
 
   it('preserves an orphaned type entirely instead of deleting it', () => {
     const withOrphanType = config({
-      skills: { Task: { 'To Do': null }, Bug: { New: { path: '.kanbrain/skills/bug-new.md' } } },
+      workflowSteps: { Task: { 'To Do': null }, Bug: { New: { skillId: 'skill-bug' } } },
     });
     const result = syncConfig(withOrphanType, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
 
-    expect(result.skills.Bug).toEqual({ New: { path: '.kanbrain/skills/bug-new.md' } });
+    expect(result.workflowSteps.Bug).toEqual({ New: { skillId: 'skill-bug' } });
   });
 
   it('adds a brand new type with all statuses defaulted to null', () => {
@@ -110,22 +111,21 @@ describe('syncConfig', () => {
       {},
       {},
     );
-    expect(result.skills.Bug).toEqual({ New: null });
+    expect(result.workflowSteps.Bug).toEqual({ New: null });
   });
 
-  it('preserves label and color customizations on a skill entry that still applies', () => {
+  it('preserves the definitionOfDone and artifacts on a workflow step that still applies', () => {
     const withCustomization = config({
-      skills: {
-        Task: { 'To Do': { path: '.kanbrain/skills/task-todo.md', label: 'Refine', textColor: 'ffffff', buttonColor: '007acc' } },
+      workflowSteps: {
+        Task: { 'To Do': { skillId: 'skill-1', definitionOfDone: ['Tests passing'], artifacts: ['Pull request'] } },
       },
     });
     const result = syncConfig(withCustomization, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
 
-    expect(result.skills.Task['To Do']).toEqual({
-      path: '.kanbrain/skills/task-todo.md',
-      label: 'Refine',
-      textColor: 'ffffff',
-      buttonColor: '007acc',
+    expect(result.workflowSteps.Task['To Do']).toEqual({
+      skillId: 'skill-1',
+      definitionOfDone: ['Tests passing'],
+      artifacts: ['Pull request'],
     });
   });
 
@@ -144,15 +144,10 @@ describe('syncConfig', () => {
     expect(result.searchAssignedToMe).toBe(true);
   });
 
-  it('preserves globalSkills unchanged across a sync', () => {
-    const withGlobal = config({ globalSkills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } } });
-    const result = syncConfig(withGlobal, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.globalSkills).toEqual({ 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } });
-  });
-
-  it('leaves globalSkills undefined when it was never set', () => {
-    const result = syncConfig(config(), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
-    expect(result.globalSkills).toBeUndefined();
+  it('preserves the skill registry unchanged across a sync', () => {
+    const withSkills = config({ skills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } } });
+    const result = syncConfig(withSkills, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
+    expect(result.skills).toEqual({ 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } });
   });
 
   it('preserves profiles unchanged across a sync', () => {

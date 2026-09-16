@@ -101,11 +101,11 @@ describe('buildSetupAssistantContent', () => {
     expect(content).toContain('no longer');
   });
 
-  it('mentions global skills and points to the usage guide', () => {
+  it('mentions the skill registry and points to the usage guide', () => {
     const content = buildSetupAssistantContent('my-org', 'MyProject', types(), []);
 
-    expect(content).toContain('## Global skills');
-    expect(content).toContain('globalSkills');
+    expect(content).toContain('## The skill registry');
+    expect(content).toContain('explain-card');
     expect(content).toContain('.kanbrain/USAGE.md');
   });
 });

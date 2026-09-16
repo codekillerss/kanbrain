@@ -19,6 +19,7 @@ export function buildExplainCardSkillEntry(): SkillEntry {
     label: 'Explain Card',
     buttonColor: EXPLAIN_CARD_BUTTON_COLOR,
     textColor: pickReadableTextColor(`#${EXPLAIN_CARD_BUTTON_COLOR}`).replace(/^#/, ''),
+    isGlobal: true,
   };
 }
 
@@ -221,24 +222,30 @@ export function buildValidationCommentSkillEntry(): SkillEntry {
     label: 'Validation Comment',
     buttonColor: VALIDATION_COMMENT_BUTTON_COLOR,
     textColor: pickReadableTextColor(`#${VALIDATION_COMMENT_BUTTON_COLOR}`).replace(/^#/, ''),
+    isGlobal: true,
   };
 }
 
-interface SeededGlobalSkill {
+interface SeededSkill {
   entry: SkillEntry;
   content: string;
 }
 
-const SEEDED_GLOBAL_SKILLS: Record<string, SeededGlobalSkill> = {
+const SEEDED_SKILLS: Record<string, SeededSkill> = {
   [EXPLAIN_CARD_SKILL_ID]: { entry: buildExplainCardSkillEntry(), content: EXPLAIN_CARD_SKILL_CONTENT },
   [VALIDATION_COMMENT_SKILL_ID]: { entry: buildValidationCommentSkillEntry(), content: VALIDATION_COMMENT_SKILL_CONTENT },
 };
 
-export function ensureSeededGlobalSkills(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
+export function ensureSeededSkills(existing: Record<string, SkillEntry> | undefined): Record<string, SkillEntry> {
   const merged = { ...(existing ?? {}) };
-  for (const [id, skill] of Object.entries(SEEDED_GLOBAL_SKILLS)) {
+  for (const [id, skill] of Object.entries(SEEDED_SKILLS)) {
     if (!(id in merged)) {
       merged[id] = skill.entry;
+    } else if (!merged[id].isGlobal) {
+      // Backfills isGlobal onto a seeded entry that predates that field (e.g. one carried over from
+      // an old globalSkills map by a config already on the workflowSteps shape, which the schema
+      // migration itself only runs once and won't touch again).
+      merged[id] = { ...merged[id], isGlobal: true };
     }
   }
   return merged;
@@ -247,7 +254,7 @@ export function ensureSeededGlobalSkills(existing: Record<string, SkillEntry> | 
 // Setup mkdirs .kanbrain/skills earlier in its flow; Sync never did, so without this a workspace with
 // that directory deleted would throw instead of having the file restored.
 export function writeMissingSeededSkillFiles(workspaceRoot: string): void {
-  for (const skill of Object.values(SEEDED_GLOBAL_SKILLS)) {
+  for (const skill of Object.values(SEEDED_SKILLS)) {
     const fullPath = path.join(workspaceRoot, skill.entry.path);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(path.dirname(fullPath), { recursive: true });
@@ -301,14 +308,14 @@ This file is generated once by \`Kanbrain: Setup\` (and backfilled by \`Kanbrain
 
 Kanbrain shows the active Azure DevOps work item (and its children) in a VS Code side panel. Buttons on that panel generate a context file describing the work item and send a "read this file" command to an agent running in an integrated terminal — that agent is you, if you're reading a file Kanbrain generated.
 
-There are two kinds of skill:
+Kanbrain keeps two separate things, on purpose:
 
-- **Status skills** — \`.kanbrain/config.json\`'s \`skills\` map links one skill file to each (work item type, status) pair. The button shown on the active work item's card always reflects that work item's current status.
-- **Global skills** — \`.kanbrain/config.json\`'s \`globalSkills\` map holds skills that aren't tied to any status. They show up as a small "▾" menu next to the status skill button (or alone, if the current status has no skill mapped) — pick one to run it against the active work item regardless of its status. Useful for actions that make sense across the whole flow, like the two skills Kanbrain seeds for you — \`explain-card\` (explain the current work item in plain language) and \`validation-comment\` (walk through validating the delivery and draft the evidence comment for the card) — or a custom one like "estimate Effort for this Backlog item."
+- **Skills** — \`.kanbrain/config.json\`'s \`skills\` map is the registry: one entry per skill (id → path/label/colors/\`isGlobal\`), independent of any status. It's the only place a skill's file path, button label, and colors are configured. A skill flagged \`isGlobal: true\` shows up in the small "▾" menu on every card (or alone, if the current status has no step mapped) — pick one from there to run it against the active work item regardless of its status. Useful for actions that span the whole flow rather than one step, like a custom skill "estimate Effort for this Backlog item." Kanbrain seeds two global skills for you — \`explain-card\` (explain the current work item in plain language) and \`validation-comment\` (walk through validating the delivery and draft the evidence comment for the card).
+- **Workflow steps** — \`.kanbrain/config.json\`'s \`workflowSteps\` map links a (work item type, status) pair to a \`skillId\` from the registry above, plus an optional **Definition of Done** and list of **expected artifacts** for that step. The button shown on the active work item's card always reflects the workflow step for that work item's current status. A skill can be wired into \`workflowSteps\`, flagged \`isGlobal\`, both, or neither (in which case it only shows up when picked directly from the registry, e.g. via "Configure with AI").
 
-A global skill is not locked out of the status buttons: \`skills[type][status]\` entries take a plain \`path\`, so pointing one at a global skill's file puts the button on the card at that status while the skill stays available from the "▾" menu everywhere else. Handy when your process does have a status that means "time to validate".
+The same skill id can be referenced by several workflow steps — handy when the same instructions apply at more than one status.
 
-Every generated context file always starts with a card info block (work item id/title/type/status/description, parent, subtasks) ahead of the skill's own content — skill files don't need to restate any of that. Both kinds also resolve the same placeholders inside the skill file's own content, if you want to reference a specific field directly in your instructions: \`{{id}}\` \`{{title}}\` \`{{description}}\` \`{{status}}\` \`{{type}}\` \`{{url}}\` \`{{branch}}\` \`{{parent.id}}\` \`{{parent.title}}\` \`{{parent.description}}\` \`{{subtasks}}\`.
+Every generated context file always starts with a card info block (work item id/title/type/status/description, parent, subtasks) ahead of the skill's own content — skill files don't need to restate any of that. When the work item's current status has a workflow step with a Definition of Done and/or expected artifacts configured, those are injected right after the card info block too, so the agent sees them before the skill's own instructions. Skill content also resolves placeholders, if you want to reference a specific field directly in your instructions: \`{{id}}\` \`{{title}}\` \`{{description}}\` \`{{status}}\` \`{{type}}\` \`{{url}}\` \`{{branch}}\` \`{{parent.id}}\` \`{{parent.title}}\` \`{{parent.description}}\` \`{{subtasks}}\`.
 
 ## Azure DevOps access
 
@@ -318,17 +325,17 @@ Because of that, feel free to suggest concrete actions on the board to the user 
 
 ## Where things live
 
-- \`.kanbrain/config.json\` — the shared config: organization/project, \`skills\`, \`globalSkills\`, colors, icons, team settings. Commit this.
+- \`.kanbrain/config.json\` — the shared config: organization/project, \`skills\` (the registry), \`workflowSteps\` (type/status → skillId + Definition of Done + artifacts), colors, icons, team settings. Commit this.
 - \`.kanbrain/config.local.json\` — per-machine repository paths and display preferences (gitignored, never commit this).
 - \`.kanbrain/skills/*.md\` — the skill files themselves. Commit these too.
 - \`.kanbrain/generated/\` — context files Kanbrain writes each time a skill runs (gitignored, one-off/disposable).
 
-Edit skills directly, or use the Config screen in the Kanbrain panel — both status skills and global skills have a path/label/color editor there.
+Edit skills directly, or use the Brain screen (🧠) in the Kanbrain panel — its Skills tab has the path/label/color/global editor for the registry, and its Workflow tab wires a skill (plus Definition of Done and artifacts) to each work item type/status.
 `;
 
 export function isBootstrapContentMissing(workspaceRoot: string, config: KanbrainConfig): boolean {
   const usageGuideMissing = !fs.existsSync(path.join(workspaceRoot, USAGE_GUIDE_RELATIVE_PATH));
-  const seededSkillsMissing = Object.keys(SEEDED_GLOBAL_SKILLS).some(id => !config.globalSkills?.[id]);
+  const seededSkillsMissing = Object.keys(SEEDED_SKILLS).some(id => !config.skills[id]);
   const defaultProfilesMissing = Object.keys(DEFAULT_PROFILES).some(id => !config.profiles?.[id]);
   return usageGuideMissing || seededSkillsMissing || defaultProfilesMissing;
 }

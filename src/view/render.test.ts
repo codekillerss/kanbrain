@@ -22,7 +22,8 @@ const config: KanbrainConfig = {
   organization: 'org',
   project: 'proj',
   defaultTeam: 'MyProject Team',
-  skills: { Task: { Active: { path: 'skills/fix.md' }, Closed: null } },
+  skills: { 'skill-1': { path: 'skills/fix.md' } },
+  workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Closed: null } },
   statusColors: { Active: 'b2b2b2' },
   typeColors: { Task: 'f2cb1d' },
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
@@ -372,7 +373,7 @@ describe('render', () => {
   it('uses a custom label when the skill entry defines one', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      skills: { Task: { Active: { path: 'skills/fix.md', label: 'Fix it now' }, Closed: null } },
+      skills: { 'skill-1': { path: 'skills/fix.md', label: 'Fix it now' } },
     };
     const html = render({
       hasWorkspace: true,
@@ -389,7 +390,7 @@ describe('render', () => {
   it('applies textColor and buttonColor as inline style when valid hex', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      skills: { Task: { Active: { path: 'skills/fix.md', textColor: 'ffffff', buttonColor: '007acc' }, Closed: null } },
+      skills: { 'skill-1': { path: 'skills/fix.md', textColor: 'ffffff', buttonColor: '007acc' } },
     };
     const html = render({
       hasWorkspace: true,
@@ -406,7 +407,7 @@ describe('render', () => {
   it('ignores an invalid hex color and falls back to the theme default', () => {
     const customConfig: KanbrainConfig = {
       ...config,
-      skills: { Task: { Active: { path: 'skills/fix.md', buttonColor: 'not-a-color' }, Closed: null } },
+      skills: { 'skill-1': { path: 'skills/fix.md', buttonColor: 'not-a-color' } },
     };
     const html = render({
       hasWorkspace: true,

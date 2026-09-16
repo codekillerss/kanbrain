@@ -1,6 +1,7 @@
 import type { RenderState } from './render';
 import { renderRepositoriesBody } from './renderRepositories';
-import { renderConfigEditor } from './renderConfigEditor';
+import { renderSkillsEditor } from './renderSkillsEditor';
+import { renderWorkflowEditor } from './renderWorkflowEditor';
 import { renderProfilesEditor } from './renderProfilesEditor';
 
 function renderSegment(title: string, icon: string, segment: string, body: string, pinnedActionHtml: string, expanded: boolean): string {
@@ -32,10 +33,11 @@ export function renderBrain(state: RenderState): string {
         'Skills',
         '🛠️',
         'skills',
-        renderConfigEditor(config),
-        '<button type="button" class="kb-secondary-btn" data-action="add-global-skill">+ Add global skill</button>',
+        renderSkillsEditor(config.skills),
+        '<button type="button" class="kb-secondary-btn" data-action="add-skill">+ Add skill</button>',
         openSegment === 'skills',
       )}
+      ${renderSegment('Workflow', '🧭', 'workflow', renderWorkflowEditor(config), '', openSegment === 'workflow')}
       ${renderSegment(
         'Profiles',
         '👤',

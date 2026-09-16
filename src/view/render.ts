@@ -19,7 +19,7 @@ export interface RenderState {
   selectedTeam?: string;
   parentCollapsed?: boolean;
   childrenCollapsed?: boolean;
-  openBrainSegment?: 'repositories' | 'skills' | 'profiles' | null;
+  openBrainSegment?: 'repositories' | 'skills' | 'workflow' | 'profiles' | null;
   reviewsPullRequests?: PullRequestSummary[];
   reviewsStatusFilters?: ('active' | 'completed' | 'abandoned')[];
   reviewsOwnerFilter?: 'all' | 'mine' | 'assigned' | 'fixed' | 'needsMyFix';

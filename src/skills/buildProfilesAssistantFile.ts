@@ -25,7 +25,7 @@ Team: \`${team}\`
 
 ## Scope
 
-This file is scoped to **profiles only** — don't touch \`.kanbrain/config.json\`'s \`skills\`, \`globalSkills\`, or \`repositories\` while following it.
+This file is scoped to **profiles only** — don't touch \`.kanbrain/config.json\`'s \`skills\`, \`workflowSteps\`, or \`repositories\` while following it.
 
 ## What a profile is
 

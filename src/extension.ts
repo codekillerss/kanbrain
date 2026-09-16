@@ -13,6 +13,7 @@ import { registerSyncBoardConfigCommand } from './commands/syncBoardConfig';
 import { registerConfigureWithAiCommand } from './commands/configureWithAi';
 import { registerConfigureRepositoriesWithAiCommand } from './commands/configureRepositoriesWithAi';
 import { registerConfigureSkillsWithAiCommand } from './commands/configureSkillsWithAi';
+import { registerConfigureWorkflowWithAiCommand } from './commands/configureWorkflowWithAi';
 import { registerConfigureProfilesWithAiCommand } from './commands/configureProfilesWithAi';
 import { registerConnectCommand } from './commands/connect';
 import { registerOpenWorkItemDetailCommand } from './commands/openWorkItemDetail';
@@ -108,6 +109,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerConfigureWithAiCommand(client, workspaceRoot),
     registerConfigureRepositoriesWithAiCommand(client, workspaceRoot),
     registerConfigureSkillsWithAiCommand(client, workspaceRoot),
+    registerConfigureWorkflowWithAiCommand(client, workspaceRoot),
     registerConfigureProfilesWithAiCommand(client, workspaceRoot),
     registerConnectCommand(client, workspaceRoot, () => provider.markConnected()),
     registerOpenWorkItemDetailCommand(detailPanelManager),

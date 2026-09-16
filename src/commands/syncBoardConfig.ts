@@ -12,7 +12,7 @@ import { matchRepositoriesToLocalPaths } from '../config/matchRepositoriesToLoca
 import {
   USAGE_GUIDE_CONTENT,
   USAGE_GUIDE_RELATIVE_PATH,
-  ensureSeededGlobalSkills,
+  ensureSeededSkills,
   writeMissingSeededSkillFiles,
   ensureDefaultProfiles,
   isBootstrapContentMissing,
@@ -77,7 +77,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
     );
     writeConfig(workspaceRoot, {
       ...updated,
-      globalSkills: ensureSeededGlobalSkills(updated.globalSkills),
+      skills: ensureSeededSkills(updated.skills),
       profiles: ensureDefaultProfiles(updated.profiles),
       lastSyncedVersion: extensionVersion,
     });

@@ -51,7 +51,7 @@ export function renderSearchResults(
     return '<div class="kb-empty">No work items found.</div>';
   }
 
-  const types = Object.keys(config.skills);
+  const types = Object.keys(config.workflowSteps);
   if (types.length === 0) {
     return renderStatusGroups(items, config, avatars);
   }

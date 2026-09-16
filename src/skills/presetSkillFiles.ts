@@ -1,8 +1,9 @@
-import type { SkillEntry } from '../types';
+import type { SkillEntry, WorkflowStepConfig } from '../types';
 import { isValidHexColor, normalizeHex, pickReadableTextColor } from '../view/badgeColor';
 
 export interface PresetPlan {
-  skills: Record<string, Record<string, SkillEntry | null>>;
+  skills: Record<string, SkillEntry>;
+  workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>>;
   filesToWrite: { relativePath: string; content: string }[];
 }
 
@@ -42,31 +43,34 @@ export function buildPresetPlan(
   generateFiles: boolean,
   statusColors: Record<string, string>,
 ): PresetPlan {
-  const skills: Record<string, Record<string, SkillEntry | null>> = {};
+  const skills: Record<string, SkillEntry> = {};
+  const workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>> = {};
   const filesToWrite: { relativePath: string; content: string }[] = [];
-  const pathByKey = new Map<string, string>();
+  const idByKey = new Map<string, string>();
 
   for (const [typeName, statuses] of Object.entries(discovered)) {
-    const statusSkills: Record<string, SkillEntry | null> = {};
+    const statusSteps: Record<string, WorkflowStepConfig | null> = {};
 
     for (const [statusName, category] of Object.entries(statuses)) {
       if (FINAL_CATEGORIES.has(category) || !generateFiles) {
-        statusSkills[statusName] = null;
+        statusSteps[statusName] = null;
         continue;
       }
 
       const key = `${typeName}::${statusName}`;
-      let relativePath = pathByKey.get(key);
-      if (!relativePath) {
-        relativePath = `.kanbrain/skills/${slugify(typeName)}-${slugify(statusName)}.md`;
-        pathByKey.set(key, relativePath);
+      let id = idByKey.get(key);
+      if (!id) {
+        id = `${slugify(typeName)}-${slugify(statusName)}`;
+        const relativePath = `.kanbrain/skills/${id}.md`;
+        idByKey.set(key, id);
         filesToWrite.push({ relativePath, content: skillSkeleton(typeName, statusName) });
+        skills[id] = buildStatusSkillEntry(relativePath, statusName, statusColors);
       }
-      statusSkills[statusName] = buildStatusSkillEntry(relativePath, statusName, statusColors);
+      statusSteps[statusName] = { skillId: id };
     }
 
-    skills[typeName] = statusSkills;
+    workflowSteps[typeName] = statusSteps;
   }
 
-  return { skills, filesToWrite };
+  return { skills, workflowSteps, filesToWrite };
 }

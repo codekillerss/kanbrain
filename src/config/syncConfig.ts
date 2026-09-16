@@ -1,4 +1,4 @@
-import type { KanbrainConfig, SkillEntry, CardFieldSettings, RepositoryPathEntry } from '../types';
+import type { KanbrainConfig, WorkflowStepConfig, CardFieldSettings, RepositoryPathEntry } from '../types';
 import { DEFAULT_REPO_SCAN_DEPTH } from './config';
 
 function mergeRepositories(
@@ -29,25 +29,25 @@ export function syncConfig(
   freshTaskBacklogTypesByTeam: Record<string, string[]>,
   freshRepositories: Record<string, RepositoryPathEntry>,
 ): KanbrainConfig {
-  const skills: Record<string, Record<string, SkillEntry | null>> = {};
+  const workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>> = {};
 
   for (const [type, statuses] of Object.entries(discoveredStatusesByType)) {
-    const existingType = config.skills[type] ?? {};
-    const merged: Record<string, SkillEntry | null> = {};
+    const existingType = config.workflowSteps[type] ?? {};
+    const merged: Record<string, WorkflowStepConfig | null> = {};
     for (const status of Object.keys(statuses)) {
       merged[status] = status in existingType ? existingType[status] : null;
     }
-    skills[type] = merged;
+    workflowSteps[type] = merged;
   }
 
-  for (const [type, statuses] of Object.entries(config.skills)) {
-    if (!(type in skills)) {
-      skills[type] = { ...statuses };
+  for (const [type, statuses] of Object.entries(config.workflowSteps)) {
+    if (!(type in workflowSteps)) {
+      workflowSteps[type] = { ...statuses };
       continue;
     }
-    for (const [status, skill] of Object.entries(statuses)) {
-      if (!(status in skills[type])) {
-        skills[type][status] = skill;
+    for (const [status, step] of Object.entries(statuses)) {
+      if (!(status in workflowSteps[type])) {
+        workflowSteps[type][status] = step;
       }
     }
   }
@@ -56,7 +56,8 @@ export function syncConfig(
     organization: config.organization,
     project: config.project,
     defaultTeam: freshDefaultTeam,
-    skills,
+    skills: config.skills,
+    workflowSteps,
     statusColors: freshStatusColors,
     statusCategoriesByType: discoveredStatusesByType,
     typeColors: freshTypeColors,
@@ -66,7 +67,6 @@ export function syncConfig(
     showAssignedTo: config.showAssignedTo,
     searchAssignedToMe: config.searchAssignedToMe,
     repositories: mergeRepositories(config.repositories, freshRepositories),
-    globalSkills: config.globalSkills,
     profiles: config.profiles,
     selectedProfileId: config.selectedProfileId,
     repoScanDepth: config.repoScanDepth ?? DEFAULT_REPO_SCAN_DEPTH,
