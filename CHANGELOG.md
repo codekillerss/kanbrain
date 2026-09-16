@@ -2,7 +2,7 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
-## [Unreleased]
+## [0.12.0] - 2026-09-16
 
 ### Added
 
