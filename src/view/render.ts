@@ -6,10 +6,12 @@ import { renderBrain } from './renderBrain';
 import { renderReviews } from './renderReviews';
 import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
+import { isExtensionOutdated } from '../config/compareVersions';
 
 export interface RenderState {
   hasWorkspace: boolean;
   config: KanbrainConfig | null;
+  extensionVersion: string;
   workItem: WorkItem | null;
   parent: WorkItem | null;
   subtasks: WorkItem[];
@@ -76,6 +78,13 @@ export function render(state: RenderState): string {
       <div class="kb-empty">
         No project configured. Run the <b>Kanbrain: Setup</b> command.
         <div><button id="kb-run-setup-btn" class="kb-action-btn">Run Kanbrain: Setup</button></div>
+      </div>
+    `;
+  }
+  if (isExtensionOutdated(state.extensionVersion, state.config.lastSyncedVersion)) {
+    return `
+      <div class="kb-empty">
+        This project was last configured with a newer version of Kanbrain (v${state.config.lastSyncedVersion}) than the one currently running (v${state.extensionVersion}). Update the Kanbrain extension to avoid configuration issues.
       </div>
     `;
   }

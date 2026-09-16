@@ -53,6 +53,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly workspaceRoot: string | undefined,
     private readonly client: AzureDevOpsClient | undefined,
+    private readonly extensionVersion: string,
     private readonly getCurrentBranch: () => Promise<string>,
     private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
@@ -802,6 +803,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       render({
         hasWorkspace: !!this.workspaceRoot,
         config,
+        extensionVersion: this.extensionVersion,
         workItem: null,
         parent: null,
         subtasks: [],
@@ -935,6 +937,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       render({
         hasWorkspace: !!this.workspaceRoot,
         config,
+        extensionVersion: this.extensionVersion,
         workItem,
         parent,
         subtasks,
@@ -1567,7 +1570,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-toggle { display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 0; margin: 12px 0 0; font-size: 11px; font-weight: 400; text-transform: uppercase; opacity: 0.7; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); appearance: none; -webkit-appearance: none; }
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
-      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 320px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+      .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 640px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
       .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-query-combobox:hover { background: var(--vscode-list-hoverBackground); }

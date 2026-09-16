@@ -54,6 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const provider = new KanbrainViewProvider(
     workspaceRoot,
     client,
+    extensionVersion,
     () => getCurrentBranch(workspaceRoot ?? ''),
     id => context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, id),
     () => hasCachedAzureSession(getVscodeMicrosoftSession),

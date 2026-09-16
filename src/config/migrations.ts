@@ -1,4 +1,5 @@
 import type { KanbrainConfig, SkillEntry, WorkflowStepConfig } from '../types';
+import { compareVersions } from './compareVersions';
 
 export interface ConfigMigration {
   version: string;
@@ -10,15 +11,7 @@ function isOlderThan(configVersion: string | undefined, threshold: string): bool
   if (!configVersion) {
     return true;
   }
-  const a = configVersion.split('.').map(Number);
-  const b = threshold.split('.').map(Number);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const diff = (a[i] ?? 0) - (b[i] ?? 0);
-    if (diff !== 0) {
-      return diff < 0;
-    }
-  }
-  return false;
+  return compareVersions(configVersion, threshold) < 0;
 }
 
 interface LegacyKanbrainConfig {
