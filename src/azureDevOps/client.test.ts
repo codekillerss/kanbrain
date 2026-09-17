@@ -1121,3 +1121,67 @@ describe('AzureDevOpsClient.listTeams', () => {
     );
   });
 });
+
+describe('AzureDevOpsClient.searchIdentities', () => {
+  it('searches identities and maps display name / unique name', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 'id-1', providerDisplayName: 'Jane Doe', isActive: true, isContainer: false, properties: { Account: { $value: 'jane@example.com' } } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'jane');
+
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com' }]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://vssps.dev.azure.com/my-org/_apis/identities?searchFilter=General&filterValue=jane&api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('filters out inactive and container identities', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 'id-1', providerDisplayName: 'Inactive Person', isActive: false, properties: { Account: { $value: 'x@example.com' } } },
+          { id: 'id-2', providerDisplayName: 'A Group', isContainer: true, properties: { Account: { $value: 'group@example.com' } } },
+          { id: 'id-3', providerDisplayName: 'Active Person', isActive: true, isContainer: false, properties: { Account: { $value: 'ok@example.com' } } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'person');
+
+    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com' }]);
+  });
+
+  it('falls back to descriptor when properties.Account is missing, and drops results with neither', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 'id-1', providerDisplayName: 'Has Descriptor', isActive: true, descriptor: 'desc-1' },
+          { id: 'id-2', providerDisplayName: 'Has Neither', isActive: true },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'x');
+
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Has Descriptor', uniqueName: 'desc-1' }]);
+  });
+
+  it('returns an empty array for a blank query without calling fetch', async () => {
+    const fetchImpl = vi.fn();
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', '   ');
+
+    expect(results).toEqual([]);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});

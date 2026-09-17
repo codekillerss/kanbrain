@@ -48,11 +48,27 @@ export interface BoardColumn {
   stateMappings: Record<string, string>;
 }
 
+export interface IdentitySearchResult {
+  id: string;
+  displayName: string;
+  uniqueName: string;
+}
+
 interface RawIdentityRef {
   id?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
+}
+
+interface RawIdentity {
+  id: string;
+  providerDisplayName?: string;
+  customDisplayName?: string;
+  isActive?: boolean;
+  isContainer?: boolean;
+  properties?: { Account?: { $value?: string } };
+  descriptor?: string;
 }
 
 function mapIdentityRef(raw: unknown): AssignedTo {
@@ -497,5 +513,23 @@ export class AzureDevOpsClient {
     } catch {
       return [];
     }
+  }
+
+  async searchIdentities(organization: string, query: string): Promise<IdentitySearchResult[]> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return [];
+    }
+    const data = await this.request<{ value: RawIdentity[] }>(
+      `https://vssps.dev.azure.com/${organization}/_apis/identities?searchFilter=General&filterValue=${encodeURIComponent(trimmed)}&api-version=7.1`,
+    );
+    return (data.value ?? [])
+      .filter(i => i.isActive !== false && !i.isContainer)
+      .map(i => ({
+        id: i.id,
+        displayName: i.providerDisplayName ?? i.customDisplayName ?? 'Unknown',
+        uniqueName: i.properties?.Account?.$value ?? i.descriptor ?? '',
+      }))
+      .filter(i => i.uniqueName);
   }
 }
