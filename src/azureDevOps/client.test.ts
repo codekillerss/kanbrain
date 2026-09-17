@@ -34,6 +34,33 @@ describe('AzureDevOpsClient', () => {
     );
   });
 
+  it('PATCHes a work item with a JSON Patch body', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 482, [{ op: 'add', path: '/fields/System.State', value: 'Active' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/482?api-version=7.1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify([{ op: 'add', path: '/fields/System.State', value: 'Active' }]),
+      }),
+    );
+  });
+
+  it('supports a remove op with no value, for unassigning', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 482, [{ op: 'remove', path: '/fields/System.AssignedTo' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: JSON.stringify([{ op: 'remove', path: '/fields/System.AssignedTo' }]) }),
+    );
+  });
+
   it('lists organizations for the current user', async () => {
     const fetchImpl = vi
       .fn()
