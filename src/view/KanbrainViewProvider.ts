@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
-import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
+import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation } from '../azureDevOps/client';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 import { countItemsByType, filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
@@ -18,6 +18,7 @@ import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig
 import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
 import { render } from './render';
+import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
@@ -196,6 +197,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.runSegmentAi(String(message.segment ?? ''));
       } else if (message.type === 'set-open-brain-segment') {
         this.setOpenBrainSegment(message.segment ?? null);
+      } else if (message.type === 'select-status') {
+        await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
+      } else if (message.type === 'search-identities') {
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''));
+      } else if (message.type === 'select-assignee') {
+        await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
     });
 
@@ -951,6 +958,74 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         void this.refresh();
       }
     }
+  }
+
+  private async updateWorkItemStatus(id: number, status: string): Promise<void> {
+    if (!this.workspaceRoot || !this.client || !status) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    try {
+      await this.client.updateWorkItem(config.organization, config.project, id, [
+        { op: 'add', path: '/fields/System.State', value: status },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Could not update status for #${id}: ${message}`);
+    }
+    this.invalidateActiveCardCache();
+  }
+
+  private async updateWorkItemAssignee(id: number, uniqueName: string | null): Promise<void> {
+    if (!this.workspaceRoot || !this.client) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    try {
+      const ops: JsonPatchOperation[] = uniqueName
+        ? [{ op: 'add', path: '/fields/System.AssignedTo', value: uniqueName }]
+        : [{ op: 'remove', path: '/fields/System.AssignedTo' }];
+      await this.client.updateWorkItem(config.organization, config.project, id, ops);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Could not update assignee for #${id}: ${message}`);
+    }
+    this.invalidateActiveCardCache();
+  }
+
+  private async searchIdentities(workItemId: number, query: string): Promise<void> {
+    if (!this.view || !this.workspaceRoot || !this.client) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    try {
+      const results = await this.client.searchIdentities(config.organization, query);
+      this.view.webview.postMessage({ type: 'identity-results', workItemId, html: renderIdentityOptions(results, workItemId) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.view.webview.postMessage({
+        type: 'identity-results',
+        workItemId,
+        html: `<div class="kb-empty">Error: ${escapeHtml(message)}</div>`,
+      });
+    }
+  }
+
+  private invalidateActiveCardCache(): void {
+    if (this.activeWorkItemId !== undefined) {
+      this.cardCache.delete(this.activeWorkItemId);
+    }
+    this.lastState = '';
+    void this.refresh();
   }
 
   private async refresh(): Promise<void> {
