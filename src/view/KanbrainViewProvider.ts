@@ -975,8 +975,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`Could not update status for #${id}: ${message}`);
+      return;
     }
-    this.invalidateActiveCardCache();
+    this.invalidateCardCacheFor(id);
   }
 
   private async updateWorkItemAssignee(id: number, uniqueName: string | null): Promise<void> {
@@ -995,8 +996,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`Could not update assignee for #${id}: ${message}`);
+      return;
     }
-    this.invalidateActiveCardCache();
+    this.invalidateCardCacheFor(id);
   }
 
   private async searchIdentities(workItemId: number, query: string): Promise<void> {
@@ -1020,9 +1022,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private invalidateActiveCardCache(): void {
-    if (this.activeWorkItemId !== undefined) {
-      this.cardCache.delete(this.activeWorkItemId);
+  // A cache entry is keyed by a tab's root work item id but bundles that item's parent and
+  // subtasks too, so editing any of those three can leave a *different* tab's entry stale if it
+  // happens to bundle the same id (e.g. tab A's parent is tab B's root). Marking every matching
+  // entry's polledAt as stale (rather than deleting it) keeps the "switch tabs instantly, refresh
+  // in the background" behavior intact for every tab, including ones not touched by this edit.
+  private invalidateCardCacheFor(workItemId: number): void {
+    for (const entry of this.cardCache.values()) {
+      const bundledIds = [entry.workItem?.id, entry.parent?.id, ...entry.subtasks.map(s => s.id)];
+      if (bundledIds.includes(workItemId)) {
+        entry.polledAt = 0;
+      }
     }
     this.lastState = '';
     void this.refresh();
