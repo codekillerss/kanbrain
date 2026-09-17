@@ -2,6 +2,13 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.14.0] - 2026-09-17
+
+### Changed
+
+- On the Workflow tab, the Definition of Done and Expected Artifacts fields now grow with their content instead of showing a fixed 3-row box with a manual resize handle, capping at 200px before scrolling internally.
+- Each workflow status row now has its header colored with that status's configured color (falling back to a neutral background when none is set), with the text color picked for contrast, so it's no longer visually indistinguishable from the work item type header above it.
+
 ## [0.13.0] - 2026-09-17
 
 ### Added
