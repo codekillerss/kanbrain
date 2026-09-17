@@ -1253,8 +1253,28 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    let identitySearchTimer = null;
+    document.querySelectorAll('.kb-assignee-search-input').forEach((input) => {
+      input.addEventListener('input', () => {
+        const workItemId = input.dataset.id;
+        const query = input.value;
+        clearTimeout(identitySearchTimer);
+        identitySearchTimer = setTimeout(() => {
+          vscode.postMessage({ type: 'search-identities', workItemId, query });
+        }, 300);
+      });
+    });
+
     function closeAllSkillPickers() {
       document.querySelectorAll('.kb-skill-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
+
+    function closeAllStatusPickers() {
+      document.querySelectorAll('.kb-status-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
+
+    function closeAllAssigneePickers() {
+      document.querySelectorAll('.kb-assignee-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
 
     function saveRepositoryRow(row) {
@@ -1593,6 +1613,46 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           closeAllSkillPickers();
           saveWorkflowStepRow(row);
         }
+      } else if (target.closest && target.closest('[data-action="toggle-status-picker"]')) {
+        const picker = target.closest('.kb-status-picker');
+        const menu = picker ? picker.querySelector('.kb-status-picker-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllStatusPickers();
+          closeAllAssigneePickers();
+          if (!isOpen) {
+            const rect = picker.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.minWidth = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.closest && target.closest('[data-action="select-status"]')) {
+        const btn = target.closest('[data-action="select-status"]');
+        closeAllStatusPickers();
+        vscode.postMessage({ type: 'select-status', id: btn.dataset.id, status: btn.dataset.status });
+      } else if (target.closest && target.closest('[data-action="toggle-assignee-picker"]')) {
+        const picker = target.closest('.kb-assignee-picker');
+        const menu = picker ? picker.querySelector('.kb-assignee-picker-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllStatusPickers();
+          closeAllAssigneePickers();
+          if (!isOpen) {
+            const rect = picker.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.minWidth = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+            const input = menu.querySelector('.kb-assignee-search-input');
+            if (input) input.focus();
+          }
+        }
+      } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
+        const btn = target.closest('[data-action="select-assignee"]');
+        closeAllAssigneePickers();
+        vscode.postMessage({ type: 'select-assignee', id: btn.dataset.id, uniqueName: btn.dataset.uniqueName });
       }
 
       if (
@@ -1604,6 +1664,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
       if (!target.closest || !target.closest('.kb-skill-picker')) {
         closeAllSkillPickers();
+      }
+
+      if (!target.closest || !target.closest('.kb-status-picker')) {
+        closeAllStatusPickers();
+      }
+
+      if (!target.closest || !target.closest('.kb-assignee-picker')) {
+        closeAllAssigneePickers();
       }
 
       if (!target.closest || !target.closest('.kb-query-combobox')) {
@@ -1634,6 +1702,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       closeAllGlobalSkillMenus();
       if (!(event.target && event.target.closest && event.target.closest('.kb-skill-picker-menu'))) {
         closeAllSkillPickers();
+      }
+      if (!(event.target && event.target.closest && event.target.closest('.kb-status-picker-menu'))) {
+        closeAllStatusPickers();
+      }
+      if (!(event.target && event.target.closest && event.target.closest('.kb-assignee-picker-menu'))) {
+        closeAllAssigneePickers();
       }
     }, true);
 
@@ -1756,6 +1830,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         // Exactly one search fires per dialog open, only now that we know whether a saved
         // query was previously selected — see the comment at the load-saved-queries call site.
         triggerSearch();
+      } else if (event.data.type === 'identity-results') {
+        const results = document.querySelector('.kb-assignee-picker[data-id="' + event.data.workItemId + '"] .kb-assignee-picker-results');
+        if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
         const rows = document.querySelectorAll('.kb-config-row');
         for (const row of rows) {
@@ -1923,6 +2000,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-skill-picker-option-active { background: var(--vscode-list-inactiveSelectionBackground); }
       .kb-skill-picker-option-label { font-size: 12px; }
       .kb-skill-picker-option-path { font-size: 11px; color: var(--vscode-descriptionForeground); }
+      .kb-status-picker, .kb-assignee-picker { position: relative; }
+      .kb-status-picker-trigger, .kb-assignee-picker-trigger { cursor: pointer; background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; width: 100%; }
+      .kb-status-picker-menu, .kb-assignee-picker-menu { position: fixed; z-index: 50; min-width: 160px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-status-picker-menu.kb-hidden, .kb-assignee-picker-menu.kb-hidden { display: none; }
+      .kb-status-picker-option, .kb-assignee-picker-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-status-picker-option:hover, .kb-assignee-picker-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-status-picker-option-active { font-weight: 600; }
+      .kb-assignee-picker-menu .kb-assignee-search-input { margin-bottom: 2px; }
       .kb-textarea { min-height: 60px; resize: vertical; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }
