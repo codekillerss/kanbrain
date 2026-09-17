@@ -3,7 +3,7 @@ import { resolveSkill } from '../config/resolveSkill';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
-import { renderAssigneeRow } from './renderAssignee';
+import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 import { renderParentRow } from './renderParent';
 import { renderDevelopmentBadge } from './renderDevelopment';
 import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
@@ -91,6 +91,22 @@ function renderStatusPicker(workItem: WorkItem, config: KanbrainConfig): string 
   `;
 }
 
+function renderAssigneePicker(workItem: WorkItem, avatars: Record<string, string>): string {
+  const current = workItem.assignedTo
+    ? `${renderAvatarOrInitial(workItem.assignedTo.displayName, workItem.assignedTo.imageUrl, avatars)}${escapeHtml(workItem.assignedTo.displayName)}`
+    : `<span class="kb-avatar-initial">?</span>Unassigned`;
+  return `
+    <div class="kb-assignee-picker" data-id="${workItem.id}">
+      <button type="button" class="kb-assignee-row kb-assignee-picker-trigger" data-action="toggle-assignee-picker">${current}</button>
+      <div class="kb-assignee-picker-menu kb-hidden">
+        <input type="text" class="kb-input kb-assignee-search-input" data-id="${workItem.id}" placeholder="Search people...">
+        <button type="button" class="kb-assignee-picker-option" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned</button>
+        <div class="kb-assignee-picker-results"></div>
+      </div>
+    </div>
+  `;
+}
+
 export function renderWorkItemCard(
   workItem: WorkItem,
   config: KanbrainConfig,
@@ -106,7 +122,7 @@ export function renderWorkItemCard(
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
-  const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
+  const assigneeHtml = !showAssignedTo ? '' : editable ? renderAssigneePicker(workItem, avatars) : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
   const statusHtml = editable
     ? renderStatusPicker(workItem, config)
     : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;

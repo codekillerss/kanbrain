@@ -299,4 +299,47 @@ describe('renderWorkItemCard', () => {
 
     expect(html).toContain('kb-status-picker-menu');
   });
+
+  it('keeps the plain read-only assignee row when editable is false (default)', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }), config, 'kb-main-card');
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).toContain('kb-assignee-row');
+  });
+
+  it('shows an assignee picker with the current assignee, a search input, and an Unassigned option when editable is true', () => {
+    const html = renderWorkItemCard(
+      workItem({ id: 482, assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
+      config,
+      'kb-main-card',
+      true,
+      {},
+      false,
+      null,
+      false,
+      undefined,
+      false,
+      true,
+    );
+
+    expect(html).toContain('class="kb-assignee-picker" data-id="482"');
+    expect(html).toContain('data-action="toggle-assignee-picker"');
+    expect(html).toContain('Jane Doe');
+    expect(html).toContain('class="kb-input kb-assignee-search-input"');
+    expect(html).toContain('data-action="select-assignee" data-id="482" data-unique-name=""');
+    expect(html).toContain('kb-assignee-picker-results');
+  });
+
+  it('shows "Unassigned" as the trigger label when there is no assignee and editable is true', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('Unassigned');
+  });
+
+  it('omits the assignee picker entirely when showAssignedTo resolves to false, even if editable is true', () => {
+    const hiddenConfig: KanbrainConfig = { ...config, cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: false } } } } };
+    const html = renderWorkItemCard(workItem(), hiddenConfig, 'kb-main-card', true, {}, false, null, false, 'MyProject Team', false, true);
+
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).not.toContain('kb-assignee-row');
+  });
 });
