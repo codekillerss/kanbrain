@@ -89,19 +89,19 @@ describe('renderSearchResults', () => {
     expect(html).not.toContain('data-action="run-skill"');
   });
 
-  it('renders no tab bar when there are no configured work item types', () => {
+  it('renders no type filter when there are no configured work item types', () => {
     const html = renderSearchResults([workItem()], config(), {});
 
-    expect(html).not.toContain('kb-search-tabs');
+    expect(html).not.toContain('kb-search-type-filter');
   });
 
-  it('renders a tab per work item type, in config order, plus an "all" tab first', () => {
+  it('renders a filter option per work item type, in config order, plus an "all" option first', () => {
     const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 3, Task: 7 });
 
-    const allIndex = html.indexOf('data-tab="all"');
-    const epicIndex = html.indexOf('data-tab="Epic"');
-    const taskIndex = html.indexOf('data-tab="Task"');
+    const allIndex = html.indexOf('data-type="all"');
+    const epicIndex = html.indexOf('data-type="Epic"');
+    const taskIndex = html.indexOf('data-type="Task"');
 
     expect(allIndex).toBeGreaterThanOrEqual(0);
     expect(epicIndex).toBeGreaterThan(allIndex);
@@ -109,26 +109,36 @@ describe('renderSearchResults', () => {
     expect(html).toContain('All (2)');
   });
 
-  it('shows the type tab count from typeCounts, not from the filtered item list', () => {
+  it('shows the type icon on each filter option, but not on the "all" option', () => {
+    const items = [workItem({ id: 1, type: 'Epic' })];
+    const html = renderSearchResults(
+      items,
+      config({ workflowSteps: { Epic: {} }, typeIcons: { Epic: '<svg><path d="M0 0"/></svg>' } }),
+      { Epic: 1 },
+    );
+
+    const allOptionStart = html.indexOf('data-type="all"');
+    const allOptionEnd = html.indexOf('</button>', allOptionStart);
+    const epicOptionStart = html.indexOf('data-type="Epic"');
+    const epicOptionEnd = html.indexOf('</button>', epicOptionStart);
+
+    expect(html.slice(epicOptionStart, epicOptionEnd)).toContain('<svg><path d="M0 0"/></svg>');
+    expect(html.slice(allOptionStart, allOptionEnd)).not.toContain('<svg>');
+  });
+
+  it('shows the type option count from typeCounts, not from the filtered item list', () => {
     const items = [workItem({ id: 1, type: 'Epic' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {} } }), { Epic: 12 });
 
     expect(html).toContain('Epic (12)');
   });
 
-  it('marks a type tab as empty when its count is 0', () => {
-    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
-
-    expect(html).toContain('kb-search-tab-empty');
-    expect(html).toContain('Task (0)');
-  });
-
   it("scopes each type panel to only that type's items", () => {
     const items = [workItem({ id: 1, type: 'Epic', title: 'An epic' }), workItem({ id: 2, type: 'Task', title: 'A task' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 1, Task: 1 });
 
-    const epicPanelStart = html.indexOf('data-tab-panel="Epic"');
-    const taskPanelStart = html.indexOf('data-tab-panel="Task"');
+    const epicPanelStart = html.indexOf('data-type-panel="Epic"');
+    const taskPanelStart = html.indexOf('data-type-panel="Task"');
     const epicPanel = html.slice(epicPanelStart, taskPanelStart);
 
     expect(epicPanel).toContain('An epic');

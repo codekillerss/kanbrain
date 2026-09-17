@@ -77,10 +77,15 @@ describe('renderHome', () => {
     expect(html).toContain('kb-main-card');
     expect(html).toContain('id="kb-toggle-search-btn"');
     expect(html).toContain('id="kb-clear-btn"');
-    expect(html).toContain('id="kb-history-btn"');
     expect(html).toContain('kb-icon-btn');
     expect(html).toContain('id="kb-open-flow-btn"');
     expect(html).toContain('Open Flow');
+  });
+
+  it('no longer renders a dedicated history button (history is a tab inside the search dialog)', () => {
+    const html = renderHome(state({ workItem: workItem() }));
+
+    expect(html).not.toContain('kb-history-btn');
   });
 
   it('puts the switch/clear buttons in the Flow section header, not overlaid on the card', () => {

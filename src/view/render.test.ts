@@ -222,11 +222,25 @@ describe('render', () => {
     expect(html).toContain('id="kb-clear-btn"');
   });
 
-  it('shows a history button and dialog when there is an active work item', () => {
+  it('merges search and history into a single dialog with two internal tabs', () => {
     const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
-    expect(html).toContain('id="kb-history-btn"');
-    expect(html).toContain('id="kb-history-section"');
-    expect(html).toContain('id="kb-history-close-btn" class="kb-dialog-close-btn"');
+
+    expect(html).not.toContain('id="kb-history-section"');
+    const dialogStart = html.indexOf('id="kb-search-section"');
+    const dialogEnd = html.indexOf('id="kb-footer', dialogStart);
+    const dialog = html.slice(dialogStart, dialogEnd);
+
+    expect(dialog).toContain('data-action="select-dialog-tab" data-dialog-tab="search"');
+    expect(dialog).toContain('data-action="select-dialog-tab" data-dialog-tab="history"');
+    expect(dialog).toContain('data-dialog-panel="search"');
+    expect(dialog).toContain('data-dialog-panel="history"');
+    expect(dialog).toContain('id="kb-history-results"');
+  });
+
+  it('no longer renders a dedicated history button on the flow screen', () => {
+    const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config, workItem: workItem(), parent: null, subtasks: [], screen: 'flow' });
+
+    expect(html).not.toContain('kb-history-btn');
   });
 
   it('wraps the current work item in a section card with Switch/Clear in the header', () => {

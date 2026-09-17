@@ -56,23 +56,19 @@ function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, conf
   `;
 }
 
-function renderHistoryDialog(): string {
-  return `<div id="kb-history-section" class="kb-search-overlay kb-hidden">
-    <div class="kb-search-dialog">
-      <div class="kb-search-dialog-header">
-        <strong class="kb-dialog-title">Work Item History</strong>
-        <button id="kb-history-close-btn" class="kb-dialog-close-btn" title="Close" aria-label="Close">&#10005;</button>
-      </div>
-      <div id="kb-history-results"><div class="kb-empty">Loading...</div></div>
-    </div>
-  </div>`;
-}
-
 function renderSearchDialog(config: KanbrainConfig): string {
   return `
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
         <div class="kb-search-dialog-header">
+          <div class="kb-dialog-tabs">
+            <button type="button" class="kb-dialog-tab kb-dialog-tab-active" data-action="select-dialog-tab" data-dialog-tab="search">Search</button>
+            <button type="button" class="kb-dialog-tab" data-action="select-dialog-tab" data-dialog-tab="history">History</button>
+          </div>
+          <button id="kb-search-close-btn">✕</button>
+        </div>
+
+        <div class="kb-dialog-panel" data-dialog-panel="search">
           <div class="kb-query-combobox">
             <div id="kb-query-trigger" class="kb-query-trigger">
               <span id="kb-query-trigger-label" class="kb-query-trigger-label kb-query-trigger-placeholder">Filter by saved query...</span>
@@ -84,14 +80,19 @@ function renderSearchDialog(config: KanbrainConfig): string {
               <div id="kb-query-options-list"></div>
             </div>
           </div>
-          <button id="kb-search-close-btn">✕</button>
+          <input id="kb-search-input" placeholder="Search by title or #id...">
+          <div class="kb-search-filters-row">
+            <label class="kb-checkbox-row">
+              <input type="checkbox" id="kb-search-assigned-to-me" ${config.searchAssignedToMe ? 'checked' : ''}>
+              Assigned to me
+            </label>
+          </div>
+          <div id="kb-search-results"></div>
         </div>
-        <input id="kb-search-input" placeholder="Search by title or #id...">
-        <label class="kb-checkbox-row">
-          <input type="checkbox" id="kb-search-assigned-to-me" ${config.searchAssignedToMe ? 'checked' : ''}>
-          Assigned to me
-        </label>
-        <div id="kb-search-results"></div>
+
+        <div class="kb-dialog-panel kb-hidden" data-dialog-panel="history">
+          <div id="kb-history-results"><div class="kb-empty">Loading...</div></div>
+        </div>
       </div>
     </div>
   `;
@@ -127,7 +128,7 @@ export function render(state: RenderState): string {
   const tabBarHtml = renderTabBar(state.tabs ?? [], state.activeTabId, state.config);
 
   if (state.screen === 'home') {
-    return `${tabBarHtml}${renderHome(state)}${renderSearchDialog(state.config)}${renderHistoryDialog()}${renderFooter(state)}`;
+    return `${tabBarHtml}${renderHome(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
     return `${tabBarHtml}${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
@@ -175,13 +176,11 @@ export function render(state: RenderState): string {
   return `
     ${tabBarHtml}
     ${renderSearchDialog(state.config)}
-    ${renderHistoryDialog()}
     ${parentSectionHtml}
     <div class="kb-section-card kb-section-card-current">
       <div class="kb-section-label">
         <span>Current Work Item</span>
         <div class="kb-section-actions">
-          <button id="kb-history-btn" class="kb-icon-btn" title="Work item history">&#8634;</button>
           <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>
