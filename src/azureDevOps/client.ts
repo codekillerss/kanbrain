@@ -9,6 +9,12 @@ export interface WorkItemTypeState {
   color: string;
 }
 
+export interface JsonPatchOperation {
+  op: 'add' | 'remove';
+  path: string;
+  value?: string;
+}
+
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
   getToken: () => Promise<string>;
@@ -66,9 +72,9 @@ export class AzureDevOpsClient {
     const response = await this.deps.fetchImpl(url, {
       ...init,
       headers: {
+        'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
     });
     if (!response.ok) {
@@ -209,6 +215,13 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
     );
     return data.fields ?? {};
+  }
+
+  async updateWorkItem(organization: string, project: string, id: number, ops: JsonPatchOperation[]): Promise<void> {
+    await this.request(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json-patch+json' }, body: JSON.stringify(ops) },
+    );
   }
 
   async getComments(organization: string, project: string, id: number): Promise<WorkItemComment[]> {

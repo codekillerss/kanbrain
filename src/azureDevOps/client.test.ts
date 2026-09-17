@@ -22,6 +22,18 @@ function binaryResponse(bytes: Uint8Array, contentType: string | null, ok = true
 }
 
 describe('AzureDevOpsClient', () => {
+  it('lets a caller-supplied Content-Type header override the default application/json', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 1, [{ op: 'add', path: '/fields/System.State', value: 'Active' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json-patch+json' }) }),
+    );
+  });
+
   it('lists organizations for the current user', async () => {
     const fetchImpl = vi
       .fn()
