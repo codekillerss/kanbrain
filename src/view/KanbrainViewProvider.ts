@@ -1137,10 +1137,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       tabs: tabsForRender,
       activeTabId: this.activeTabId,
     };
-    if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars, reviewsExtra)) {
+    if (!hasStateChanged(this.lastState, config, workItem, parent, subtasks, avatars, reviewsExtra)) {
       return;
     }
-    this.lastState = serializeState(config, workItem, subtasks, avatars, reviewsExtra);
+    this.lastState = serializeState(config, workItem, parent, subtasks, avatars, reviewsExtra);
     this.view.webview.html = this.wrapHtml(
       render({
         hasWorkspace: !!this.workspaceRoot,

@@ -6,50 +6,62 @@ describe('hasStateChanged', () => {
     const config = { a: 1 };
     const workItem = { id: 1, title: 'A' };
     const subtasks = [{ id: 2, title: 'B' }];
-    const previous = serializeState(config, workItem, subtasks);
+    const previous = serializeState(config, workItem, null, subtasks);
 
-    expect(hasStateChanged(previous, { a: 1 }, { id: 1, title: 'A' }, [{ id: 2, title: 'B' }])).toBe(false);
+    expect(hasStateChanged(previous, { a: 1 }, { id: 1, title: 'A' }, null, [{ id: 2, title: 'B' }])).toBe(false);
   });
 
   it('is true when a field changes', () => {
-    const previous = serializeState(null, { id: 1, title: 'A' }, []);
+    const previous = serializeState(null, { id: 1, title: 'A' }, null, []);
 
-    expect(hasStateChanged(previous, null, { id: 1, title: 'A (edited)' }, [])).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1, title: 'A (edited)' }, null, [])).toBe(true);
   });
 
   it('is true when the subtasks array changes', () => {
-    const previous = serializeState(null, { id: 1 }, []);
+    const previous = serializeState(null, { id: 1 }, null, []);
 
-    expect(hasStateChanged(previous, null, { id: 1 }, [{ id: 2 }])).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1 }, null, [{ id: 2 }])).toBe(true);
+  });
+
+  it('is true when only the parent changes (e.g. its status was edited elsewhere)', () => {
+    const previous = serializeState(null, { id: 1 }, { id: 2, status: 'Active' }, []);
+
+    expect(hasStateChanged(previous, null, { id: 1 }, { id: 2, status: 'Closed' }, [])).toBe(true);
+  });
+
+  it('is false when parent is omitted on both sides (defaults to the same undefined)', () => {
+    const previous = serializeState(null, { id: 1 }, undefined, []);
+
+    expect(hasStateChanged(previous, null, { id: 1 }, undefined, [])).toBe(false);
   });
 
   it('is true when config changes from null to a value, even if workItem and subtasks stay the same', () => {
-    const previous = serializeState(null, null, []);
+    const previous = serializeState(null, null, null, []);
 
-    expect(hasStateChanged(previous, { organization: 'org' }, null, [])).toBe(true);
+    expect(hasStateChanged(previous, { organization: 'org' }, null, null, [])).toBe(true);
   });
 
   it('is true when only the avatars map changes', () => {
-    const previous = serializeState(null, { id: 1 }, [], {});
+    const previous = serializeState(null, { id: 1 }, null, [], {});
 
-    expect(hasStateChanged(previous, null, { id: 1 }, [], { 'https://example.com/a.png': 'data:image/png;base64,X' })).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1 }, null, [], { 'https://example.com/a.png': 'data:image/png;base64,X' })).toBe(true);
   });
 
   it('is false when avatars is omitted on both sides (defaults to the same empty object)', () => {
-    const previous = serializeState(null, { id: 1 }, []);
+    const previous = serializeState(null, { id: 1 }, null, []);
 
-    expect(hasStateChanged(previous, null, { id: 1 }, [])).toBe(false);
+    expect(hasStateChanged(previous, null, { id: 1 }, null, [])).toBe(false);
   });
 
   it('is true when only the extra value changes', () => {
-    const previous = serializeState(null, { id: 1 }, [], {});
+    const previous = serializeState(null, { id: 1 }, null, [], {});
 
-    expect(hasStateChanged(previous, null, { id: 1 }, [], {}, [{ id: 99 }])).toBe(true);
+    expect(hasStateChanged(previous, null, { id: 1 }, null, [], {}, [{ id: 99 }])).toBe(true);
   });
 
   it('is false when extra is omitted on both sides (defaults to the same null)', () => {
-    const previous = serializeState(null, { id: 1 }, [], {});
+    const previous = serializeState(null, { id: 1 }, null, [], {});
 
-    expect(hasStateChanged(previous, null, { id: 1 }, [], {})).toBe(false);
+    expect(hasStateChanged(previous, null, { id: 1 }, null, [], {})).toBe(false);
   });
 });
