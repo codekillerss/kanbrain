@@ -3,6 +3,9 @@ import { ensureAzureSession, hasCachedAzureSession } from './auth/ensureAzureSes
 import { getVscodeMicrosoftSession } from './auth/vscodeSession';
 import { AzureDevOpsClient } from './azureDevOps/client';
 import { KanbrainViewProvider } from './view/KanbrainViewProvider';
+import { registerTabTerminalCleanup } from './terminal/tabTerminal';
+import { randomUUID } from 'node:crypto';
+import type { WorkItemTab } from './view/tabs';
 import { WorkItemDetailPanelManager } from './view/WorkItemDetailPanelManager';
 import { PullRequestDetailPanelManager } from './view/PullRequestDetailPanelManager';
 import { getCurrentBranch } from './git/getCurrentBranch';
@@ -32,6 +35,22 @@ const ACTIVE_WORK_ITEM_KEY = 'kanbrain.activeWorkItemId';
 const SELECTED_TEAM_KEY = 'kanbrain.selectedTeam';
 const WORK_ITEM_HISTORY_KEY = 'kanbrain.workItemHistoryIds';
 const SELECTED_SAVED_QUERY_KEY = 'kanbrain.selectedSavedQueryId';
+const TABS_KEY = 'kanbrain.tabs';
+const ACTIVE_TAB_ID_KEY = 'kanbrain.activeTabId';
+
+// Reads the pre-tabs single active-work-item state so upgrading users don't lose their open item.
+function loadInitialTabs(context: vscode.ExtensionContext): { tabs: WorkItemTab[]; activeTabId: string | undefined } {
+  const savedTabs = context.workspaceState.get<WorkItemTab[]>(TABS_KEY);
+  if (savedTabs) {
+    return { tabs: savedTabs, activeTabId: context.workspaceState.get<string>(ACTIVE_TAB_ID_KEY) };
+  }
+  const legacyWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);
+  if (!legacyWorkItemId) {
+    return { tabs: [], activeTabId: undefined };
+  }
+  const tabId = randomUUID();
+  return { tabs: [{ id: tabId, workItemId: legacyWorkItemId }], activeTabId: tabId };
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -51,12 +70,13 @@ export function activate(context: vscode.ExtensionContext): void {
     : undefined;
   const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
 
+  const initialTabs = loadInitialTabs(context);
+
   const provider = new KanbrainViewProvider(
     workspaceRoot,
     client,
     extensionVersion,
     () => getCurrentBranch(workspaceRoot ?? ''),
-    id => context.workspaceState.update(ACTIVE_WORK_ITEM_KEY, id),
     () => hasCachedAzureSession(getVscodeMicrosoftSession),
     async id => {
       if (detailPanelManager) {
@@ -68,10 +88,17 @@ export function activate(context: vscode.ExtensionContext): void {
     ids => context.workspaceState.update(WORK_ITEM_HISTORY_KEY, ids),
     context.workspaceState.get<string>(SELECTED_SAVED_QUERY_KEY),
     queryId => context.workspaceState.update(SELECTED_SAVED_QUERY_KEY, queryId),
+    initialTabs.tabs,
+    initialTabs.activeTabId,
+    (tabs, activeTabId) => {
+      context.workspaceState.update(TABS_KEY, tabs);
+      context.workspaceState.update(ACTIVE_TAB_ID_KEY, activeTabId);
+    },
   );
   providerRef = provider;
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(KanbrainViewProvider.viewType, provider));
+  context.subscriptions.push(registerTabTerminalCleanup());
 
   if (!workspaceRoot || !client || !detailPanelManager || !prDetailPanelManager) {
     return;
@@ -103,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   context.subscriptions.push(
-    registerSetupCommand(client, workspaceRoot, () => provider.setActiveWorkItem(undefined), extensionVersion),
+    registerSetupCommand(client, workspaceRoot, () => provider.resetAllTabs(), extensionVersion),
     registerSelectWorkItemCommand(client, workspaceRoot, id => provider.setActiveWorkItem(id)),
     registerCheckBoardConfigCommand(client, workspaceRoot),
     registerSyncBoardConfigCommand(client, workspaceRoot, extensionVersion),
@@ -122,11 +149,6 @@ export function activate(context: vscode.ExtensionContext): void {
     registerResolveRepositoryTagCommand(workspaceRoot, provider),
     registerOpenWorkItemInBrowserCommand(),
   );
-
-  const savedWorkItemId = context.workspaceState.get<number>(ACTIVE_WORK_ITEM_KEY);
-  if (savedWorkItemId) {
-    provider.setActiveWorkItem(savedWorkItemId, false);
-  }
 
   const savedTeam = context.workspaceState.get<string>(SELECTED_TEAM_KEY);
   if (savedTeam) {

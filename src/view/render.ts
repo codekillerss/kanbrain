@@ -7,6 +7,8 @@ import { renderReviews } from './renderReviews';
 import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 import { isExtensionOutdated } from '../config/compareVersions';
+import { renderTypeAccent } from './renderTypeAccent';
+import { MAX_TABS, type WorkItemTab } from './tabs';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -26,6 +28,32 @@ export interface RenderState {
   reviewsStatusFilters?: ('active' | 'completed' | 'abandoned')[];
   reviewsOwnerFilter?: 'all' | 'mine' | 'assigned' | 'fixed' | 'needsMyFix';
   reviewsFetchFailedCount?: number;
+  tabs?: WorkItemTab[];
+  activeTabId?: string;
+}
+
+function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, config: KanbrainConfig): string {
+  if (tabs.length === 0) {
+    return '';
+  }
+  const tabsHtml = tabs
+    .map(tab => {
+      const iconHtml = tab.type ? renderTypeAccent(tab.type, config).iconHtml : '';
+      return `
+      <button type="button" class="kb-tab${tab.id === activeTabId ? ' kb-tab-active' : ''}" data-action="select-tab" data-tab-id="${tab.id}">
+        ${iconHtml}
+        <span class="kb-tab-label">#${tab.workItemId}</span>
+        <span class="kb-tab-close" data-action="close-tab" data-tab-id="${tab.id}" title="Close tab" aria-label="Close tab">&#10005;</span>
+      </button>`;
+    })
+    .join('');
+  const atLimit = tabs.length >= MAX_TABS;
+  return `
+    <div class="kb-tab-bar">
+      ${tabsHtml}
+      <button type="button" id="kb-add-tab-btn" class="kb-tab-add" title="${atLimit ? `Up to ${MAX_TABS} tabs at once` : 'Open a work item in a new tab'}"${atLimit ? ' disabled' : ''}>+</button>
+    </div>
+  `;
 }
 
 function renderHistoryDialog(): string {
@@ -96,21 +124,24 @@ export function render(state: RenderState): string {
       </div>
     `;
   }
+  const tabBarHtml = renderTabBar(state.tabs ?? [], state.activeTabId, state.config);
+
   if (state.screen === 'home') {
-    return `${renderHome(state)}${renderSearchDialog(state.config)}${renderHistoryDialog()}${renderFooter(state)}`;
+    return `${tabBarHtml}${renderHome(state)}${renderSearchDialog(state.config)}${renderHistoryDialog()}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
-    return `${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    return `${tabBarHtml}${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'brain') {
-    return `${renderBrain(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    return `${tabBarHtml}${renderBrain(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'reviews') {
-    return `${renderReviews(state)}${renderFooter(state)}`;
+    return `${tabBarHtml}${renderReviews(state)}${renderFooter(state)}`;
   }
 
   if (!state.workItem) {
     return `
+      ${tabBarHtml}
       <div id="kb-search-section">
         <input id="kb-search-input" placeholder="Search by title or #id...">
         <label class="kb-checkbox-row">
@@ -142,6 +173,7 @@ export function render(state: RenderState): string {
     : '<div class="kb-empty">No child items.</div>';
 
   return `
+    ${tabBarHtml}
     ${renderSearchDialog(state.config)}
     ${renderHistoryDialog()}
     ${parentSectionHtml}

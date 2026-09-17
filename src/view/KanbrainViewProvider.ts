@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 import { AzureDevOpsHttpError, type AzureDevOpsClient } from '../azureDevOps/client';
@@ -12,7 +13,7 @@ import { resolveSkill } from '../config/resolveSkill';
 import { resolveWorkflowStep } from '../config/resolveWorkflowStep';
 import { cloneRepository } from '../git/cloneRepository';
 import { generateContextFile } from '../skills/generateContextFile';
-import { sendReadCommand } from '../terminal/kanbrainTerminal';
+import { sendReadCommandForTab } from '../terminal/tabTerminal';
 import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig, WorkItem } from '../types';
 import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
@@ -20,6 +21,7 @@ import { render } from './render';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
+import { addTab, closeTab, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -30,6 +32,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private lastState = '';
+  private tabs: WorkItemTab[] = [];
+  private activeTabId: string | undefined;
+  private tabTypesCache = new Map<number, string>();
+  private cardCache = new Map<number, { workItem: WorkItem | null; parent: WorkItem | null; subtasks: WorkItem[]; polledAt: number }>();
   private activeWorkItemId: number | undefined;
   private selectedTeam: string | undefined;
   private typeCounts: Record<string, number> = {};
@@ -55,7 +61,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly client: AzureDevOpsClient | undefined,
     private readonly extensionVersion: string,
     private readonly getCurrentBranch: () => Promise<string>,
-    private readonly persistActiveWorkItem: (id: number | undefined) => void,
     private readonly checkAzureSession: () => Promise<boolean>,
     private readonly openWorkItemDetail: (id: number) => Promise<void>,
     private readonly persistSelectedTeam: (team: string | undefined) => void,
@@ -63,11 +68,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     private readonly persistWorkItemHistory: (ids: number[]) => void = () => {},
     initialSelectedSavedQueryId: string | undefined = undefined,
     private readonly persistSelectedSavedQueryId: (id: string | undefined) => void = () => {},
+    initialTabs: WorkItemTab[] = [],
+    initialActiveTabId: string | undefined = undefined,
+    private readonly persistTabs: (tabs: WorkItemTab[], activeTabId: string | undefined) => void = () => {},
   ) {
     this.workItemHistoryIds = initialWorkItemHistoryIds
       .filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
       .slice(0, 50);
     this.selectedSavedQueryId = initialSelectedSavedQueryId;
+    this.tabs = initialTabs;
+    this.activeTabId = initialActiveTabId;
+    this.activeWorkItemId = this.tabs.find(t => t.id === this.activeTabId)?.workItemId;
+    this.currentScreen = this.activeWorkItemId !== undefined ? 'flow' : 'home';
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -92,8 +104,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         );
       } else if (message.type === 'pick-work-item') {
         this.setActiveWorkItem(Number(message.id));
+      } else if (message.type === 'add-tab') {
+        this.openNewTab(Number(message.id));
+      } else if (message.type === 'select-tab') {
+        this.selectTab(String(message.tabId ?? ''));
+      } else if (message.type === 'close-tab') {
+        this.closeTabById(String(message.tabId ?? ''));
       } else if (message.type === 'clear-work-item') {
-        this.setActiveWorkItem(undefined);
+        this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
         await this.loadWorkItemHistory();
       } else if (message.type === 'load-saved-queries') {
@@ -203,16 +221,66 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     await presentBoardConfigCheck(this.client, this.workspaceRoot, { quietWhenNothingToReport: true });
   }
 
-  setActiveWorkItem(id: number | undefined, recordHistory = true): void {
-    this.activeWorkItemId = id;
-    if (id !== undefined && recordHistory) {
+  setActiveWorkItem(id: number, recordHistory = true): void {
+    this.applyTabsUpdate(replaceActiveWorkItem(this.tabs, this.activeTabId, id, randomUUID()));
+    if (recordHistory) {
       this.workItemHistoryIds = [id, ...this.workItemHistoryIds.filter(historyId => historyId !== id)].slice(0, 50);
       this.persistWorkItemHistory(this.workItemHistoryIds);
     }
-    this.persistActiveWorkItem(id);
-    this.currentScreen = id === undefined ? 'home' : 'flow';
+    this.currentScreen = 'flow';
     this.lastState = '';
     void this.refresh();
+  }
+
+  openNewTab(id: number): void {
+    const update = addTab(this.tabs, id, randomUUID());
+    if (!update) {
+      vscode.window.showInformationMessage(`You can have up to ${MAX_TABS} work items open at once. Close a tab before opening another.`);
+      return;
+    }
+    this.applyTabsUpdate(update);
+    this.workItemHistoryIds = [id, ...this.workItemHistoryIds.filter(historyId => historyId !== id)].slice(0, 50);
+    this.persistWorkItemHistory(this.workItemHistoryIds);
+    this.currentScreen = 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  selectTab(tabId: string): void {
+    if (tabId === this.activeTabId || !this.tabs.some(t => t.id === tabId)) {
+      return;
+    }
+    this.applyTabsUpdate({ tabs: this.tabs, activeTabId: tabId });
+    this.currentScreen = 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  closeTabById(tabId: string): void {
+    this.applyTabsUpdate(closeTab(this.tabs, this.activeTabId, tabId));
+    this.currentScreen = this.activeTabId === undefined ? 'home' : 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  closeActiveTab(): void {
+    if (this.activeTabId) {
+      this.closeTabById(this.activeTabId);
+    }
+  }
+
+  resetAllTabs(): void {
+    this.applyTabsUpdate({ tabs: [], activeTabId: undefined });
+    this.currentScreen = 'home';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private applyTabsUpdate(update: TabsUpdate): void {
+    this.tabs = update.tabs;
+    this.activeTabId = update.activeTabId;
+    this.activeWorkItemId = this.tabs.find(t => t.id === this.activeTabId)?.workItemId;
+    this.persistTabs(this.tabs, this.activeTabId);
   }
 
   private async loadWorkItemHistory(): Promise<void> {
@@ -752,7 +820,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async executeSkill(workItem: WorkItem, skill: SkillEntry, workflowStep: WorkflowStepConfig | null): Promise<void> {
-    if (!this.workspaceRoot || !this.client) {
+    if (!this.workspaceRoot || !this.client || !this.activeTabId) {
       return;
     }
     const config = readConfig(this.workspaceRoot);
@@ -774,7 +842,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       workflowStep,
     );
 
-    sendReadCommand(relativePath);
+    sendReadCommandForTab(this.activeTabId, relativePath);
   }
 
   private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected' | 'unknown'> {
@@ -855,6 +923,36 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     };
   }
 
+  private async pollWorkItem(id: number, config: KanbrainConfig, options: { rerenderWhenDone: boolean }): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+    try {
+      const [fetched] = await this.client.getWorkItems(config.organization, config.project, [id]);
+      const workItem = fetched ?? null;
+      let subtasks: WorkItem[] = [];
+      let parent: WorkItem | null = null;
+      if (workItem) {
+        subtasks = filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config);
+        if (workItem.parentId) {
+          const [fetchedParent] = await this.client.getWorkItems(config.organization, config.project, [workItem.parentId]);
+          parent = fetchedParent ?? null;
+        }
+      }
+      this.cardCache.set(id, { workItem, parent, subtasks, polledAt: Date.now() });
+    } catch (error) {
+      if (error instanceof AzureDevOpsHttpError && (error.status === 401 || error.status === 403)) {
+        // The session actually expired/was revoked — the next refresh() picks this up and shows the Connect screen.
+        this.connectionStatus = 'disconnected';
+      }
+      // Transient failure (network, 5xx, timeout): leave any existing cache entry as-is and retry on a later poll.
+    } finally {
+      if (options.rerenderWhenDone && this.activeWorkItemId === id) {
+        void this.refresh();
+      }
+    }
+  }
+
   private async refresh(): Promise<void> {
     if (!this.view) {
       return;
@@ -877,26 +975,31 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     let subtasks: WorkItem[] = [];
 
     if (config && this.client && activeWorkItemIdAtStart) {
-      try {
-        const [fetched] = await this.client.getWorkItems(config.organization, config.project, [activeWorkItemIdAtStart]);
-        workItem = fetched ?? null;
-        if (workItem) {
-          subtasks = filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config);
-          if (workItem.parentId) {
-            const [fetchedParent] = await this.client.getWorkItems(config.organization, config.project, [workItem.parentId]);
-            parent = fetchedParent ?? null;
+      const cached = this.cardCache.get(activeWorkItemIdAtStart);
+      if (cached) {
+        workItem = cached.workItem;
+        parent = cached.parent;
+        subtasks = cached.subtasks;
+      }
+      const cacheIsFresh = !!cached && Date.now() - cached.polledAt < POLL_INTERVAL_MS;
+      if (!cacheIsFresh) {
+        if (cached) {
+          // Switching to (or staying on) a tab whose cache is stale — show what we already have
+          // right away instead of blocking the tab switch on a network round-trip, and let the
+          // background poll below swap in the fresh data (or the disconnected screen) once it lands.
+          void this.pollWorkItem(activeWorkItemIdAtStart, config, { rerenderWhenDone: true });
+        } else {
+          // Never polled this work item before — there is nothing to show without waiting once.
+          await this.pollWorkItem(activeWorkItemIdAtStart, config, { rerenderWhenDone: false });
+          if (this.connectionStatus === 'disconnected') {
+            this.renderDisconnected(config);
+            return;
           }
+          const freshlyCached = this.cardCache.get(activeWorkItemIdAtStart);
+          workItem = freshlyCached?.workItem ?? null;
+          parent = freshlyCached?.parent ?? null;
+          subtasks = freshlyCached?.subtasks ?? [];
         }
-      } catch (error) {
-        if (error instanceof AzureDevOpsHttpError && (error.status === 401 || error.status === 403)) {
-          // The session actually expired/was revoked — show the Connect screen.
-          this.connectionStatus = 'disconnected';
-          this.renderDisconnected(config);
-          return;
-        }
-        // Transient failure (network, 5xx, timeout) — skip this poll, keep the current
-        // connection state, and retry on the next one instead of forcing a reconnect.
-        return;
       }
     }
 
@@ -905,6 +1008,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       // raced a slower in-flight poll) — discard this now-stale result instead of overwriting
       // the newer state.
       return;
+    }
+
+    if (config && this.client && this.tabs.length > 0) {
+      const idsNeeded = [...new Set(this.tabs.map(t => t.workItemId))].filter(id => !this.tabTypesCache.has(id));
+      if (idsNeeded.length > 0) {
+        try {
+          const fetched = await this.client.getWorkItems(config.organization, config.project, idsNeeded);
+          for (const item of fetched) {
+            this.tabTypesCache.set(item.id, item.type);
+          }
+        } catch {
+          // Transient failure — tab icons stay blank for these ids until a later poll succeeds.
+        }
+      }
     }
 
     if (config && this.client && this.currentScreen === 'reviews') {
@@ -928,7 +1045,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     // (now search-only) manual showAssignedTo toggle.
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
-    const reviewsExtra = { pullRequests: this.reviewsPullRequests, failedCount: this.reviewsFetchFailedCount };
+    const tabsForRender = this.tabs.map(tab => ({ ...tab, type: this.tabTypesCache.get(tab.workItemId) }));
+    const reviewsExtra = {
+      pullRequests: this.reviewsPullRequests,
+      failedCount: this.reviewsFetchFailedCount,
+      tabs: tabsForRender,
+      activeTabId: this.activeTabId,
+    };
     if (!hasStateChanged(this.lastState, config, workItem, subtasks, avatars, reviewsExtra)) {
       return;
     }
@@ -951,6 +1074,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         reviewsStatusFilters: this.reviewsStatusFilters,
         reviewsOwnerFilter: this.reviewsOwnerFilter,
         reviewsFetchFailedCount: this.reviewsFetchFailedCount,
+        tabs: tabsForRender,
+        activeTabId: this.activeTabId,
       }),
     );
   }
@@ -1172,6 +1297,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       if (target.id === 'kb-toggle-search-btn' || target.id === 'kb-footer-select-work-item-btn') {
         const section = document.getElementById('kb-search-section');
         if (section) {
+          section.dataset.mode = 'replace';
           const wasHidden = section.classList.contains('kb-hidden');
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
@@ -1188,6 +1314,22 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             document.getElementById('kb-search-input')?.focus();
           }
         }
+      } else if (target.id === 'kb-add-tab-btn') {
+        const section = document.getElementById('kb-search-section');
+        if (section) {
+          section.dataset.mode = 'add';
+          section.classList.remove('kb-hidden');
+          activeQueryId = null;
+          setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
+          if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
+          closeQueryDropdown();
+          vscode.postMessage({ type: 'load-saved-queries' });
+          document.getElementById('kb-search-input')?.focus();
+        }
+      } else if (target.closest && target.closest('[data-action="close-tab"]')) {
+        vscode.postMessage({ type: 'close-tab', tabId: target.closest('[data-action="close-tab"]').dataset.tabId });
+      } else if (target.closest && target.closest('[data-action="select-tab"]')) {
+        vscode.postMessage({ type: 'select-tab', tabId: target.closest('[data-action="select-tab"]').dataset.tabId });
       } else if (target.id === 'kb-history-btn') {
         const section = document.getElementById('kb-history-section');
         if (section) {
@@ -1250,7 +1392,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="pick-work-item"]')) {
-        vscode.postMessage({ type: 'pick-work-item', id: target.closest('[data-action="pick-work-item"]').dataset.id });
+        const pickedId = target.closest('[data-action="pick-work-item"]').dataset.id;
+        const searchSectionEl = document.getElementById('kb-search-section');
+        if (searchSectionEl && searchSectionEl.dataset.mode === 'add') {
+          vscode.postMessage({ type: 'add-tab', id: pickedId });
+        } else {
+          vscode.postMessage({ type: 'pick-work-item', id: pickedId });
+        }
       } else if (target.dataset && target.dataset.action === 'open-work-item-detail') {
         vscode.postMessage({ type: 'open-work-item-detail', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="select-query"]')) {
@@ -1561,6 +1709,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
+      .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+      .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+      .kb-tab + .kb-tab { border-left: 1px solid var(--vscode-panel-border); }
+      .kb-tab:hover { background: var(--vscode-list-hoverBackground); opacity: 1; }
+      .kb-tab-active { opacity: 1; border-bottom-color: var(--vscode-focusBorder); }
+      .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 2px; opacity: 0.7; }
+      .kb-tab-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
+      .kb-tab-add { flex-shrink: 0; width: 22px; height: 22px; padding: 0; background: transparent; border: none; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-size: 14px; border-radius: 2px; }
+      .kb-tab-add:hover:not(:disabled) { opacity: 1; background: var(--vscode-list-hoverBackground); }
+      .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-team-card { margin: 10px; }
@@ -1650,6 +1808,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
       .kb-parent-section, .kb-section-card-current { flex-shrink: 0; }
       .kb-section-card-children { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
+      .kb-section-card-children:has(> .kb-collapsible-body.kb-hidden) { flex: 0 0 auto; }
       .kb-section-card-children > .kb-section-label { flex-shrink: 0; }
       .kb-section-card-children > .kb-collapsible-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
       .kb-section-card-current {

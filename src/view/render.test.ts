@@ -389,6 +389,7 @@ describe('render', () => {
     expect(bodyTag).not.toContain('kb-hidden');
   });
 
+
   it('shows the status as a colored dot next to the plain status text', () => {
     const html = render({
       hasWorkspace: true, extensionVersion: '1.0.0',
@@ -689,5 +690,118 @@ describe('render', () => {
     });
 
     expect(html).not.toContain('kb-parent-section');
+  });
+
+  it('does not show a tab bar when there are no open tabs', () => {
+    const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config, workItem: null, parent: null, subtasks: [], screen: 'home' });
+    expect(html).not.toContain('kb-tab-bar');
+  });
+
+  it('shows a tab bar with one tab per open work item', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482 }, { id: 'tab-2', workItemId: 900 }],
+      activeTabId: 'tab-1',
+    });
+
+    expect(html).toContain('data-tab-id="tab-1"');
+    expect(html).toContain('data-tab-id="tab-2"');
+    expect(html).toContain('#482');
+    expect(html).toContain('#900');
+  });
+
+  it('marks the active tab with kb-tab-active', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482 }, { id: 'tab-2', workItemId: 900 }],
+      activeTabId: 'tab-2',
+    });
+
+    const tab1Start = html.indexOf('data-tab-id="tab-1"');
+    const tab1TagStart = html.lastIndexOf('<button', tab1Start);
+    const tab2Start = html.indexOf('data-tab-id="tab-2"');
+    const tab2TagStart = html.lastIndexOf('<button', tab2Start);
+    expect(html.slice(tab1TagStart, html.indexOf('>', tab1TagStart))).not.toContain('kb-tab-active');
+    expect(html.slice(tab2TagStart, html.indexOf('>', tab2TagStart))).toContain('kb-tab-active');
+  });
+
+  it('shows an enabled add-tab button below the tab limit', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482 }],
+      activeTabId: 'tab-1',
+    });
+
+    const start = html.indexOf('id="kb-add-tab-btn"');
+    expect(start).toBeGreaterThan(-1);
+    expect(html.slice(start, html.indexOf('>', start))).not.toContain('disabled');
+  });
+
+  it('shows the work item type icon in a tab when its type is known', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482, type: 'Task' }],
+      activeTabId: 'tab-1',
+    });
+
+    const tabStart = html.indexOf('data-tab-id="tab-1"');
+    const tabTagStart = html.lastIndexOf('<button', tabStart);
+    const tabTagEnd = html.indexOf('</button>', tabStart);
+    expect(html.slice(tabTagStart, tabTagEnd)).toContain('<svg><path d="M0 0"/></svg>');
+  });
+
+  it('omits the icon when a tab\'s type has not resolved yet', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482 }],
+      activeTabId: 'tab-1',
+    });
+
+    const tabStart = html.indexOf('data-tab-id="tab-1"');
+    const tabTagStart = html.lastIndexOf('<button', tabStart);
+    const tabTagEnd = html.indexOf('</button>', tabStart);
+    expect(html.slice(tabTagStart, tabTagEnd)).not.toContain('<svg>');
+  });
+
+  it('disables the add-tab button at the tab limit', () => {
+    const tabs = Array.from({ length: 8 }, (_, i) => ({ id: `tab-${i}`, workItemId: i + 1 }));
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 1 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs,
+      activeTabId: 'tab-0',
+    });
+
+    const start = html.indexOf('id="kb-add-tab-btn"');
+    expect(html.slice(start, html.indexOf('>', start))).toContain('disabled');
   });
 });
