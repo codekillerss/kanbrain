@@ -2,6 +2,17 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.13.0] - 2026-09-17
+
+### Added
+
+- The Flow view now has a tab bar so several work items can stay open at once (up to 8), each showing its work item type icon. Selecting a work item from search replaces the item shown in the currently active tab, and a new "+" button opens another one alongside it; trying to open a work item that's already in another tab just switches focus to it instead of duplicating the tab. Each tab gets its own integrated terminal, reused across every skill run on that tab, independent from the other open tabs' terminals — closing a tab does not close its terminal, so it's still there in the background if you reopen that work item later.
+- Work item data is now cached per work item with the same TTL as the polling interval, so switching back to a tab you were on a few seconds ago shows it instantly instead of waiting on a network round-trip; a background refresh still happens right after to catch anything that changed.
+
+### Fixed
+
+- Collapsing the Children section on the Flow screen now actually shrinks it, instead of leaving an empty bordered box the size it had before collapsing.
+
 ## [0.12.0] - 2026-09-16
 
 ### Added
