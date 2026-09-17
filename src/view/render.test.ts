@@ -804,4 +804,17 @@ describe('render', () => {
     const start = html.indexOf('id="kb-add-tab-btn"');
     expect(html.slice(start, html.indexOf('>', start))).toContain('disabled');
   });
+
+  it('shows editable status pickers on the main card, parent card, and subtasks on the flow screen', () => {
+    const configWithAssignee: KanbrainConfig = {
+      ...config,
+      cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: true } } } },
+    };
+    const parent = workItem({ id: 900, title: 'Epic parent' });
+    const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
+    const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config: configWithAssignee, workItem: workItem({ id: 482 }), parent, subtasks, screen: 'flow' });
+
+    expect(html.split('kb-status-picker').length - 1).toBeGreaterThanOrEqual(3);
+    expect(html).not.toContain('kb-assignee-picker');
+  });
 });

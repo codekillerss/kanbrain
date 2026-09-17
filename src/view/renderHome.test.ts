@@ -279,4 +279,11 @@ describe('renderHome', () => {
     expect(teamIndex).toBeGreaterThanOrEqual(0);
     expect(profileIndex).toBeGreaterThan(teamIndex);
   });
+
+  it('does not show editable status/assignee pickers (the home card is read-only)', () => {
+    const html = renderHome(state({ workItem: workItem() }));
+
+    expect(html).not.toContain('kb-status-picker');
+    expect(html).not.toContain('kb-assignee-picker');
+  });
 });

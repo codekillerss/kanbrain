@@ -257,4 +257,86 @@ describe('renderWorkItemCard', () => {
     expect(html).not.toContain('kb-action-group');
     expect(html).not.toContain('kb-action-btn-placeholder');
   });
+
+  it('keeps the plain read-only status row when editable is false (default)', () => {
+    const html = renderWorkItemCard(workItem({ status: 'Active' }), config, 'kb-main-card');
+    expect(html).not.toContain('kb-status-picker');
+    expect(html).toContain('<div class="kb-status-row">');
+  });
+
+  it('shows a status picker with one option per known status for the type when editable is true', () => {
+    const withTwoStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Closed: null } },
+      statusColors: { Active: 'b2b2b2', Closed: '339933' },
+    };
+    const html = renderWorkItemCard(workItem({ id: 482, status: 'Active', type: 'Task' }), withTwoStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('kb-status-picker');
+    expect(html).toContain('data-action="toggle-status-picker"');
+    expect(html).toContain('data-action="select-status" data-id="482" data-status="Active"');
+    expect(html).toContain('data-action="select-status" data-id="482" data-status="Closed"');
+  });
+
+  it('marks the current status option as active in the picker', () => {
+    const withTwoStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Closed: null } },
+    };
+    const html = renderWorkItemCard(workItem({ status: 'Closed', type: 'Task' }), withTwoStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    const closedStart = html.indexOf('data-status="Closed"');
+    const closedTagStart = html.lastIndexOf('<button', closedStart);
+    const activeStart = html.indexOf('data-status="Active"');
+    const activeTagStart = html.lastIndexOf('<button', activeStart);
+    expect(html.slice(closedTagStart, html.indexOf('>', closedTagStart))).toContain('kb-status-picker-option-active');
+    expect(html.slice(activeTagStart, html.indexOf('>', activeTagStart))).not.toContain('kb-status-picker-option-active');
+  });
+
+  it('renders an empty status picker menu (no crash) when the type has no known statuses', () => {
+    const noStatuses: KanbrainConfig = { ...config, workflowSteps: {} };
+    const html = renderWorkItemCard(workItem({ type: 'Bug' }), noStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('kb-status-picker-menu');
+  });
+
+  it('keeps the plain read-only assignee row when editable is false (default)', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }), config, 'kb-main-card');
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).toContain('kb-assignee-row');
+  });
+
+  it('keeps the plain read-only assignee row even when editable is true (assignee editing is temporarily disabled)', () => {
+    const html = renderWorkItemCard(
+      workItem({ id: 482, assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
+      config,
+      'kb-main-card',
+      true,
+      {},
+      false,
+      null,
+      false,
+      undefined,
+      false,
+      true,
+    );
+
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).toContain('kb-assignee-row');
+    expect(html).toContain('Jane Doe');
+  });
+
+  it('shows "Unassigned" as the trigger label when there is no assignee and editable is true', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('Unassigned');
+  });
+
+  it('omits the assignee picker entirely when showAssignedTo resolves to false, even if editable is true', () => {
+    const hiddenConfig: KanbrainConfig = { ...config, cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: false } } } } };
+    const html = renderWorkItemCard(workItem(), hiddenConfig, 'kb-main-card', true, {}, false, null, false, 'MyProject Team', false, true);
+
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).not.toContain('kb-assignee-row');
+  });
 });

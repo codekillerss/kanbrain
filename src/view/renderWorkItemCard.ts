@@ -3,7 +3,7 @@ import { resolveSkill } from '../config/resolveSkill';
 import { escapeHtml } from './escapeHtml';
 import { renderStatusDot } from './renderStatusDot';
 import { renderTypeAccent } from './renderTypeAccent';
-import { renderAssigneeRow } from './renderAssignee';
+import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 import { renderParentRow } from './renderParent';
 import { renderDevelopmentBadge } from './renderDevelopment';
 import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
@@ -71,6 +71,43 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
   `;
 }
 
+function renderStatusPicker(workItem: WorkItem, config: KanbrainConfig): string {
+  const statuses = Object.keys(config.workflowSteps[workItem.type] ?? {});
+  const options = statuses
+    .map(
+      s => `
+      <button type="button" class="kb-status-picker-option${s === workItem.status ? ' kb-status-picker-option-active' : ''}" data-action="select-status" data-id="${workItem.id}" data-status="${escapeHtml(s)}">
+        ${renderStatusDot(s, config.statusColors ?? {})}${escapeHtml(s)}
+      </button>`,
+    )
+    .join('');
+  return `
+    <div class="kb-status-picker">
+      <button type="button" class="kb-status-row kb-status-picker-trigger" data-action="toggle-status-picker">
+        <span class="kb-status-picker-trigger-label">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</span>
+        <span class="kb-status-picker-icon">▾</span>
+      </button>
+      <div class="kb-status-picker-menu kb-hidden">${options}</div>
+    </div>
+  `;
+}
+
+function renderAssigneePicker(workItem: WorkItem, avatars: Record<string, string>): string {
+  const current = workItem.assignedTo
+    ? `${renderAvatarOrInitial(workItem.assignedTo.displayName, workItem.assignedTo.imageUrl, avatars)}${escapeHtml(workItem.assignedTo.displayName)}`
+    : `<span class="kb-avatar-initial">?</span>Unassigned`;
+  return `
+    <div class="kb-assignee-picker" data-id="${workItem.id}">
+      <button type="button" class="kb-assignee-row kb-assignee-picker-trigger" data-action="toggle-assignee-picker">${current}</button>
+      <div class="kb-assignee-picker-menu kb-hidden">
+        <input type="text" class="kb-input kb-assignee-search-input" data-id="${workItem.id}" placeholder="Search people...">
+        <button type="button" class="kb-assignee-picker-option" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned</button>
+        <div class="kb-assignee-picker-results"></div>
+      </div>
+    </div>
+  `;
+}
+
 export function renderWorkItemCard(
   workItem: WorkItem,
   config: KanbrainConfig,
@@ -82,10 +119,18 @@ export function renderWorkItemCard(
   showParent = false,
   selectedTeam: string | undefined = undefined,
   showPickButton = false,
+  editable = false,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
-  const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
+  // Assignee editing is temporarily disabled — the picker's styling isn't ready yet — so this
+  // always renders the static row for now, regardless of `editable`. The rest of the write path
+  // (renderAssigneePicker, the message handlers, searchIdentities) is left in place to re-enable
+  // later.
+  const assigneeHtml = !showAssignedTo ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  const statusHtml = editable
+    ? renderStatusPicker(workItem, config)
+    : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;
   const parentHtml = renderParentRow(parent, showParent, config);
   const developmentHtml = renderDevelopmentBadge(workItem.development);
   const titleAttrs = clickableTitle
@@ -100,7 +145,7 @@ export function renderWorkItemCard(
         <span class="kb-id">#${workItem.id}</span>
         <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       </div>
-      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${statusHtml}
       ${assigneeHtml}
       ${parentHtml}
       ${developmentHtml}

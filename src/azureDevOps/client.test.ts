@@ -22,6 +22,45 @@ function binaryResponse(bytes: Uint8Array, contentType: string | null, ok = true
 }
 
 describe('AzureDevOpsClient', () => {
+  it('lets a caller-supplied Content-Type header override the default application/json', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 1, [{ op: 'add', path: '/fields/System.State', value: 'Active' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json-patch+json' }) }),
+    );
+  });
+
+  it('PATCHes a work item with a JSON Patch body', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 482, [{ op: 'add', path: '/fields/System.State', value: 'Active' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/workitems/482?api-version=7.1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify([{ op: 'add', path: '/fields/System.State', value: 'Active' }]),
+      }),
+    );
+  });
+
+  it('supports a remove op with no value, for unassigning', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.updateWorkItem('my-org', 'MyProject', 482, [{ op: 'remove', path: '/fields/System.AssignedTo' }]);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: JSON.stringify([{ op: 'remove', path: '/fields/System.AssignedTo' }]) }),
+    );
+  });
+
   it('lists organizations for the current user', async () => {
     const fetchImpl = vi
       .fn()
@@ -1080,5 +1119,92 @@ describe('AzureDevOpsClient.listTeams', () => {
       'https://dev.azure.com/my-org/_apis/projects/MyProject/teams?api-version=7.1',
       expect.anything(),
     );
+  });
+});
+
+describe('AzureDevOpsClient.searchIdentities', () => {
+  it('searches identities via IdentityPicker and maps display name / unique name', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            queryToken: 'jane',
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Jane Doe', mail: 'jane@example.com', signInAddress: 'jane@example.com', active: true },
+            ],
+            pagingToken: '',
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'jane');
+
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com' }]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://vssps.dev.azure.com/my-org/_apis/IdentityPicker/Identities?api-version=7.1-preview.1',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          query: 'jane',
+          identityTypes: ['user'],
+          operationScopes: ['ims', 'source'],
+          options: { MinResults: 5, MaxResults: 20 },
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+        }),
+      }),
+    );
+  });
+
+  it('filters out inactive identities and non-user entity types', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Inactive Person', mail: 'x@example.com', signInAddress: null, active: false },
+              { entityId: 'id-2', entityType: 'Group', displayName: 'A Group', mail: 'group@example.com', signInAddress: null, active: true },
+              { entityId: 'id-3', entityType: 'User', displayName: 'Active Person', mail: 'ok@example.com', signInAddress: null, active: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'person');
+
+    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com' }]);
+  });
+
+  it('falls back to signInAddress when mail is missing, and drops results with neither', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Has SignIn Only', mail: null, signInAddress: 'signin@example.com', active: true },
+              { entityId: 'id-2', entityType: 'User', displayName: 'Has Neither', mail: null, signInAddress: null, active: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'x');
+
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com' }]);
+  });
+
+  it('returns an empty array for a blank query without calling fetch', async () => {
+    const fetchImpl = vi.fn();
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', '   ');
+
+    expect(results).toEqual([]);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

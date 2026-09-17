@@ -9,6 +9,12 @@ export interface WorkItemTypeState {
   color: string;
 }
 
+export interface JsonPatchOperation {
+  op: 'add' | 'remove';
+  path: string;
+  value?: string;
+}
+
 export interface AzureDevOpsClientDeps {
   fetchImpl: typeof fetch;
   getToken: () => Promise<string>;
@@ -42,11 +48,30 @@ export interface BoardColumn {
   stateMappings: Record<string, string>;
 }
 
+export interface IdentitySearchResult {
+  id: string;
+  displayName: string;
+  uniqueName: string;
+}
+
 interface RawIdentityRef {
   id?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
+}
+
+interface RawPickerIdentity {
+  entityId: string;
+  entityType: string;
+  displayName: string | null;
+  mail: string | null;
+  signInAddress: string | null;
+  active: boolean | null;
+}
+
+interface RawIdentityPickerResponse {
+  results: { identities: RawPickerIdentity[] }[];
 }
 
 function mapIdentityRef(raw: unknown): AssignedTo {
@@ -66,9 +91,9 @@ export class AzureDevOpsClient {
     const response = await this.deps.fetchImpl(url, {
       ...init,
       headers: {
+        'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
     });
     if (!response.ok) {
@@ -209,6 +234,13 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
     );
     return data.fields ?? {};
+  }
+
+  async updateWorkItem(organization: string, project: string, id: number, ops: JsonPatchOperation[]): Promise<void> {
+    await this.request(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems/${id}?api-version=7.1`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json-patch+json' }, body: JSON.stringify(ops) },
+    );
   }
 
   async getComments(organization: string, project: string, id: number): Promise<WorkItemComment[]> {
@@ -484,5 +516,34 @@ export class AzureDevOpsClient {
     } catch {
       return [];
     }
+  }
+
+  async searchIdentities(organization: string, query: string): Promise<IdentitySearchResult[]> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return [];
+    }
+    const data = await this.request<RawIdentityPickerResponse>(
+      `https://vssps.dev.azure.com/${organization}/_apis/IdentityPicker/Identities?api-version=7.1-preview.1`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          query: trimmed,
+          identityTypes: ['user'],
+          operationScopes: ['ims', 'source'],
+          options: { MinResults: 5, MaxResults: 20 },
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+        }),
+      },
+    );
+    const identities = data.results?.flatMap(r => r.identities) ?? [];
+    return identities
+      .filter(i => i.entityType === 'User' && i.active !== false)
+      .map(i => ({
+        id: i.entityId,
+        displayName: i.displayName ?? 'Unknown',
+        uniqueName: i.mail ?? i.signInAddress ?? '',
+      }))
+      .filter(i => i.uniqueName);
   }
 }

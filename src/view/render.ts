@@ -161,14 +161,14 @@ export function render(state: RenderState): string {
     <div class="kb-section-card kb-parent-section">
       <button type="button" class="kb-section-label" data-action="toggle-group" data-section="parent"><span><span class="kb-chevron">▾</span>Parent</span></button>
       <div class="kb-collapsible-body${state.parentCollapsed ? ' kb-hidden' : ''}">
-        ${renderWorkItemCard(state.parent, state.config, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true)}
+        ${renderWorkItemCard(state.parent, state.config, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true, true)}
       </div>
     </div>
   `
     : '';
   const subtasksHtml = state.subtasks.length
     ? state.subtasks
-        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true))
+        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true, true))
         .join('')
     : '<div class="kb-empty">No child items.</div>';
 
@@ -186,7 +186,7 @@ export function render(state: RenderState): string {
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>
       </div>
-      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam)}
+      ${renderWorkItemCard(state.workItem, state.config, 'kb-main-card', true, avatars, true, state.parent, showParent, state.selectedTeam, false, true)}
     </div>
     <div class="kb-section-card kb-section-card-children">
       ${
