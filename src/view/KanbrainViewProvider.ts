@@ -1162,7 +1162,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    function autosizeWorkflowTextarea(field) {
+      field.style.height = 'auto';
+      field.style.height = field.scrollHeight + 'px';
+    }
+
     document.querySelectorAll('.kb-workflow-row textarea').forEach((field) => {
+      autosizeWorkflowTextarea(field);
+      field.addEventListener('input', () => autosizeWorkflowTextarea(field));
       field.addEventListener('blur', () => {
         const row = field.closest('.kb-workflow-row');
         if (row) {
@@ -1427,6 +1434,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             });
           }
           items.classList.toggle('kb-hidden');
+          if (!items.classList.contains('kb-hidden')) {
+            // Textareas revealed just now were sized while hidden (scrollHeight reads 0 on
+            // display:none elements), so they need to be measured again now that they're visible.
+            items.querySelectorAll('.kb-workflow-textarea').forEach((field) => autosizeWorkflowTextarea(field));
+          }
           if (parentHeader) {
             parentHeader.parentElement.classList.toggle('kb-config-parent-section-expanded', wasHidden);
             if (toggle.dataset.segment) {
@@ -1862,7 +1874,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
       .kb-repo-row { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px; margin: 6px 0; }
       .kb-repo-name { font-weight: 600; margin-bottom: 4px; font-size: 12px; }
-      .kb-config-row-status { display: flex; align-items: center; font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+      .kb-workflow-row { padding: 0; overflow: hidden; }
+      .kb-workflow-row-body { padding: 6px; }
+      .kb-config-row-status { display: flex; align-items: center; font-weight: 600; font-size: 12px; padding: 6px 8px; margin: 0; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+      .kb-workflow-textarea { resize: none; overflow-y: auto; max-height: 200px; }
       .kb-config-field-path { display: flex; gap: 4px; align-items: center; }
       .kb-config-field-path .kb-input { flex: 1; margin-bottom: 0; }
       .kb-config-field-path button { flex-shrink: 0; padding: 4px 8px; background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); border: none; border-radius: 2px; cursor: pointer; font-family: var(--vscode-font-family); }

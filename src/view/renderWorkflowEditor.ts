@@ -1,6 +1,6 @@
 import type { KanbrainConfig, SkillEntry, WorkflowStepConfig } from '../types';
 import { escapeHtml } from './escapeHtml';
-import { renderStatusDot } from './renderStatusDot';
+import { isValidHexColor, normalizeHex, pickReadableTextColor } from './badgeColor';
 import { renderTypeAccent } from './renderTypeAccent';
 
 const NO_SKILL_LABEL = '— No skill —';
@@ -48,16 +48,27 @@ function renderSkillPicker(step: WorkflowStepConfig | null, skills: Record<strin
   `;
 }
 
+function renderStatusHeaderStyle(status: string, statusColors: Record<string, string>): string {
+  const color = statusColors[status];
+  if (!color || !isValidHexColor(color)) {
+    return '';
+  }
+  const background = normalizeHex(color);
+  return ` style="background-color: ${background}; color: ${pickReadableTextColor(background)};"`;
+}
+
 function renderWorkflowStepRow(type: string, status: string, step: WorkflowStepConfig | null, skills: Record<string, SkillEntry>, statusColors: Record<string, string>): string {
   const definitionOfDone = step?.definitionOfDone?.join('\n') ?? '';
   const artifacts = step?.artifacts?.join('\n') ?? '';
 
   return `
     <div class="kb-config-row kb-workflow-row" data-level="${escapeHtml(type)}" data-status="${escapeHtml(status)}">
-      <div class="kb-config-row-status">${renderStatusDot(status, statusColors)}${escapeHtml(status)}</div>
-      ${renderSkillPicker(step, skills)}
-      <textarea class="kb-input kb-workflow-textarea" data-field="definitionOfDone" placeholder="Definition of Done (one item per line)" rows="3">${escapeHtml(definitionOfDone)}</textarea>
-      <textarea class="kb-input kb-workflow-textarea" data-field="artifacts" placeholder="Expected artifacts (one item per line)" rows="3">${escapeHtml(artifacts)}</textarea>
+      <div class="kb-config-row-status"${renderStatusHeaderStyle(status, statusColors)}>${escapeHtml(status)}</div>
+      <div class="kb-workflow-row-body">
+        ${renderSkillPicker(step, skills)}
+        <textarea class="kb-input kb-workflow-textarea" data-field="definitionOfDone" placeholder="Definition of Done (one item per line)">${escapeHtml(definitionOfDone)}</textarea>
+        <textarea class="kb-input kb-workflow-textarea" data-field="artifacts" placeholder="Expected artifacts (one item per line)">${escapeHtml(artifacts)}</textarea>
+      </div>
     </div>
   `;
 }

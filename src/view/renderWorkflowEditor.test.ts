@@ -86,11 +86,29 @@ describe('renderWorkflowEditor', () => {
     expect(html).toContain('&lt;To Do&gt;');
   });
 
-  it('shows a status dot when a color is known for the status', () => {
+  it('colors the status header background with the status color and a readable text color', () => {
     const html = renderWorkflowEditor(config({ workflowSteps: { Task: { 'To Do': null } }, statusColors: { 'To Do': 'b2b2b2' } }));
 
-    expect(html).toContain('kb-status-dot');
-    expect(html).toContain('#b2b2b2');
+    const start = html.indexOf('kb-config-row-status');
+    const tagEnd = html.indexOf('>', start);
+    const tag = html.slice(html.lastIndexOf('<div', start), tagEnd);
+    expect(tag).toContain('background-color: #b2b2b2');
+    expect(tag).toContain('color: #000000');
+  });
+
+  it('falls back to no inline color when the status has no color configured', () => {
+    const html = renderWorkflowEditor(config({ workflowSteps: { Task: { 'To Do': null } } }));
+
+    const start = html.indexOf('kb-config-row-status');
+    const tagEnd = html.indexOf('>', start);
+    const tag = html.slice(html.lastIndexOf('<div', start), tagEnd);
+    expect(tag).not.toContain('background-color');
+  });
+
+  it('does not set a fixed row count on the definitionOfDone/artifacts textareas so they can auto-size', () => {
+    const html = renderWorkflowEditor(config({ workflowSteps: { Task: { 'To Do': null } } }));
+
+    expect(html).not.toContain('rows="3"');
   });
 
   it('renders each type as a collapsible section with a chevron toggle header', () => {
