@@ -805,7 +805,7 @@ describe('render', () => {
     expect(html.slice(start, html.indexOf('>', start))).toContain('disabled');
   });
 
-  it('shows editable status/assignee pickers on the main card, parent card, and subtasks on the flow screen', () => {
+  it('shows editable status pickers on the main card, parent card, and subtasks on the flow screen', () => {
     const configWithAssignee: KanbrainConfig = {
       ...config,
       cardSettingsByTeam: { 'MyProject Team': { Tasks: { Task: { parent: false, assignedTo: true } } } },
@@ -815,6 +815,6 @@ describe('render', () => {
     const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config: configWithAssignee, workItem: workItem({ id: 482 }), parent, subtasks, screen: 'flow' });
 
     expect(html.split('kb-status-picker').length - 1).toBeGreaterThanOrEqual(3);
-    expect(html.split('kb-assignee-picker').length - 1).toBeGreaterThanOrEqual(1);
+    expect(html).not.toContain('kb-assignee-picker');
   });
 });

@@ -1646,7 +1646,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             menu.style.minWidth = rect.width + 'px';
             menu.classList.remove('kb-hidden');
             const input = menu.querySelector('.kb-assignee-search-input');
-            if (input) input.focus();
+            if (input) input.focus({ preventScroll: true });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
@@ -2001,7 +2001,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-skill-picker-option-label { font-size: 12px; }
       .kb-skill-picker-option-path { font-size: 11px; color: var(--vscode-descriptionForeground); }
       .kb-status-picker, .kb-assignee-picker { position: relative; }
-      .kb-status-picker-trigger, .kb-assignee-picker-trigger { cursor: pointer; background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; width: 100%; }
+      .kb-status-picker-trigger { cursor: pointer; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; padding: 4px 6px; font-family: var(--vscode-font-family); font-size: 12px; opacity: 1; text-align: left; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+      .kb-status-picker-trigger:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-status-picker-trigger:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      .kb-status-picker-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+      .kb-status-picker-trigger-label { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .kb-assignee-picker-trigger { cursor: pointer; background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; width: 100%; }
       .kb-status-picker-menu, .kb-assignee-picker-menu { position: fixed; z-index: 50; min-width: 160px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
       .kb-status-picker-menu.kb-hidden, .kb-assignee-picker-menu.kb-hidden { display: none; }
       .kb-status-picker-option, .kb-assignee-picker-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }

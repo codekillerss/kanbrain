@@ -306,7 +306,7 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('kb-assignee-row');
   });
 
-  it('shows an assignee picker with the current assignee, a search input, and an Unassigned option when editable is true', () => {
+  it('keeps the plain read-only assignee row even when editable is true (assignee editing is temporarily disabled)', () => {
     const html = renderWorkItemCard(
       workItem({ id: 482, assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
       config,
@@ -321,12 +321,9 @@ describe('renderWorkItemCard', () => {
       true,
     );
 
-    expect(html).toContain('class="kb-assignee-picker" data-id="482"');
-    expect(html).toContain('data-action="toggle-assignee-picker"');
+    expect(html).not.toContain('kb-assignee-picker');
+    expect(html).toContain('kb-assignee-row');
     expect(html).toContain('Jane Doe');
-    expect(html).toContain('class="kb-input kb-assignee-search-input"');
-    expect(html).toContain('data-action="select-assignee" data-id="482" data-unique-name=""');
-    expect(html).toContain('kb-assignee-picker-results');
   });
 
   it('shows "Unassigned" as the trigger label when there is no assignee and editable is true', () => {

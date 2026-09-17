@@ -84,7 +84,8 @@ function renderStatusPicker(workItem: WorkItem, config: KanbrainConfig): string 
   return `
     <div class="kb-status-picker">
       <button type="button" class="kb-status-row kb-status-picker-trigger" data-action="toggle-status-picker">
-        ${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}
+        <span class="kb-status-picker-trigger-label">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</span>
+        <span class="kb-status-picker-icon">▾</span>
       </button>
       <div class="kb-status-picker-menu kb-hidden">${options}</div>
     </div>
@@ -122,7 +123,11 @@ export function renderWorkItemCard(
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
-  const assigneeHtml = !showAssignedTo ? '' : editable ? renderAssigneePicker(workItem, avatars) : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  // Assignee editing is temporarily disabled — the picker's styling isn't ready yet — so this
+  // always renders the static row for now, regardless of `editable`. The rest of the write path
+  // (renderAssigneePicker, the message handlers, searchIdentities) is left in place to re-enable
+  // later.
+  const assigneeHtml = !showAssignedTo ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
   const statusHtml = editable
     ? renderStatusPicker(workItem, config)
     : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;
