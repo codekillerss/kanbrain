@@ -71,6 +71,26 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
   `;
 }
 
+function renderStatusPicker(workItem: WorkItem, config: KanbrainConfig): string {
+  const statuses = Object.keys(config.workflowSteps[workItem.type] ?? {});
+  const options = statuses
+    .map(
+      s => `
+      <button type="button" class="kb-status-picker-option${s === workItem.status ? ' kb-status-picker-option-active' : ''}" data-action="select-status" data-id="${workItem.id}" data-status="${escapeHtml(s)}">
+        ${renderStatusDot(s, config.statusColors ?? {})}${escapeHtml(s)}
+      </button>`,
+    )
+    .join('');
+  return `
+    <div class="kb-status-picker">
+      <button type="button" class="kb-status-row kb-status-picker-trigger" data-action="toggle-status-picker">
+        ${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}
+      </button>
+      <div class="kb-status-picker-menu kb-hidden">${options}</div>
+    </div>
+  `;
+}
+
 export function renderWorkItemCard(
   workItem: WorkItem,
   config: KanbrainConfig,
@@ -82,10 +102,14 @@ export function renderWorkItemCard(
   showParent = false,
   selectedTeam: string | undefined = undefined,
   showPickButton = false,
+  editable = false,
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
   const assigneeHtml = showAssignedTo ? renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row') : '';
+  const statusHtml = editable
+    ? renderStatusPicker(workItem, config)
+    : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;
   const parentHtml = renderParentRow(parent, showParent, config);
   const developmentHtml = renderDevelopmentBadge(workItem.development);
   const titleAttrs = clickableTitle
@@ -100,7 +124,7 @@ export function renderWorkItemCard(
         <span class="kb-id">#${workItem.id}</span>
         <div${titleAttrs}>${escapeHtml(workItem.title)}</div>
       </div>
-      <div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>
+      ${statusHtml}
       ${assigneeHtml}
       ${parentHtml}
       ${developmentHtml}
