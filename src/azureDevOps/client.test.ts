@@ -1123,11 +1123,17 @@ describe('AzureDevOpsClient.listTeams', () => {
 });
 
 describe('AzureDevOpsClient.searchIdentities', () => {
-  it('searches identities and maps display name / unique name', async () => {
+  it('searches identities via IdentityPicker and maps display name / unique name', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
-        value: [
-          { id: 'id-1', providerDisplayName: 'Jane Doe', isActive: true, isContainer: false, properties: { Account: { $value: 'jane@example.com' } } },
+        results: [
+          {
+            queryToken: 'jane',
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Jane Doe', mail: 'jane@example.com', signInAddress: 'jane@example.com', active: true },
+            ],
+            pagingToken: '',
+          },
         ],
       }),
     );
@@ -1137,18 +1143,31 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com' }]);
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://vssps.dev.azure.com/my-org/_apis/identities?searchFilter=General&filterValue=jane&api-version=7.1',
-      expect.anything(),
+      'https://vssps.dev.azure.com/my-org/_apis/IdentityPicker/Identities?api-version=7.1-preview.1',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          query: 'jane',
+          identityTypes: ['user'],
+          operationScopes: ['ims', 'source'],
+          options: { MinResults: 5, MaxResults: 20 },
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+        }),
+      }),
     );
   });
 
-  it('filters out inactive and container identities', async () => {
+  it('filters out inactive identities and non-user entity types', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
-        value: [
-          { id: 'id-1', providerDisplayName: 'Inactive Person', isActive: false, properties: { Account: { $value: 'x@example.com' } } },
-          { id: 'id-2', providerDisplayName: 'A Group', isContainer: true, properties: { Account: { $value: 'group@example.com' } } },
-          { id: 'id-3', providerDisplayName: 'Active Person', isActive: true, isContainer: false, properties: { Account: { $value: 'ok@example.com' } } },
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Inactive Person', mail: 'x@example.com', signInAddress: null, active: false },
+              { entityId: 'id-2', entityType: 'Group', displayName: 'A Group', mail: 'group@example.com', signInAddress: null, active: true },
+              { entityId: 'id-3', entityType: 'User', displayName: 'Active Person', mail: 'ok@example.com', signInAddress: null, active: true },
+            ],
+          },
         ],
       }),
     );
@@ -1159,12 +1178,16 @@ describe('AzureDevOpsClient.searchIdentities', () => {
     expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com' }]);
   });
 
-  it('falls back to descriptor when properties.Account is missing, and drops results with neither', async () => {
+  it('falls back to signInAddress when mail is missing, and drops results with neither', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
-        value: [
-          { id: 'id-1', providerDisplayName: 'Has Descriptor', isActive: true, descriptor: 'desc-1' },
-          { id: 'id-2', providerDisplayName: 'Has Neither', isActive: true },
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'Has SignIn Only', mail: null, signInAddress: 'signin@example.com', active: true },
+              { entityId: 'id-2', entityType: 'User', displayName: 'Has Neither', mail: null, signInAddress: null, active: true },
+            ],
+          },
         ],
       }),
     );
@@ -1172,7 +1195,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'x');
 
-    expect(results).toEqual([{ id: 'id-1', displayName: 'Has Descriptor', uniqueName: 'desc-1' }]);
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com' }]);
   });
 
   it('returns an empty array for a blank query without calling fetch', async () => {

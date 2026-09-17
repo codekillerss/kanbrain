@@ -61,14 +61,17 @@ interface RawIdentityRef {
   _links?: { avatar?: { href?: string } };
 }
 
-interface RawIdentity {
-  id: string;
-  providerDisplayName?: string;
-  customDisplayName?: string;
-  isActive?: boolean;
-  isContainer?: boolean;
-  properties?: { Account?: { $value?: string } };
-  descriptor?: string;
+interface RawPickerIdentity {
+  entityId: string;
+  entityType: string;
+  displayName: string | null;
+  mail: string | null;
+  signInAddress: string | null;
+  active: boolean | null;
+}
+
+interface RawIdentityPickerResponse {
+  results: { identities: RawPickerIdentity[] }[];
 }
 
 function mapIdentityRef(raw: unknown): AssignedTo {
@@ -520,15 +523,26 @@ export class AzureDevOpsClient {
     if (!trimmed) {
       return [];
     }
-    const data = await this.request<{ value: RawIdentity[] }>(
-      `https://vssps.dev.azure.com/${organization}/_apis/identities?searchFilter=General&filterValue=${encodeURIComponent(trimmed)}&api-version=7.1`,
+    const data = await this.request<RawIdentityPickerResponse>(
+      `https://vssps.dev.azure.com/${organization}/_apis/IdentityPicker/Identities?api-version=7.1-preview.1`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          query: trimmed,
+          identityTypes: ['user'],
+          operationScopes: ['ims', 'source'],
+          options: { MinResults: 5, MaxResults: 20 },
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+        }),
+      },
     );
-    return (data.value ?? [])
-      .filter(i => i.isActive !== false && !i.isContainer)
+    const identities = data.results?.flatMap(r => r.identities) ?? [];
+    return identities
+      .filter(i => i.entityType === 'User' && i.active !== false)
       .map(i => ({
-        id: i.id,
-        displayName: i.providerDisplayName ?? i.customDisplayName ?? 'Unknown',
-        uniqueName: i.properties?.Account?.$value ?? i.descriptor ?? '',
+        id: i.entityId,
+        displayName: i.displayName ?? 'Unknown',
+        uniqueName: i.mail ?? i.signInAddress ?? '',
       }))
       .filter(i => i.uniqueName);
   }
