@@ -2,6 +2,16 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.15.0] - 2026-09-17
+
+### Added
+
+- Work items on the Flow screen (main card, parent card, and subtasks) can now have their status changed directly from a dropdown on the card, writing straight to Azure DevOps — no need to open Azure Boards in the browser. Status options come from what's already known locally for that work item type; picking one shows the real result once it's confirmed by the server (no optimistic UI), and a failed write shows an error without changing what's on screen.
+
+### Fixed
+
+- A work item's parent card could keep showing an outdated status after it changed elsewhere (edited from another tab, or updated by someone else in Azure Boards) until some unrelated part of the screen also changed — the background refresh compared state without accounting for the parent, so it silently skipped rebuilding the card.
+
 ## [0.14.0] - 2026-09-17
 
 ### Changed
