@@ -66,16 +66,26 @@ export function renderSearchResults(
     })),
   ];
 
-  const tabBar = tabs
-    .map(
-      tab =>
-        `<button class="kb-search-tab${tab.count === 0 ? ' kb-search-tab-empty' : ''}" data-action="select-tab" data-tab="${escapeHtml(tab.id)}">${escapeHtml(tab.label)} (${tab.count})</button>`,
-    )
+  const options = tabs
+    .map(tab => {
+      const iconHtml = tab.id === 'all' ? '' : renderTypeAccent(tab.id, config).iconHtml;
+      return `<button type="button" class="kb-search-type-filter-option${tab.count === 0 ? ' kb-search-type-filter-option-empty' : ''}" data-action="select-search-type" data-type="${escapeHtml(tab.id)}">${iconHtml}${escapeHtml(tab.label)} (${tab.count})</button>`;
+    })
     .join('');
 
   const panels = tabs
-    .map(tab => `<div class="kb-search-tab-panel" data-tab-panel="${escapeHtml(tab.id)}">${renderStatusGroups(tab.items, config, avatars)}</div>`)
+    .map(tab => `<div class="kb-search-type-panel" data-type-panel="${escapeHtml(tab.id)}">${renderStatusGroups(tab.items, config, avatars)}</div>`)
     .join('');
 
-  return `<div class="kb-search-tabs">${tabBar}</div>${panels}`;
+  const filter = `
+    <div class="kb-search-type-filter">
+      <button type="button" class="kb-search-type-filter-trigger" data-action="toggle-search-type-filter">
+        <span class="kb-search-type-filter-trigger-label">${escapeHtml(tabs[0].label)} (${tabs[0].count})</span>
+        <span class="kb-search-type-filter-icon">▾</span>
+      </button>
+      <div class="kb-search-type-filter-menu kb-hidden">${options}</div>
+    </div>
+  `;
+
+  return `${filter}${panels}`;
 }

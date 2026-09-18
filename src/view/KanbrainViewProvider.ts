@@ -1173,14 +1173,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   ${body}
   <script>
     const vscode = acquireVsCodeApi();
-    let activeSearchTab = 'all';
+    let activeDialogTab = 'search';
+    let activeSearchType = 'all';
 
-    function applySearchTab() {
-      document.querySelectorAll('.kb-search-tab').forEach((btn) => {
-        btn.classList.toggle('kb-search-tab-active', btn.dataset.tab === activeSearchTab);
+    function applyDialogTab() {
+      document.querySelectorAll('.kb-dialog-tab').forEach((btn) => {
+        btn.classList.toggle('kb-dialog-tab-active', btn.dataset.dialogTab === activeDialogTab);
       });
-      document.querySelectorAll('.kb-search-tab-panel').forEach((panel) => {
-        panel.classList.toggle('kb-hidden', panel.dataset.tabPanel !== activeSearchTab);
+      document.querySelectorAll('.kb-dialog-panel').forEach((panel) => {
+        panel.classList.toggle('kb-hidden', panel.dataset.dialogPanel !== activeDialogTab);
+      });
+    }
+
+    function applySearchTypeFilter() {
+      const label = document.querySelector('.kb-search-type-filter-trigger-label');
+      document.querySelectorAll('.kb-search-type-filter-option').forEach((option) => {
+        if (label && option.dataset.type === activeSearchType) label.innerHTML = option.innerHTML;
+      });
+      document.querySelectorAll('.kb-search-type-panel').forEach((panel) => {
+        panel.classList.toggle('kb-hidden', panel.dataset.typePanel !== activeSearchType);
       });
     }
 
@@ -1285,6 +1296,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     function closeAllAssigneePickers() {
       document.querySelectorAll('.kb-assignee-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
+
+    function closeAllSearchTypeFilters() {
+      document.querySelectorAll('.kb-search-type-filter-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
 
     function saveRepositoryRow(row) {
@@ -1413,6 +1428,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           const wasHidden = section.classList.contains('kb-hidden');
           section.classList.toggle('kb-hidden');
           if (wasHidden) {
+            activeDialogTab = 'search';
+            applyDialogTab();
             activeQueryId = null;
             setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
             if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
@@ -1431,6 +1448,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (section) {
           section.dataset.mode = 'add';
           section.classList.remove('kb-hidden');
+          activeDialogTab = 'search';
+          applyDialogTab();
           activeQueryId = null;
           setQueryTriggerLabel(QUERY_PLACEHOLDER, true);
           if (queryClearBtn) queryClearBtn.classList.add('kb-hidden');
@@ -1442,16 +1461,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'close-tab', tabId: target.closest('[data-action="close-tab"]').dataset.tabId });
       } else if (target.closest && target.closest('[data-action="select-tab"]')) {
         vscode.postMessage({ type: 'select-tab', tabId: target.closest('[data-action="select-tab"]').dataset.tabId });
-      } else if (target.id === 'kb-history-btn') {
-        const section = document.getElementById('kb-history-section');
-        if (section) {
-          section.classList.remove('kb-hidden');
+      } else if (target.closest && target.closest('[data-action="select-dialog-tab"]')) {
+        const tab = target.closest('[data-action="select-dialog-tab"]').dataset.dialogTab;
+        activeDialogTab = tab;
+        applyDialogTab();
+        if (tab === 'history') {
           vscode.postMessage({ type: 'load-work-item-history' });
         }
-      } else if (target.id === 'kb-history-close-btn') {
-        document.getElementById('kb-history-section')?.classList.add('kb-hidden');
-      } else if (target.id === 'kb-history-section' && target.classList.contains('kb-search-overlay')) {
-        target.classList.add('kb-hidden');
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.id === 'kb-run-setup-btn') {
@@ -1554,9 +1570,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (toggle.dataset.section) {
           vscode.postMessage({ type: 'toggle-section', section: toggle.dataset.section });
         }
-      } else if (target.dataset && target.dataset.action === 'select-tab') {
-        activeSearchTab = target.dataset.tab;
-        applySearchTab();
       } else if (target.dataset && target.dataset.action === 'pick-skill-file') {
         const row = target.closest('.kb-config-row');
         if (row) {
@@ -1663,6 +1676,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const btn = target.closest('[data-action="select-assignee"]');
         closeAllAssigneePickers();
         vscode.postMessage({ type: 'select-assignee', id: btn.dataset.id, uniqueName: btn.dataset.uniqueName });
+      } else if (target.closest && target.closest('[data-action="toggle-search-type-filter"]')) {
+        const picker = target.closest('.kb-search-type-filter');
+        const menu = picker ? picker.querySelector('.kb-search-type-filter-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeAllSearchTypeFilters();
+          if (!isOpen) {
+            const rect = picker.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.minWidth = rect.width + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.closest && target.closest('[data-action="select-search-type"]')) {
+        const btn = target.closest('[data-action="select-search-type"]');
+        activeSearchType = btn.dataset.type;
+        closeAllSearchTypeFilters();
+        applySearchTypeFilter();
       }
 
       if (
@@ -1682,6 +1714,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
       if (!target.closest || !target.closest('.kb-assignee-picker')) {
         closeAllAssigneePickers();
+      }
+
+      if (!target.closest || !target.closest('.kb-search-type-filter')) {
+        closeAllSearchTypeFilters();
       }
 
       if (!target.closest || !target.closest('.kb-query-combobox')) {
@@ -1718,6 +1754,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       if (!(event.target && event.target.closest && event.target.closest('.kb-assignee-picker-menu'))) {
         closeAllAssigneePickers();
+      }
+      if (!(event.target && event.target.closest && event.target.closest('.kb-search-type-filter-menu'))) {
+        closeAllSearchTypeFilters();
       }
     }, true);
 
@@ -1825,7 +1864,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const results = document.getElementById('kb-search-results');
         if (results) {
           results.innerHTML = event.data.html;
-          applySearchTab();
+          applySearchTypeFilter();
         }
       } else if (event.data.type === 'work-item-history') {
         const results = document.getElementById('kb-history-results');
@@ -1966,19 +2005,31 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-query-option:disabled { opacity: 0.5; cursor: default; }
       .kb-query-option:disabled:hover { background: none; }
       .kb-query-type-badge { margin-left: 4px; font-size: 10px; opacity: 0.7; }
-      .kb-dialog-title { flex: 1; min-width: 0; font-size: 12px; }
       #kb-search-results { overflow-y: auto; flex: 1; min-height: 0; }
       .kb-dialog-close-btn { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; border-radius: 2px; font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-dialog-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-dialog-close-btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       #kb-search-close-btn { flex-shrink: 0; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px 6px; border-radius: 2px; font-family: var(--vscode-font-family); }
       #kb-search-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
-      .kb-search-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; }
-      .kb-search-tab { flex-shrink: 0; padding: 4px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
-      .kb-search-tab:disabled { opacity: 0.5; cursor: default; }
-      .kb-search-tab:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-search-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
-      .kb-search-tab-empty { opacity: 0.5; }
+      .kb-dialog-tabs { display: flex; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
+      .kb-dialog-tab { flex-shrink: 0; padding: 4px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-dialog-tab:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-dialog-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
+      .kb-dialog-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .kb-dialog-panel.kb-hidden { display: none; }
+      .kb-search-filters-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      .kb-search-filters-row .kb-checkbox-row { margin-bottom: 0; }
+      .kb-search-type-filter { position: relative; margin-bottom: 6px; }
+      .kb-search-type-filter-trigger { cursor: pointer; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; padding: 4px 6px; font-family: var(--vscode-font-family); font-size: 12px; text-align: left; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+      .kb-search-type-filter-trigger:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-search-type-filter-trigger:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+      .kb-search-type-filter-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+      .kb-search-type-filter-trigger-label { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .kb-search-type-filter-menu { position: fixed; z-index: 50; min-width: 160px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-search-type-filter-menu.kb-hidden { display: none; }
+      .kb-search-type-filter-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
+      .kb-search-type-filter-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-search-type-filter-option-empty { opacity: 0.5; }
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
       .kb-parent-section, .kb-section-card-current { flex-shrink: 0; }
       .kb-section-card-children { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
