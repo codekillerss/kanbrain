@@ -181,7 +181,9 @@ export function render(state: RenderState): string {
       <div class="kb-section-label">
         <span>Current Work Item</span>
         <div class="kb-section-actions">
-          <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">⇄</button>
+          <button id="kb-toggle-search-btn" class="kb-icon-btn" title="Switch work item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
           <button id="kb-clear-btn" class="kb-icon-btn" title="Clear">✕</button>
         </div>
       </div>

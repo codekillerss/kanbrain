@@ -7,10 +7,12 @@ import { renderAssigneeRow, renderAvatarOrInitial } from './renderAssignee';
 import { renderParentRow } from './renderParent';
 import { renderDevelopmentBadge } from './renderDevelopment';
 import { resolveShowAssignedTo } from '../config/resolveCardFieldVisibility';
-import { isValidHexColor, normalizeHex } from './badgeColor';
+import { isValidHexColor, normalizeHex, pickReadableTextColor } from './badgeColor';
 
 function renderPickButton(id: number): string {
-  return `<button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${id}" title="Set as current work item">⇄</button>`;
+  return `<button type="button" class="kb-icon-btn kb-pick-btn" data-action="pick-work-item" data-id="${id}" title="Set as current work item">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707s.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146"/></svg>
+  </button>`;
 }
 
 function renderGlobalSkillTrigger(id: number, hasEntries: boolean): string {
@@ -71,23 +73,43 @@ function renderActionButton(workItem: WorkItem, config: KanbrainConfig): string 
   `;
 }
 
+function renderAdvanceStatusButton(workItem: WorkItem, statuses: string[], statusColors: Record<string, string>): string {
+  const currentIndex = statuses.indexOf(workItem.status);
+  const nextStatus = currentIndex >= 0 ? statuses[currentIndex + 1] : undefined;
+  if (!nextStatus) {
+    return `<button type="button" class="kb-status-advance-btn" disabled title="No next status">&gt;&gt;</button>`;
+  }
+  const rawColor = statusColors[nextStatus];
+  let styleAttr = '';
+  if (rawColor && isValidHexColor(rawColor)) {
+    const background = normalizeHex(rawColor);
+    const contrast = pickReadableTextColor(background);
+    styleAttr = ` style="background-color: ${background}; color: ${contrast}; border-color: ${contrast};"`;
+  }
+  return `<button type="button" class="kb-status-advance-btn" data-action="advance-status" data-id="${workItem.id}" data-status="${escapeHtml(nextStatus)}" title="Advance to ${escapeHtml(nextStatus)}"${styleAttr}>&gt;&gt;</button>`;
+}
+
 function renderStatusPicker(workItem: WorkItem, config: KanbrainConfig): string {
   const statuses = Object.keys(config.workflowSteps[workItem.type] ?? {});
   const options = statuses
-    .map(
-      s => `
-      <button type="button" class="kb-status-picker-option${s === workItem.status ? ' kb-status-picker-option-active' : ''}" data-action="select-status" data-id="${workItem.id}" data-status="${escapeHtml(s)}">
-        ${renderStatusDot(s, config.statusColors ?? {})}${escapeHtml(s)}
-      </button>`,
-    )
+    .map(s => {
+      const isActive = s === workItem.status;
+      return `
+      <button type="button" class="kb-status-picker-option${isActive ? ' kb-status-picker-option-active' : ''}" data-action="select-status" data-id="${workItem.id}" data-status="${escapeHtml(s)}">
+        ${renderStatusDot(s, config.statusColors ?? {})}${escapeHtml(s)}${isActive ? '<span class="kb-status-picker-option-check">✓</span>' : ''}
+      </button>`;
+    })
     .join('');
   return `
-    <div class="kb-status-picker">
-      <button type="button" class="kb-status-row kb-status-picker-trigger" data-action="toggle-status-picker">
-        <span class="kb-status-picker-trigger-label">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</span>
-        <span class="kb-status-picker-icon">▾</span>
-      </button>
-      <div class="kb-status-picker-menu kb-hidden">${options}</div>
+    <div class="kb-status-editable-row">
+      <div class="kb-status-picker">
+        <button type="button" class="kb-status-row kb-status-picker-trigger" data-action="toggle-status-picker">
+          <span class="kb-status-picker-trigger-label">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</span>
+          <span class="kb-status-picker-icon">▾</span>
+        </button>
+        <div class="kb-status-picker-menu kb-hidden">${options}</div>
+      </div>
+      ${renderAdvanceStatusButton(workItem, statuses, config.statusColors ?? {})}
     </div>
   `;
 }

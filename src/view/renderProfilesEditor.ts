@@ -14,10 +14,12 @@ function renderProfileRow(id: string, entry: ProfileEntry): string {
       <div class="kb-config-level-body kb-hidden">
         <div class="kb-config-row" data-profile-id="${escapeHtml(id)}">
           <input type="text" class="kb-input" data-field="label" placeholder="Label" value="${escapeHtml(label)}">
-          <textarea class="kb-input kb-textarea" data-field="description" placeholder="Description">${escapeHtml(description)}</textarea>
-          <button type="button" class="kb-icon-btn" data-action="remove-profile" data-profile-id="${escapeHtml(id)}" title="Remove">✕</button>
+          <textarea class="kb-input kb-autosize-textarea" data-field="description" placeholder="Description">${escapeHtml(description)}</textarea>
         </div>
       </div>
+      <button type="button" class="kb-icon-btn kb-icon-btn-danger kb-config-level-remove-btn" data-action="remove-profile" data-profile-id="${escapeHtml(id)}" title="Remove profile">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
   `;
 }

@@ -293,11 +293,86 @@ describe('renderWorkItemCard', () => {
     expect(html.slice(activeTagStart, html.indexOf('>', activeTagStart))).not.toContain('kb-status-picker-option-active');
   });
 
+  it('shows a checkmark on the current status option in the picker', () => {
+    const withTwoStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Closed: null } },
+    };
+    const html = renderWorkItemCard(workItem({ status: 'Closed', type: 'Task' }), withTwoStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    const closedOptionStart = html.lastIndexOf('<button', html.indexOf('data-status="Closed"'));
+    const closedOptionEnd = html.indexOf('</button>', closedOptionStart);
+    const activeOptionStart = html.lastIndexOf('<button', html.indexOf('data-status="Active"'));
+    const activeOptionEnd = html.indexOf('</button>', activeOptionStart);
+    expect(html.slice(closedOptionStart, closedOptionEnd)).toContain('kb-status-picker-option-check');
+    expect(html.slice(activeOptionStart, activeOptionEnd)).not.toContain('kb-status-picker-option-check');
+  });
+
   it('renders an empty status picker menu (no crash) when the type has no known statuses', () => {
     const noStatuses: KanbrainConfig = { ...config, workflowSteps: {} };
     const html = renderWorkItemCard(workItem({ type: 'Bug' }), noStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
 
     expect(html).toContain('kb-status-picker-menu');
+  });
+
+  it('shows an enabled advance-status button targeting the next status in the workflow order', () => {
+    const withThreeStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Review: null, Closed: null } },
+    };
+    const html = renderWorkItemCard(workItem({ id: 482, status: 'Active', type: 'Task' }), withThreeStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('data-action="advance-status" data-id="482" data-status="Review"');
+    const btnStart = html.indexOf('data-action="advance-status"');
+    const tagStart = html.lastIndexOf('<button', btnStart);
+    expect(html.slice(tagStart, html.indexOf('>', tagStart))).not.toContain('disabled');
+  });
+
+  it('disables the advance-status button when the work item is already at the last status', () => {
+    const withTwoStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Closed: null } },
+    };
+    const html = renderWorkItemCard(workItem({ status: 'Closed', type: 'Task' }), withTwoStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    expect(html).toContain('kb-status-advance-btn');
+    expect(html).not.toContain('data-action="advance-status"');
+    const btnStart = html.indexOf('kb-status-advance-btn');
+    const tagStart = html.lastIndexOf('<button', btnStart);
+    expect(html.slice(tagStart, html.indexOf('>', tagStart))).toContain('disabled');
+  });
+
+  it('omits the advance-status button when editable is false', () => {
+    const html = renderWorkItemCard(workItem({ status: 'Active' }), config, 'kb-main-card');
+    expect(html).not.toContain('kb-status-advance-btn');
+  });
+
+  it('colors the advance-status button background with the next status color and picks a contrasting arrow/border color', () => {
+    const withColors: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Review: null } },
+      statusColors: { Review: 'ffffff' },
+    };
+    const html = renderWorkItemCard(workItem({ status: 'Active', type: 'Task' }), withColors, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    const btnStart = html.indexOf('data-action="advance-status"');
+    const tagStart = html.lastIndexOf('<button', btnStart);
+    const tag = html.slice(tagStart, html.indexOf('>', tagStart));
+    expect(tag).toContain('background-color: #ffffff');
+    expect(tag).toContain('color: #000000');
+    expect(tag).toContain('border-color: #000000');
+  });
+
+  it('leaves the advance-status button unstyled when the next status has no configured color', () => {
+    const withThreeStatuses: KanbrainConfig = {
+      ...config,
+      workflowSteps: { Task: { Active: { skillId: 'skill-1' }, Review: null } },
+    };
+    const html = renderWorkItemCard(workItem({ status: 'Active', type: 'Task' }), withThreeStatuses, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    const btnStart = html.indexOf('data-action="advance-status"');
+    const tagStart = html.lastIndexOf('<button', btnStart);
+    expect(html.slice(tagStart, html.indexOf('>', tagStart))).not.toContain('style=');
   });
 
   it('keeps the plain read-only assignee row when editable is false (default)', () => {
