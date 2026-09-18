@@ -171,6 +171,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.removeProfile(String(message.id ?? ''));
       } else if (message.type === 'set-show-assigned-to') {
         this.setShowAssignedTo(Boolean(message.value));
+      } else if (message.type === 'set-ai-provider-command') {
+        this.setAiProviderCommand(String(message.command ?? ''));
       } else if (message.type === 'set-selected-team') {
         this.setSelectedTeam(message.team || undefined);
       } else if (message.type === 'set-selected-profile') {
@@ -563,6 +565,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
+  private setAiProviderCommand(command: string): void {
+    if (!this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.aiProviderCommand = command || undefined;
+    writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
   private saveWorkflowStep(level: string, status: string, skillId: string, definitionOfDone: string, artifacts: string): void {
     if (!this.workspaceRoot) {
       return;
@@ -849,7 +865,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       workflowStep,
     );
 
-    sendReadCommandForTab(this.activeTabId, relativePath);
+    sendReadCommandForTab(this.activeTabId, relativePath, config.aiProviderCommand);
   }
 
   private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected' | 'unknown'> {
@@ -1335,6 +1351,28 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (showAssigneeToggle) {
       showAssigneeToggle.addEventListener('change', () => {
         vscode.postMessage({ type: 'set-show-assigned-to', value: showAssigneeToggle.checked });
+      });
+    }
+
+    const aiProviderSelect = document.getElementById('kb-ai-provider-select');
+    const aiProviderCustomInput = document.getElementById('kb-ai-provider-custom-input');
+    if (aiProviderSelect) {
+      aiProviderSelect.addEventListener('change', () => {
+        if (aiProviderSelect.value === 'custom') {
+          if (aiProviderCustomInput) {
+            aiProviderCustomInput.classList.remove('kb-hidden');
+            aiProviderCustomInput.focus();
+          }
+          return;
+        }
+        if (aiProviderCustomInput) aiProviderCustomInput.classList.add('kb-hidden');
+        const command = aiProviderSelect.selectedOptions[0].dataset.command || '';
+        vscode.postMessage({ type: 'set-ai-provider-command', command });
+      });
+    }
+    if (aiProviderCustomInput) {
+      aiProviderCustomInput.addEventListener('blur', () => {
+        vscode.postMessage({ type: 'set-ai-provider-command', command: aiProviderCustomInput.value });
       });
     }
 
@@ -2046,6 +2084,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       .kb-section-card .kb-section-label { margin: 0; border-radius: 0; }
       .kb-section-card .kb-home-commands, .kb-section-card .kb-checkbox-row, .kb-section-card .kb-empty { margin: 10px; }
+      .kb-section-card .kb-field-hint, .kb-section-card select, .kb-section-card .kb-input { margin: 0 10px 10px; width: calc(100% - 20px); }
+      .kb-section-card .kb-field-hint { margin-top: 10px; }
       .kb-section-card .kb-main-card, .kb-section-card .kb-subtask-card, .kb-section-card .kb-review-row { margin: 8px 10px; }
       .kb-home-commands { display: flex; flex-direction: column; gap: 6px; }
       .kb-icon-btn { width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; border-radius: 2px; font-size: 13px; }
@@ -2137,6 +2177,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-current-badge { flex-shrink: 0; margin-left: 6px; padding: 1px 5px; border-radius: 8px; font-size: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
       .kb-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 6px 0; cursor: pointer; }
       .kb-checkbox-row:has(input:disabled) { opacity: 0.5; cursor: default; }
+      .kb-field-hint { margin: 0 0 8px; font-size: 11px; opacity: 0.75; }
+      #kb-ai-provider-select { box-sizing: border-box; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-status-select { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-status-select:hover { background: var(--vscode-list-hoverBackground); }
       .kb-status-select-disabled { opacity: 0.5; pointer-events: none; }

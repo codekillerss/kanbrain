@@ -85,4 +85,32 @@ describe('renderConfig', () => {
     expect(html).not.toContain('data-level="Task"');
     expect(html).not.toContain('data-profile-id="developer"');
   });
+
+  it('shows a Terminal section with an AI provider select defaulting to "None"', () => {
+    const html = renderConfig(state());
+    expect(html).toContain('>Terminal<');
+    expect(html).toContain('id="kb-ai-provider-select"');
+    expect(html).toMatch(/<option value="none"[^>]*selected[^>]*>/);
+  });
+
+  it('selects the matching preset option when aiProviderCommand matches a known preset', () => {
+    const html = renderConfig(state({ config: config({ aiProviderCommand: 'claude' }) }));
+    expect(html).toMatch(/<option value="claude"[^>]*selected[^>]*>/);
+  });
+
+  it('falls back to "Custom" with the input visible and pre-filled when the command matches no preset', () => {
+    const html = renderConfig(state({ config: config({ aiProviderCommand: 'my-agent --flag' }) }));
+    expect(html).toMatch(/<option value="custom"[^>]*selected[^>]*>/);
+    const inputStart = html.indexOf('id="kb-ai-provider-custom-input"');
+    const inputTag = html.slice(html.lastIndexOf('<input', inputStart), html.indexOf('>', inputStart) + 1);
+    expect(inputTag).not.toContain('kb-hidden');
+    expect(inputTag).toContain('value="my-agent --flag"');
+  });
+
+  it('hides the custom input when a preset (or none) is selected', () => {
+    const html = renderConfig(state({ config: config({ aiProviderCommand: 'claude' }) }));
+    const inputStart = html.indexOf('id="kb-ai-provider-custom-input"');
+    const inputTag = html.slice(html.lastIndexOf('<input', inputStart), html.indexOf('>', inputStart) + 1);
+    expect(inputTag).toContain('kb-hidden');
+  });
 });
