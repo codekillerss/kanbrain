@@ -22,7 +22,7 @@ export function renderWorkItemHistory(
       <button type="button" class="kb-result-item-main" data-action="pick-work-item" data-id="${item.id}"${isCurrent ? ' disabled' : ''}>
         ${iconHtml}<span class="kb-result-item-title">#${item.id} ${escapeHtml(item.title)}</span>${currentBadge}
       </button>
-      <div class="kb-history-item-status">${renderStatusDot(item.status, config.statusColors ?? {})}${escapeHtml(item.status)}</div>
+      <div class="kb-history-item-status">${renderStatusDot(item.status, config.statusColors ?? {})}<span class="kb-history-item-status-label">${escapeHtml(item.status)}</span></div>
       <div class="kb-result-item-footer kb-history-item-footer">
         ${assignee}
         <button type="button" class="kb-view-details-link" data-action="open-work-item-detail" data-id="${item.id}">View details</button>

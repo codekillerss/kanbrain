@@ -64,6 +64,19 @@ describe('renderSearchResults', () => {
     expect(html).toContain('#b2b2b2');
   });
 
+  it('shows a colored left border on the group of items when a color is known for the status', () => {
+    const html = renderSearchResults([workItem({ status: 'Active' })], config({ statusColors: { Active: 'b2b2b2' } }), {});
+
+    expect(html).toContain('kb-group-items');
+    expect(html).toContain('border-left: 3px solid #b2b2b2');
+  });
+
+  it('omits the group left border when the status has no configured color', () => {
+    const html = renderSearchResults([workItem({ status: 'Active' })], config(), {});
+
+    expect(html).not.toContain('border-left');
+  });
+
   it('shows the type icon and a colored right border on each item', () => {
     const html = renderSearchResults(
       [workItem({ type: 'Task' })],

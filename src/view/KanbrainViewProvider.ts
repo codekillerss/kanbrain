@@ -1963,7 +1963,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-label:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-section-actions { display: flex; gap: 2px; }
       .kb-hidden { display: none; }
-      .kb-result-item { width: 100%; margin: 2px 0; }
+      .kb-result-item { width: 100%; margin: 2px 0; padding-bottom: 4px; }
+      .kb-result-item:not(:last-child) { border-bottom: 1px solid var(--vscode-panel-border); }
+      .kb-group-items { padding-left: 6px; }
       .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
       .kb-view-details-link { margin-left: auto; background: none; border: none; color: var(--vscode-textLink-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 11px; padding: 2px 4px; }
       .kb-view-details-link:hover { text-decoration: underline; }
@@ -2126,7 +2128,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-result-item-assignee .kb-avatar, .kb-result-item-assignee .kb-avatar-initial { width: 14px; height: 14px; }
       .kb-history-item { padding-bottom: 4px; }
       .kb-history-item-footer { gap: 8px; }
-      .kb-history-item-status { display: flex; align-items: center; gap: 4px; margin: 0 6px 2px; font-size: 11px; opacity: 0.8; }
+      .kb-history-item-status { display: flex; align-items: center; gap: 4px; margin: 0 6px 2px; font-size: 11px; opacity: 0.8; min-width: 0; }
+      .kb-history-item-status-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
       .kb-history-item .kb-result-item-assignee { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       .kb-history-item .kb-view-details-link { flex-shrink: 0; }
       .kb-result-item-main:disabled { opacity: 0.5; cursor: default; }
