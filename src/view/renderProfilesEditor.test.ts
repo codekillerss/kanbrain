@@ -36,6 +36,16 @@ describe('renderProfilesEditor', () => {
     expect(html).toMatch(/data-action="remove-profile" data-profile-id="developer"/);
   });
 
+  it('shows a red remove button for each profile row, outside the collapsible body so it stays visible when collapsed, matching the skills editor', () => {
+    const html = renderProfilesEditor({ developer: { label: 'Developer', description: 'x' } });
+
+    expect(html).toContain('kb-icon-btn-danger');
+    expect(html).toContain('kb-config-level-remove-btn');
+    const bodyEnd = html.indexOf('kb-config-level-body');
+    const removeButtonIndex = html.indexOf('data-action="remove-profile"');
+    expect(removeButtonIndex).toBeGreaterThan(html.indexOf('</div>', bodyEnd));
+  });
+
   it('escapes HTML in id, label, and description', () => {
     const html = renderProfilesEditor({ '<id>': { label: '<Dev>', description: '<script>alert(1)</script>' } });
 

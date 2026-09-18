@@ -49,7 +49,7 @@ function renderSkillRow(id: string, entry: SkillEntry): string {
           </label>
         </div>
       </div>
-      <button type="button" class="kb-icon-btn kb-icon-btn-danger kb-remove-skill-btn" data-action="remove-skill" data-skill-id="${escapeHtml(id)}" title="Remove skill">
+      <button type="button" class="kb-icon-btn kb-icon-btn-danger kb-config-level-remove-btn" data-action="remove-skill" data-skill-id="${escapeHtml(id)}" title="Remove skill">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
     </div>

@@ -66,8 +66,8 @@ function renderWorkflowStepRow(type: string, status: string, step: WorkflowStepC
       <div class="kb-config-row-status"${renderStatusHeaderStyle(status, statusColors)}>${escapeHtml(status)}</div>
       <div class="kb-workflow-row-body">
         ${renderSkillPicker(step, skills)}
-        <textarea class="kb-input kb-workflow-textarea" data-field="definitionOfDone" placeholder="Definition of Done (one item per line)">${escapeHtml(definitionOfDone)}</textarea>
-        <textarea class="kb-input kb-workflow-textarea" data-field="artifacts" placeholder="Expected artifacts (one item per line)">${escapeHtml(artifacts)}</textarea>
+        <textarea class="kb-input kb-autosize-textarea" data-field="definitionOfDone" placeholder="Definition of Done (one item per line)">${escapeHtml(definitionOfDone)}</textarea>
+        <textarea class="kb-input kb-autosize-textarea" data-field="artifacts" placeholder="Expected artifacts (one item per line)">${escapeHtml(artifacts)}</textarea>
       </div>
     </div>
   `;
