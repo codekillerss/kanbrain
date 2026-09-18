@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.17.0] - 2026-09-18
+
+### Added
+
+- The Config screen has a new "Terminal" section to pick which command (Claude Code, Codex CLI, a custom command, or none) Kanbrain should start automatically in a newly opened terminal, before sending a skill's instructions to it — so the agent is actually running by the time it receives them. Only applies to terminals Kanbrain just created; one already running its own session is left alone. This is a machine-local preference, saved to `.kanbrain/config.local.json`.
+
 ## [0.16.0] - 2026-09-18
 
 ### Added
