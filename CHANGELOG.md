@@ -2,6 +2,19 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.18.0] - 2026-09-18
+
+### Added
+
+- Work items on the Flow screen (main card, parent card, and subtasks) have a new button next to the status dropdown to advance straight to the next status in the workflow order, instead of always opening the dropdown to pick it. Its background is colored to match the next status, with the arrow and border colors picked for contrast.
+
+### Changed
+
+- The status dropdown now marks the current status with a checkmark and a highlighted background, so it's clear which one is currently selected when the menu is open.
+- The profile description field now grows with its content instead of showing a fixed-height box with a manual resize handle, matching the workflow step fields.
+- Removing a profile now uses the same red delete button as removing a skill, always visible even when the profile row is collapsed.
+- The "set as current work item" button on parent/subtask cards now uses a pushpin icon, and the "switch work item" button now uses a magnifying glass — they previously shared the same icon, which made them hard to tell apart.
+
 ## [0.17.0] - 2026-09-18
 
 ### Added
