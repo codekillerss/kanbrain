@@ -221,6 +221,22 @@ describe('machine-local config split', () => {
     expect(readConfig(workspaceRoot)).toEqual(config);
   });
 
+  it('writes aiProviderCommand to config.local.json, not config.json', () => {
+    writeConfig(workspaceRoot, { ...baseConfig, aiProviderCommand: 'claude' });
+
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.aiProviderCommand).toBeUndefined();
+
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({ aiProviderCommand: 'claude' });
+  });
+
+  it('round-trips aiProviderCommand through readConfig', () => {
+    const config = { ...baseConfig, aiProviderCommand: 'codex' };
+    writeConfig(workspaceRoot, config);
+    expect(readConfig(workspaceRoot)).toEqual(config);
+  });
+
   it('returns legacy inline values when config.local.json does not exist yet', () => {
     fs.mkdirSync(path.dirname(getConfigPath(workspaceRoot)), { recursive: true });
     fs.writeFileSync(

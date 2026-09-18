@@ -15,18 +15,21 @@ export function registerTabTerminalCleanup(): vscode.Disposable {
   });
 }
 
-function findOrCreateTerminalForTab(tabId: string): vscode.Terminal {
+function findOrCreateTerminalForTab(tabId: string): { terminal: vscode.Terminal; isNew: boolean } {
   const existing = terminalsByTab.get(tabId);
   if (existing) {
-    return existing;
+    return { terminal: existing, isNew: false };
   }
   const terminal = vscode.window.createTerminal(`Kanbrain ${nextTerminalOrdinal++}`);
   terminalsByTab.set(tabId, terminal);
-  return terminal;
+  return { terminal, isNew: true };
 }
 
-export function sendReadCommandForTab(tabId: string, relativeContextFilePath: string): void {
-  const terminal = findOrCreateTerminalForTab(tabId);
+export function sendReadCommandForTab(tabId: string, relativeContextFilePath: string, aiProviderCommand?: string): void {
+  const { terminal, isNew } = findOrCreateTerminalForTab(tabId);
   terminal.show();
+  if (isNew && aiProviderCommand) {
+    terminal.sendText(aiProviderCommand);
+  }
   terminal.sendText(buildReadCommand(relativeContextFilePath));
 }

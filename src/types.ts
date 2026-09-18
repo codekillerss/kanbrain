@@ -133,4 +133,5 @@ export interface KanbrainConfig {
   repoScanDepth?: number;
   profiles?: Record<string, ProfileEntry>;
   selectedProfileId?: string;
+  aiProviderCommand?: string;
 }
