@@ -28,7 +28,7 @@ export async function configureWithAi(client: AzureDevOpsClient, workspaceRoot: 
 
   const fileName = `setup-assistant-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
   const relativePath = writeGeneratedFile(workspaceRoot, fileName, content);
-  sendReadCommand(relativePath);
+  sendReadCommand(relativePath, config.aiProviderCommand);
 }
 
 export function registerConfigureWithAiCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {

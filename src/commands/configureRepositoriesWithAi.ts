@@ -29,7 +29,7 @@ export async function configureRepositoriesWithAi(client: AzureDevOpsClient, wor
 
   const fileName = `repositories-assistant-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
   const relativePath = writeGeneratedFile(workspaceRoot, fileName, content);
-  sendReadCommand(relativePath);
+  sendReadCommand(relativePath, config.aiProviderCommand);
 }
 
 export function registerConfigureRepositoriesWithAiCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {

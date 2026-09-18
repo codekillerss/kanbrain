@@ -26,7 +26,7 @@ export async function configureProfilesWithAi(client: AzureDevOpsClient, workspa
 
   const fileName = `profiles-assistant-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
   const relativePath = writeGeneratedFile(workspaceRoot, fileName, content);
-  sendReadCommand(relativePath);
+  sendReadCommand(relativePath, config.aiProviderCommand);
 }
 
 export function registerConfigureProfilesWithAiCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {

@@ -28,7 +28,7 @@ export async function configureSkillsWithAi(client: AzureDevOpsClient, workspace
 
   const fileName = `skills-assistant-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
   const relativePath = writeGeneratedFile(workspaceRoot, fileName, content);
-  sendReadCommand(relativePath);
+  sendReadCommand(relativePath, config.aiProviderCommand);
 }
 
 export function registerConfigureSkillsWithAiCommand(client: AzureDevOpsClient, workspaceRoot: string): vscode.Disposable {
