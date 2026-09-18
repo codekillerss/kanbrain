@@ -104,6 +104,8 @@ Abrir o modal (`kb-toggle-search-btn`/`kb-add-tab-btn`/`kb-footer-select-work-it
 
 ### 3. Select de tipo — `renderSearchResults.ts` + JS do webview
 
+**Nota pós-implementação:** o design abaixo (um `<select>` nativo) foi o que de fato foi implementado inicialmente, mas foi trocado por um dropdown customizado (mesmo padrão do picker de status/assignee — trigger + menu, `kb-search-type-filter`/`kb-search-type-filter-option`) a pedido do usuário, pra mostrar o ícone configurado de cada tipo — algo que um `<option>` nativo não renderiza (só texto puro). O restante desta seção documenta a intenção original (contagem por tipo, painéis por tipo, preservar seleção entre buscas); a única mudança é a troca do elemento `<select>` por um dropdown com abrir/fechar/posicionamento próprios.
+
 Para minimizar mudança de superfície, `renderSearchResults` continua retornando uma única string (como hoje) e continua sendo inserida inteira em `#kb-search-results` a cada busca — só o que ela gera no lugar do tab bar muda: em vez de `<div class="kb-search-tabs">` com um `<button>` por tipo, ela gera um `<select id="kb-search-type-select">` (com uma `<option>` por tipo, contagem incluída) seguido pelos mesmos painéis de sempre, só renomeados de `kb-search-tab-panel`/`data-tab-panel` para `kb-search-type-panel`/`data-type-panel` (evita qualquer confusão com `data-tab-id` da barra de abas de work items):
 
 ```ts

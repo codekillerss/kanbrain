@@ -69,7 +69,7 @@ export function renderSearchResults(
   const options = tabs
     .map(tab => {
       const iconHtml = tab.id === 'all' ? '' : renderTypeAccent(tab.id, config).iconHtml;
-      return `<button type="button" class="kb-search-type-filter-option" data-action="select-search-type" data-type="${escapeHtml(tab.id)}">${iconHtml}${escapeHtml(tab.label)} (${tab.count})</button>`;
+      return `<button type="button" class="kb-search-type-filter-option${tab.count === 0 ? ' kb-search-type-filter-option-empty' : ''}" data-action="select-search-type" data-type="${escapeHtml(tab.id)}">${iconHtml}${escapeHtml(tab.label)} (${tab.count})</button>`;
     })
     .join('');
 

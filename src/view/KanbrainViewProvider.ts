@@ -1186,9 +1186,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     function applySearchTypeFilter() {
-      const option = document.querySelector('.kb-search-type-filter-option[data-type="' + activeSearchType + '"]');
       const label = document.querySelector('.kb-search-type-filter-trigger-label');
-      if (option && label) label.innerHTML = option.innerHTML;
+      document.querySelectorAll('.kb-search-type-filter-option').forEach((option) => {
+        if (label && option.dataset.type === activeSearchType) label.innerHTML = option.innerHTML;
+      });
       document.querySelectorAll('.kb-search-type-panel').forEach((panel) => {
         panel.classList.toggle('kb-hidden', panel.dataset.typePanel !== activeSearchType);
       });
@@ -2014,6 +2015,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-dialog-tab { flex-shrink: 0; padding: 4px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-dialog-tab:hover { background: var(--vscode-list-hoverBackground); }
       .kb-dialog-tab-active { border-bottom: 2px solid var(--vscode-focusBorder); font-weight: 600; }
+      .kb-dialog-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       .kb-dialog-panel.kb-hidden { display: none; }
       .kb-search-filters-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
       .kb-search-filters-row .kb-checkbox-row { margin-bottom: 0; }
@@ -2027,6 +2029,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-type-filter-menu.kb-hidden { display: none; }
       .kb-search-type-filter-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-search-type-filter-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-search-type-filter-option-empty { opacity: 0.5; }
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
       .kb-parent-section, .kb-section-card-current { flex-shrink: 0; }
       .kb-section-card-children { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }

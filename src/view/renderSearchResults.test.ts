@@ -126,6 +126,13 @@ describe('renderSearchResults', () => {
     expect(html.slice(allOptionStart, allOptionEnd)).not.toContain('<svg>');
   });
 
+  it('marks a filter option as empty when its count is 0', () => {
+    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
+
+    expect(html).toContain('kb-search-type-filter-option-empty');
+    expect(html).toContain('Task (0)');
+  });
+
   it('shows the type option count from typeCounts, not from the filtered item list', () => {
     const items = [workItem({ id: 1, type: 'Epic' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {} } }), { Epic: 12 });
