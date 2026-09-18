@@ -2,6 +2,17 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.16.0] - 2026-09-18
+
+### Added
+
+- The work item search dialog and the work item history dialog are now one dialog, with "Search"/"History" tabs at the top — history was previously only reachable from the current work item's card, so there was no way to reopen a recent item as a new Flow tab without searching for it again.
+- The work item type filter in search results is now a dropdown that shows each type's configured icon next to its name, instead of a row of tabs.
+
+### Changed
+
+- Search results and work item history are now visually separated by a thin line between each item, and each status group in search results gets a left border colored to match that status, mirroring the accent already used for work item type.
+
 ## [0.15.0] - 2026-09-17
 
 ### Added
