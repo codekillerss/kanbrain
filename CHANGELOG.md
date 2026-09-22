@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.2] - 2026-09-22
+
+### Fixed
+
+- A Flow tab's custom name is now kept when you swap its work item — it previously reverted to showing the work item number.
+
 ## [0.19.1] - 2026-09-22
 
 ### Added
