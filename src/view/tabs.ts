@@ -3,6 +3,8 @@ export interface WorkItemTab {
   workItemId: number;
   /** Work item type, resolved at render time for the tab's icon — never persisted or set by the functions below. */
   type?: string;
+  /** Custom tab name set by the user; falls back to `#${workItemId}` when unset. */
+  label?: string;
 }
 
 export interface TabsUpdate {
@@ -46,6 +48,11 @@ export function addTab(tabs: WorkItemTab[], workItemId: number, newTabId: string
   }
   const tab: WorkItemTab = { id: newTabId, workItemId };
   return { tabs: [...tabs, tab], activeTabId: tab.id };
+}
+
+export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): WorkItemTab[] {
+  const trimmed = label.trim();
+  return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
 }
 
 export function closeTab(tabs: WorkItemTab[], activeTabId: string | undefined, tabIdToClose: string): TabsUpdate {

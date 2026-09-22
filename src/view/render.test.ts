@@ -749,6 +749,55 @@ describe('render', () => {
     expect(html.slice(tab2TagStart, html.indexOf('>', tab2TagStart))).toContain('kb-tab-active');
   });
 
+  it('shows a custom tab label instead of #id when the tab has one', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482, label: 'My Bug Fix' }],
+      activeTabId: 'tab-1',
+    });
+
+    const tabBar = html.slice(html.indexOf('kb-tab-bar'), html.indexOf('kb-tab-add'));
+    expect(tabBar).toContain('My Bug Fix');
+    expect(tabBar).not.toContain('>#482<');
+  });
+
+  it('escapes HTML in a custom tab label', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482, label: '<script>evil</script>' }],
+      activeTabId: 'tab-1',
+    });
+
+    expect(html).not.toContain('<script>evil</script>');
+    expect(html).toContain('&lt;script&gt;evil&lt;/script&gt;');
+  });
+
+  it('renders a hidden rename input per tab, pre-filled with its current display label', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: workItem({ id: 482 }),
+      parent: null,
+      subtasks: [],
+      screen: 'flow',
+      tabs: [{ id: 'tab-1', workItemId: 482, label: 'My Bug Fix' }, { id: 'tab-2', workItemId: 900 }],
+      activeTabId: 'tab-1',
+    });
+
+    expect(html).toMatch(/<input[^>]*class="kb-tab-rename-input kb-hidden"[^>]*data-tab-id="tab-1"[^>]*value="My Bug Fix"/);
+    expect(html).toMatch(/<input[^>]*class="kb-tab-rename-input kb-hidden"[^>]*data-tab-id="tab-2"[^>]*value="#900"/);
+  });
+
   it('shows an enabled add-tab button below the tab limit', () => {
     const html = render({
       hasWorkspace: true, extensionVersion: '1.0.0',

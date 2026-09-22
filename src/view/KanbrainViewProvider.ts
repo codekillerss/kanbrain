@@ -22,7 +22,7 @@ import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
-import { addTab, closeTab, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
+import { addTab, closeTab, renameTab, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -111,6 +111,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.selectTab(String(message.tabId ?? ''));
       } else if (message.type === 'close-tab') {
         this.closeTabById(String(message.tabId ?? ''));
+      } else if (message.type === 'rename-tab') {
+        this.renameTabById(String(message.tabId ?? ''), String(message.label ?? ''));
       } else if (message.type === 'clear-work-item') {
         this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
@@ -270,6 +272,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   closeTabById(tabId: string): void {
     this.applyTabsUpdate(closeTab(this.tabs, this.activeTabId, tabId));
     this.currentScreen = this.activeTabId === undefined ? 'home' : 'flow';
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  renameTabById(tabId: string, label: string): void {
+    this.applyTabsUpdate({ tabs: renameTab(this.tabs, tabId, label), activeTabId: this.activeTabId });
     this.lastState = '';
     void this.refresh();
   }
@@ -881,7 +889,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       workflowStep,
     );
 
-    sendReadCommandForTab(this.activeTabId, relativePath, config.aiProviderCommand);
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    const terminalName = activeTab ? (activeTab.label ?? `#${activeTab.workItemId}`) : undefined;
+    sendReadCommandForTab(this.activeTabId, relativePath, config.aiProviderCommand, terminalName);
   }
 
   private async checkConnection(config: KanbrainConfig): Promise<'connected' | 'disconnected' | 'unknown'> {
@@ -1401,6 +1411,31 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     wireAiProviderSelect('kb-ai-provider-select', 'kb-ai-provider-custom-input', 'set-default-ai-provider-command');
     wireAiProviderSelect('kb-project-ai-provider-select', 'kb-project-ai-provider-custom-input', 'set-ai-provider-command');
+
+    document.querySelectorAll('[data-action="rename-tab-trigger"]').forEach(label => {
+      label.addEventListener('dblclick', () => {
+        const wrap = label.closest('.kb-tab-wrap');
+        const input = wrap && wrap.querySelector('.kb-tab-rename-input');
+        if (!input) return;
+        input.classList.remove('kb-hidden');
+        input.focus();
+        input.select();
+      });
+    });
+    document.querySelectorAll('.kb-tab-rename-input').forEach(input => {
+      input.addEventListener('blur', () => {
+        input.classList.add('kb-hidden');
+        vscode.postMessage({ type: 'rename-tab', tabId: input.dataset.tabId, label: input.value });
+      });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          input.blur();
+        } else if (e.key === 'Escape') {
+          input.value = input.defaultValue;
+          input.blur();
+        }
+      });
+    });
 
     const teamSelect = document.getElementById('kb-team-select');
     if (teamSelect) {
@@ -1994,8 +2029,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
       .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+      .kb-tab-wrap { position: relative; flex-shrink: 0; }
+      .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
       .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
-      .kb-tab + .kb-tab { border-left: 1px solid var(--vscode-panel-border); }
+      .kb-tab-rename-input { position: absolute; inset: 0; box-sizing: border-box; width: 100%; height: 100%; padding: 5px 8px; font-family: var(--vscode-font-family); font-size: 12px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-focusBorder); }
       .kb-tab:hover { background: var(--vscode-list-hoverBackground); opacity: 1; }
       .kb-tab-active { opacity: 1; border-bottom-color: var(--vscode-focusBorder); }
       .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 2px; opacity: 0.7; }

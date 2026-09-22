@@ -16,18 +16,23 @@ export function registerTabTerminalCleanup(): vscode.Disposable {
   });
 }
 
-function findOrCreateTerminalForTab(tabId: string): { terminal: vscode.Terminal; isNew: boolean } {
+function findOrCreateTerminalForTab(tabId: string, terminalName: string | undefined): { terminal: vscode.Terminal; isNew: boolean } {
   const existing = terminalsByTab.get(tabId);
   if (existing) {
     return { terminal: existing, isNew: false };
   }
-  const terminal = vscode.window.createTerminal(`Kanbrain ${nextTerminalOrdinal++}`);
+  const terminal = vscode.window.createTerminal(terminalName ?? `Kanbrain ${nextTerminalOrdinal++}`);
   terminalsByTab.set(tabId, terminal);
   return { terminal, isNew: true };
 }
 
-export function sendReadCommandForTab(tabId: string, relativeContextFilePath: string, aiProviderCommand?: string): void {
-  const { terminal, isNew } = findOrCreateTerminalForTab(tabId);
+export function sendReadCommandForTab(
+  tabId: string,
+  relativeContextFilePath: string,
+  aiProviderCommand?: string,
+  terminalName?: string,
+): void {
+  const { terminal, isNew } = findOrCreateTerminalForTab(tabId, terminalName);
   terminal.show();
   const defaultCommand = vscode.workspace.getConfiguration('kanbrain').get<string>('defaultAiProviderCommand');
   const effectiveCommand = resolveAiProviderCommand(aiProviderCommand, defaultCommand);

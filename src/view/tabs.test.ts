@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_TABS, addTab, replaceActiveWorkItem, closeTab } from './tabs';
+import { MAX_TABS, addTab, replaceActiveWorkItem, closeTab, renameTab } from './tabs';
 import type { WorkItemTab } from './tabs';
 
 describe('replaceActiveWorkItem', () => {
@@ -128,5 +128,37 @@ describe('closeTab', () => {
     const result = closeTab(tabs, 'tab-1', 'does-not-exist');
 
     expect(result).toEqual({ tabs, activeTabId: 'tab-1' });
+  });
+});
+
+describe('renameTab', () => {
+  it('sets a trimmed custom label on the matching tab, leaving other tabs untouched', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+    ];
+
+    const result = renameTab(tabs, 'tab-1', '  My Bug Fix  ');
+
+    expect(result).toEqual([
+      { id: 'tab-1', workItemId: 1, label: 'My Bug Fix' },
+      { id: 'tab-2', workItemId: 2 },
+    ]);
+  });
+
+  it('clears the custom label (falling back to the default #id display) when given an empty or whitespace-only name', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, label: 'Old name' }];
+
+    const result = renameTab(tabs, 'tab-1', '   ');
+
+    expect(result).toEqual([{ id: 'tab-1', workItemId: 1, label: undefined }]);
+  });
+
+  it('is a no-op when renaming a tab id that does not exist', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1 }];
+
+    const result = renameTab(tabs, 'does-not-exist', 'New name');
+
+    expect(result).toEqual(tabs);
   });
 });

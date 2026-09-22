@@ -9,6 +9,7 @@ import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 import { isExtensionOutdated } from '../config/compareVersions';
 import { renderTypeAccent } from './renderTypeAccent';
 import { MAX_TABS, type WorkItemTab } from './tabs';
+import { escapeHtml } from './escapeHtml';
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -40,12 +41,16 @@ function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, conf
   const tabsHtml = tabs
     .map(tab => {
       const iconHtml = tab.type ? renderTypeAccent(tab.type, config).iconHtml : '';
+      const label = tab.label ?? `#${tab.workItemId}`;
       return `
-      <button type="button" class="kb-tab${tab.id === activeTabId ? ' kb-tab-active' : ''}" data-action="select-tab" data-tab-id="${tab.id}">
-        ${iconHtml}
-        <span class="kb-tab-label">#${tab.workItemId}</span>
-        <span class="kb-tab-close" data-action="close-tab" data-tab-id="${tab.id}" title="Close tab" aria-label="Close tab">&#10005;</span>
-      </button>`;
+      <div class="kb-tab-wrap">
+        <button type="button" class="kb-tab${tab.id === activeTabId ? ' kb-tab-active' : ''}" data-action="select-tab" data-tab-id="${tab.id}">
+          ${iconHtml}
+          <span class="kb-tab-label" data-action="rename-tab-trigger" data-tab-id="${tab.id}">${escapeHtml(label)}</span>
+          <span class="kb-tab-close" data-action="close-tab" data-tab-id="${tab.id}" title="Close tab" aria-label="Close tab">&#10005;</span>
+        </button>
+        <input type="text" class="kb-tab-rename-input kb-hidden" data-tab-id="${tab.id}" value="${escapeHtml(label)}">
+      </div>`;
     })
     .join('');
   const atLimit = tabs.length >= MAX_TABS;
