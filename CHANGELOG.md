@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.3] - 2026-09-22
+
+### Added
+
+- Flow tabs can now be reordered by dragging them.
+
 ## [0.19.2] - 2026-09-22
 
 ### Fixed
