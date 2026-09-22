@@ -100,6 +100,23 @@ describe('renderWorkItemDetail', () => {
     expect(html).not.toContain('kb-pick-link');
   });
 
+  it('shows an "Open in a new tab" link next to "Set as current work item" when the item is not the current work item', () => {
+    const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482 }), currentWorkItemId: 900 }));
+
+    const rowStart = html.indexOf('kb-detail-title-row');
+    const rowEnd = html.indexOf('</div>', html.indexOf('kb-detail-title', rowStart));
+    const row = html.slice(rowStart, rowEnd);
+
+    expect(row).toContain(`href="command:kanbrain.openWorkItemInNewTab?${encodeURIComponent(JSON.stringify([482]))}"`);
+    expect(row).toContain('title="Open in a new tab"');
+  });
+
+  it('omits the "Open in a new tab" link when the item is already the current work item', () => {
+    const html = renderWorkItemDetail(input({ workItem: workItem({ id: 482 }), currentWorkItemId: 482 }));
+
+    expect(html).not.toContain('openWorkItemInNewTab');
+  });
+
   it('shows the assignee row after the status', () => {
     const html = renderWorkItemDetail(input());
 

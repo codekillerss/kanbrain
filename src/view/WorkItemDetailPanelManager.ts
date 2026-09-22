@@ -48,6 +48,7 @@ export class WorkItemDetailPanelManager {
         'kanbrain.resolveRepositoryTag',
         'kanbrain.openWorkItemInBrowser',
         'kanbrain.pickWorkItem',
+        'kanbrain.openWorkItemInNewTab',
       ],
     });
     panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'icons', 'work-item.svg');
