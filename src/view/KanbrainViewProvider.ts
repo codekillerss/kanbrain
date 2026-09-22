@@ -2055,7 +2055,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-query-option:disabled { opacity: 0.5; cursor: default; }
       .kb-query-option:disabled:hover { background: none; }
       .kb-query-type-badge { margin-left: 4px; font-size: 10px; opacity: 0.7; }
-      #kb-search-results { overflow-y: auto; flex: 1; min-height: 0; }
+      #kb-search-results, #kb-history-results { overflow-y: auto; flex: 1; min-height: 0; }
       .kb-dialog-close-btn { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; border-radius: 2px; font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-dialog-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-dialog-close-btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
