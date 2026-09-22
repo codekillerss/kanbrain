@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.1] - 2026-09-22
+
+### Added
+
+- Closing a Flow tab now asks for confirmation, naming the tab — closing a tab doesn't close its terminal, so it's easy to lose track of a running session by accidentally closing its tab.
+
 ## [0.19.0] - 2026-09-22
 
 ### Added
