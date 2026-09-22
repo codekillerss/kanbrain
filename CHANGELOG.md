@@ -2,6 +2,26 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.0] - 2026-09-22
+
+### Added
+
+- The Terminal command set from the Config screen is now a default that applies to all of your projects (saved as a VS Code user setting), not just the current one. The Home screen gets its own per-project Terminal section to override that default — leaving it untouched inherits the default (marked with "(default)" on the matching option), while explicitly picking "None" forces no command for that project even when a default is set.
+- Flow cards (main, parent, and subtasks) have a new button to open the work item in the browser, next to "Set as current work item" on the cards that have one.
+- The work item detail panel has a new "Open in a new tab" link next to "Set as current work item", so a linked/parent/child item can be opened as a new Flow tab without losing the one you're viewing.
+- Flow tabs can now be renamed: double-click a tab's label to edit it, Enter or clicking away saves, Escape reverts. Each tab's terminal is now created with the tab's name (custom or `#id`) instead of a generic "Kanbrain N".
+
+### Changed
+
+- Flow tabs have a max width with ellipsis truncation, and reject renames under 3 characters so a renamed tab always keeps enough clickable text.
+- The "Set as current work item" and "Open in browser" icon buttons on Flow cards now have a visible border, and the gap between a card's header row and its status row matches the card's own top padding.
+
+### Fixed
+
+- The search button (magnifying glass) sometimes didn't respond to clicks when clicking directly on its icon rather than the button's edge.
+- The History tab in the search dialog now scrolls vertically instead of growing without limit.
+- Fixed a persistent horizontal scrollbar in the search/history results list, which was also clipping the colored work-item-type border on the right edge of each result.
+
 ## [0.18.0] - 2026-09-18
 
 ### Added
