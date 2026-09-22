@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { buildReadCommand } from './buildReadCommand';
+import { resolveAiProviderCommand } from './resolveAiProviderCommand';
 
 const terminalsByTab = new Map<string, vscode.Terminal>();
 let nextTerminalOrdinal = 1;
@@ -28,8 +29,10 @@ function findOrCreateTerminalForTab(tabId: string): { terminal: vscode.Terminal;
 export function sendReadCommandForTab(tabId: string, relativeContextFilePath: string, aiProviderCommand?: string): void {
   const { terminal, isNew } = findOrCreateTerminalForTab(tabId);
   terminal.show();
-  if (isNew && aiProviderCommand) {
-    terminal.sendText(aiProviderCommand);
+  const defaultCommand = vscode.workspace.getConfiguration('kanbrain').get<string>('defaultAiProviderCommand');
+  const effectiveCommand = resolveAiProviderCommand(aiProviderCommand, defaultCommand);
+  if (isNew && effectiveCommand) {
+    terminal.sendText(effectiveCommand);
   }
   terminal.sendText(buildReadCommand(relativeContextFilePath));
 }

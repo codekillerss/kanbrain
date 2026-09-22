@@ -15,6 +15,13 @@ function renderPickButton(id: number): string {
   </button>`;
 }
 
+function renderOpenInBrowserButton(id: number, url: string, nextToPickButton: boolean): string {
+  const offsetClass = nextToPickButton ? ' kb-with-pick' : '';
+  return `<a class="kb-icon-btn kb-open-browser-btn${offsetClass}" href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([id, url]))}" title="Open in browser">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="8 7 17 7 17 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  </a>`;
+}
+
 function renderGlobalSkillTrigger(id: number, hasEntries: boolean): string {
   if (!hasEntries) {
     return '';
@@ -161,6 +168,7 @@ export function renderWorkItemCard(
 
   return `
     <div class="${cssClass}"${borderStyle}>
+      ${renderOpenInBrowserButton(workItem.id, workItem.url, showPickButton)}
       ${showPickButton ? renderPickButton(workItem.id) : ''}
       <div class="kb-card-header">
         ${iconHtml}

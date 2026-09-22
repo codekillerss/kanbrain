@@ -87,7 +87,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      enableCommandUris: ['kanbrain.openPullRequestDetail', 'kanbrain.checkoutBranch'],
+      enableCommandUris: ['kanbrain.openPullRequestDetail', 'kanbrain.checkoutBranch', 'kanbrain.openWorkItemInBrowser'],
     };
 
     webviewView.webview.onDidReceiveMessage(async message => {
@@ -173,6 +173,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.setShowAssignedTo(Boolean(message.value));
       } else if (message.type === 'set-ai-provider-command') {
         this.setAiProviderCommand(String(message.command ?? ''));
+      } else if (message.type === 'set-default-ai-provider-command') {
+        await this.setDefaultAiProviderCommand(String(message.command ?? ''));
       } else if (message.type === 'set-selected-team') {
         this.setSelectedTeam(message.team || undefined);
       } else if (message.type === 'set-selected-profile') {
@@ -565,6 +567,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
+  // Stores the literal command, including '' — distinct from an unset override, '' means this
+  // project explicitly forces no command even when a user default is set (see resolveAiProviderCommand).
   private setAiProviderCommand(command: string): void {
     if (!this.workspaceRoot) {
       return;
@@ -573,8 +577,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
-    config.aiProviderCommand = command || undefined;
+    config.aiProviderCommand = command;
     writeConfig(this.workspaceRoot, config);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private getDefaultAiProviderCommand(): string | undefined {
+    return vscode.workspace.getConfiguration('kanbrain').get<string>('defaultAiProviderCommand');
+  }
+
+  private async setDefaultAiProviderCommand(command: string): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('kanbrain')
+      .update('defaultAiProviderCommand', command || undefined, vscode.ConfigurationTarget.Global);
     this.lastState = '';
     void this.refresh();
   }
@@ -1147,11 +1163,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const avatars = config ? await this.resolveAvatars([workItem, parent, ...subtasks].filter((w): w is WorkItem => !!w)) : {};
 
     const tabsForRender = this.tabs.map(tab => ({ ...tab, type: this.tabTypesCache.get(tab.workItemId) }));
+    const defaultAiProviderCommand = this.getDefaultAiProviderCommand();
     const reviewsExtra = {
       pullRequests: this.reviewsPullRequests,
       failedCount: this.reviewsFetchFailedCount,
       tabs: tabsForRender,
       activeTabId: this.activeTabId,
+      defaultAiProviderCommand,
     };
     if (!hasStateChanged(this.lastState, config, workItem, parent, subtasks, avatars, reviewsExtra)) {
       return;
@@ -1177,6 +1195,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         reviewsFetchFailedCount: this.reviewsFetchFailedCount,
         tabs: tabsForRender,
         activeTabId: this.activeTabId,
+        defaultAiProviderCommand,
       }),
     );
   }
@@ -1357,27 +1376,31 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
-    const aiProviderSelect = document.getElementById('kb-ai-provider-select');
-    const aiProviderCustomInput = document.getElementById('kb-ai-provider-custom-input');
-    if (aiProviderSelect) {
-      aiProviderSelect.addEventListener('change', () => {
-        if (aiProviderSelect.value === 'custom') {
-          if (aiProviderCustomInput) {
-            aiProviderCustomInput.classList.remove('kb-hidden');
-            aiProviderCustomInput.focus();
+    function wireAiProviderSelect(selectId, inputId, messageType) {
+      const select = document.getElementById(selectId);
+      const input = document.getElementById(inputId);
+      if (select) {
+        select.addEventListener('change', () => {
+          if (select.value === 'custom') {
+            if (input) {
+              input.classList.remove('kb-hidden');
+              input.focus();
+            }
+            return;
           }
-          return;
-        }
-        if (aiProviderCustomInput) aiProviderCustomInput.classList.add('kb-hidden');
-        const command = aiProviderSelect.selectedOptions[0].dataset.command || '';
-        vscode.postMessage({ type: 'set-ai-provider-command', command });
-      });
+          if (input) input.classList.add('kb-hidden');
+          const command = select.selectedOptions[0].dataset.command || '';
+          vscode.postMessage({ type: messageType, command });
+        });
+      }
+      if (input) {
+        input.addEventListener('blur', () => {
+          vscode.postMessage({ type: messageType, command: input.value });
+        });
+      }
     }
-    if (aiProviderCustomInput) {
-      aiProviderCustomInput.addEventListener('blur', () => {
-        vscode.postMessage({ type: 'set-ai-provider-command', command: aiProviderCustomInput.value });
-      });
-    }
+    wireAiProviderSelect('kb-ai-provider-select', 'kb-ai-provider-custom-input', 'set-default-ai-provider-command');
+    wireAiProviderSelect('kb-project-ai-provider-select', 'kb-project-ai-provider-custom-input', 'set-ai-provider-command');
 
     const teamSelect = document.getElementById('kb-team-select');
     if (teamSelect) {
@@ -1982,9 +2005,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
+      .kb-open-browser-btn { position: absolute; top: 4px; right: 4px; }
+      .kb-open-browser-btn.kb-with-pick { right: 32px; }
+      .kb-pick-btn, .kb-open-browser-btn { border: 1px solid var(--vscode-panel-border); border-radius: 3px; background: var(--vscode-editor-background); }
       .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
-      .kb-card-header { display: flex; align-items: center; padding-right: 26px; }
+      .kb-card-header { display: flex; align-items: center; padding-right: 32px; }
+      .kb-open-browser-btn.kb-with-pick ~ .kb-card-header { padding-right: 60px; }
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
       .kb-type-icon svg { width: 100%; height: 100%; }
       .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }

@@ -44,6 +44,17 @@
       "kanbrain": [
         { "type": "webview", "id": "kanbrain.view", "name": "Kanbrain" }
       ]
+    },
+    "configuration": {
+      "title": "Kanbrain",
+      "properties": {
+        "kanbrain.defaultAiProviderCommand": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Command Kanbrain runs when opening a new terminal for a skill, unless a project overrides it in the Terminal section on the Home screen. Set from the Terminal section on Kanbrain's Config screen."
+        }
+      }
     }
   },
   "scripts": {

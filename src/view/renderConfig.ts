@@ -1,15 +1,10 @@
 import type { RenderState } from './render';
-import type { KanbrainConfig } from '../types';
 import { escapeHtml } from './escapeHtml';
+import { AI_PROVIDER_PRESETS, matchAiProviderPreset } from './aiProviderPresets';
 
-const AI_PROVIDER_PRESETS = [
-  { id: 'claude', label: 'Claude Code', command: 'claude' },
-  { id: 'codex', label: 'Codex CLI', command: 'codex' },
-];
-
-function renderAiProviderSection(config: KanbrainConfig): string {
-  const current = config.aiProviderCommand ?? '';
-  const matchedPreset = AI_PROVIDER_PRESETS.find(p => p.command === current);
+function renderAiProviderSection(defaultAiProviderCommand: string | undefined): string {
+  const current = defaultAiProviderCommand ?? '';
+  const matchedPreset = matchAiProviderPreset(current);
   const selectedValue = current === '' ? 'none' : matchedPreset ? matchedPreset.id : 'custom';
   const customValue = selectedValue === 'custom' ? current : '';
 
@@ -24,7 +19,7 @@ function renderAiProviderSection(config: KanbrainConfig): string {
   return `
     <div class="kb-section-card">
       <div class="kb-section-label">Terminal</div>
-      <p class="kb-field-hint">When a skill opens a terminal, Kanbrain can start this command first, before sending the skill's instructions. Only applies to newly opened terminals.</p>
+      <p class="kb-field-hint">When a skill opens a terminal, Kanbrain can start this command first, before sending the skill's instructions. This is the default for all of your projects — override it per project from the Home screen. Only applies to newly opened terminals.</p>
       <select id="kb-ai-provider-select">${options}</select>
       <input type="text" id="kb-ai-provider-custom-input" class="kb-input${selectedValue === 'custom' ? '' : ' kb-hidden'}" placeholder="Command to run, e.g. claude" value="${escapeHtml(customValue)}">
     </div>
@@ -49,6 +44,6 @@ export function renderConfig(state: RenderState): string {
         Show assignee in search results
       </label>
     </div>
-    ${renderAiProviderSection(config)}
+    ${renderAiProviderSection(state.defaultAiProviderCommand)}
   `;
 }

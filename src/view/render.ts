@@ -30,6 +30,7 @@ export interface RenderState {
   reviewsFetchFailedCount?: number;
   tabs?: WorkItemTab[];
   activeTabId?: string;
+  defaultAiProviderCommand?: string;
 }
 
 function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, config: KanbrainConfig): string {

@@ -53,6 +53,24 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('data-id="482"');
   });
 
+  it('always shows an open-in-browser link, pointing at the openWorkItemInBrowser command with the id and url', () => {
+    const html = renderWorkItemCard(workItem({ id: 482, url: 'https://dev.azure.com/org/proj/_workitems/edit/482' }), config, 'kb-main-card');
+    expect(html).toContain('kb-open-browser-btn');
+    expect(html).toContain(
+      `href="command:kanbrain.openWorkItemInBrowser?${encodeURIComponent(JSON.stringify([482, 'https://dev.azure.com/org/proj/_workitems/edit/482']))}"`,
+    );
+  });
+
+  it('does not add the "next to pick button" offset class when showPickButton is false', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-main-card');
+    expect(html).not.toContain('kb-with-pick');
+  });
+
+  it('offsets the open-in-browser button next to the pick button when showPickButton is true', () => {
+    const html = renderWorkItemCard(workItem(), config, 'kb-subtask-card', true, {}, false, null, false, undefined, true);
+    expect(html).toMatch(/class="kb-icon-btn kb-open-browser-btn kb-with-pick"/);
+  });
+
   it('shows "Unassigned" when the work item has no assignee and the type has AssignedTo enabled', () => {
     const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card');
     expect(html).toContain('kb-assignee-row');

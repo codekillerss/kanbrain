@@ -291,4 +291,49 @@ describe('renderHome', () => {
     expect(html).not.toContain('kb-status-picker');
     expect(html).not.toContain('kb-assignee-picker');
   });
+
+  it('always shows a per-project Terminal section, selecting "None" when there is no project override and no default', () => {
+    const html = renderHome(state());
+    expect(html).toContain('>Terminal<');
+    expect(html).toContain('id="kb-project-ai-provider-select"');
+    expect(html).toMatch(/<option value="none"[^>]*selected[^>]*>None[^(]*<\/option>/);
+  });
+
+  it('selects the option matching the user default and marks it "(default)" when the project has no override', () => {
+    const html = renderHome(state({ defaultAiProviderCommand: 'claude' }));
+    expect(html).toMatch(/<option value="claude"[^>]*selected[^>]*>Claude Code \(default\)<\/option>/);
+  });
+
+  it('selects the project override, not the default, when the project has an explicit non-empty override', () => {
+    const html = renderHome(
+      state({ config: config({ aiProviderCommand: 'codex' }), defaultAiProviderCommand: 'claude' }),
+    );
+    expect(html).toMatch(/<option value="codex"[^>]*selected[^>]*>Codex CLI<\/option>/);
+    expect(html).toContain('Claude Code (default)');
+    expect(html).not.toMatch(/<option value="claude"[^>]*selected/);
+  });
+
+  it('selects "None" (not the default) when the project explicitly forces no command', () => {
+    const html = renderHome(
+      state({ config: config({ aiProviderCommand: '' }), defaultAiProviderCommand: 'claude' }),
+    );
+    expect(html).toMatch(/<option value="none"[^>]*selected[^>]*>/);
+    expect(html).toContain('Claude Code (default)');
+  });
+
+  it('falls back to Custom with the input visible and pre-filled for a project override matching no preset', () => {
+    const html = renderHome(state({ config: config({ aiProviderCommand: 'my-agent --flag' }) }));
+    expect(html).toMatch(/<option value="custom"[^>]*selected[^>]*>/);
+    const inputStart = html.indexOf('id="kb-project-ai-provider-custom-input"');
+    const inputTag = html.slice(html.lastIndexOf('<input', inputStart), html.indexOf('>', inputStart) + 1);
+    expect(inputTag).not.toContain('kb-hidden');
+    expect(inputTag).toContain('value="my-agent --flag"');
+  });
+
+  it('hides the custom input when a preset (or none) is selected', () => {
+    const html = renderHome(state({ config: config({ aiProviderCommand: 'claude' }) }));
+    const inputStart = html.indexOf('id="kb-project-ai-provider-custom-input"');
+    const inputTag = html.slice(html.lastIndexOf('<input', inputStart), html.indexOf('>', inputStart) + 1);
+    expect(inputTag).toContain('kb-hidden');
+  });
 });

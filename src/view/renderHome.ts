@@ -1,6 +1,7 @@
 import type { RenderState } from './render';
 import { renderWorkItemCard } from './renderWorkItemCard';
 import { escapeHtml } from './escapeHtml';
+import { AI_PROVIDER_PRESETS, matchAiProviderPreset } from './aiProviderPresets';
 
 function renderHomeFlowActions(state: RenderState): string {
   if (!state.workItem) {
@@ -81,6 +82,37 @@ function renderHomeProfileSection(state: RenderState): string {
   `;
 }
 
+function renderHomeTerminalSection(state: RenderState): string {
+  const config = state.config!;
+  const defaultCommand = state.defaultAiProviderCommand ?? '';
+  const defaultPresetId = matchAiProviderPreset(defaultCommand)?.id;
+
+  const hasOverride = config.aiProviderCommand !== undefined;
+  const effective = hasOverride ? config.aiProviderCommand! : defaultCommand;
+  const matchedPreset = matchAiProviderPreset(effective);
+  const selectedValue = effective === '' ? 'none' : matchedPreset ? matchedPreset.id : 'custom';
+  const customValue = selectedValue === 'custom' ? effective : '';
+
+  const options = [
+    `<option value="none" data-command=""${selectedValue === 'none' ? ' selected' : ''}>None — force no command for this project</option>`,
+    ...AI_PROVIDER_PRESETS.map(
+      p =>
+        `<option value="${p.id}" data-command="${escapeHtml(p.command)}"${selectedValue === p.id ? ' selected' : ''}>${escapeHtml(p.label)}${p.id === defaultPresetId ? ' (default)' : ''}</option>`,
+    ),
+    `<option value="custom"${selectedValue === 'custom' ? ' selected' : ''}>Custom command...</option>`,
+  ].join('');
+
+  return `
+    <div class="kb-section-card">
+      <div class="kb-section-label">Terminal</div>
+      <div class="kb-team-card">
+        <select id="kb-project-ai-provider-select">${options}</select>
+      </div>
+      <input type="text" id="kb-project-ai-provider-custom-input" class="kb-input${selectedValue === 'custom' ? '' : ' kb-hidden'}" placeholder="Command to run, e.g. claude" value="${escapeHtml(customValue)}">
+    </div>
+  `;
+}
+
 export function renderHome(state: RenderState): string {
   return `
     <div class="kb-section-card">
@@ -92,5 +124,6 @@ export function renderHome(state: RenderState): string {
     </div>
     ${renderHomeTeamSection(state)}
     ${renderHomeProfileSection(state)}
+    ${renderHomeTerminalSection(state)}
   `;
 }
