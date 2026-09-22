@@ -62,6 +62,14 @@ export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): Wo
   return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
 }
 
+export function reorderTabs(tabs: WorkItemTab[], orderedTabIds: string[]): WorkItemTab[] {
+  const byId = new Map(tabs.map(t => [t.id, t]));
+  const reordered = orderedTabIds.map(id => byId.get(id)).filter((t): t is WorkItemTab => t !== undefined);
+  const includedIds = new Set(reordered.map(t => t.id));
+  const missing = tabs.filter(t => !includedIds.has(t.id));
+  return [...reordered, ...missing];
+}
+
 export function closeTab(tabs: WorkItemTab[], activeTabId: string | undefined, tabIdToClose: string): TabsUpdate {
   const index = tabs.findIndex(t => t.id === tabIdToClose);
   if (index === -1) {

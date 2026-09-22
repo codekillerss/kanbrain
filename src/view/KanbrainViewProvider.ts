@@ -22,7 +22,7 @@ import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
-import { addTab, closeTab, renameTab, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
+import { addTab, closeTab, renameTab, reorderTabs, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -113,6 +113,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.confirmAndCloseTab(String(message.tabId ?? ''));
       } else if (message.type === 'rename-tab') {
         this.renameTabById(String(message.tabId ?? ''), String(message.label ?? ''));
+      } else if (message.type === 'reorder-tabs') {
+        this.reorderTabsByIds(Array.isArray(message.tabIds) ? message.tabIds.map(String) : []);
       } else if (message.type === 'clear-work-item') {
         this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
@@ -291,6 +293,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   renameTabById(tabId: string, label: string): void {
     this.applyTabsUpdate({ tabs: renameTab(this.tabs, tabId, label), activeTabId: this.activeTabId });
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  reorderTabsByIds(tabIds: string[]): void {
+    this.applyTabsUpdate({ tabs: reorderTabs(this.tabs, tabIds), activeTabId: this.activeTabId });
     this.lastState = '';
     void this.refresh();
   }
@@ -1450,6 +1458,42 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    {
+      const tabBar = document.querySelector('.kb-tab-bar');
+      let draggingWrap = null;
+      if (tabBar) {
+        tabBar.querySelectorAll('.kb-tab-wrap').forEach(wrap => {
+          wrap.addEventListener('dragstart', e => {
+            draggingWrap = wrap;
+            wrap.classList.add('kb-tab-wrap-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '');
+          });
+          wrap.addEventListener('dragend', () => {
+            if (draggingWrap) draggingWrap.classList.remove('kb-tab-wrap-dragging');
+            draggingWrap = null;
+            const tabIds = [...tabBar.querySelectorAll('.kb-tab-wrap')]
+              .map(w => {
+                const btn = w.querySelector('[data-action="select-tab"]');
+                return btn && btn.dataset.tabId;
+              })
+              .filter(Boolean);
+            vscode.postMessage({ type: 'reorder-tabs', tabIds });
+          });
+        });
+        tabBar.addEventListener('dragover', e => {
+          if (!draggingWrap) return;
+          e.preventDefault();
+          const target = e.target.closest && e.target.closest('.kb-tab-wrap');
+          if (!target || target === draggingWrap) return;
+          const rect = target.getBoundingClientRect();
+          const before = e.clientX < rect.left + rect.width / 2;
+          target.parentNode.insertBefore(draggingWrap, before ? target : target.nextSibling);
+        });
+        tabBar.addEventListener('drop', e => e.preventDefault());
+      }
+    }
+
     const teamSelect = document.getElementById('kb-team-select');
     if (teamSelect) {
       teamSelect.addEventListener('change', () => {
@@ -2044,6 +2088,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
       .kb-tab-wrap { position: relative; flex-shrink: 0; max-width: 140px; }
       .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
+      .kb-tab-wrap-dragging { opacity: 0.4; }
       .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
       .kb-tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
       .kb-tab-rename-input { position: absolute; inset: 0; box-sizing: border-box; width: 100%; height: 100%; padding: 5px 8px; font-family: var(--vscode-font-family); font-size: 12px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-focusBorder); }

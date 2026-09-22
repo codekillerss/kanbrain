@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_TABS, addTab, replaceActiveWorkItem, closeTab, renameTab } from './tabs';
+import { MAX_TABS, addTab, replaceActiveWorkItem, closeTab, renameTab, reorderTabs } from './tabs';
 import type { WorkItemTab } from './tabs';
 
 describe('replaceActiveWorkItem', () => {
@@ -187,5 +187,53 @@ describe('renameTab', () => {
     const result = renameTab(tabs, 'tab-1', 'abc');
 
     expect(result).toEqual([{ id: 'tab-1', workItemId: 1, label: 'abc' }]);
+  });
+});
+
+describe('reorderTabs', () => {
+  it('reorders tabs to match the given tab id order', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-3', workItemId: 3 },
+    ];
+
+    const result = reorderTabs(tabs, ['tab-3', 'tab-1', 'tab-2']);
+
+    expect(result).toEqual([
+      { id: 'tab-3', workItemId: 3 },
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+    ]);
+  });
+
+  it('ignores tab ids that do not exist in tabs', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+    ];
+
+    const result = reorderTabs(tabs, ['tab-2', 'does-not-exist', 'tab-1']);
+
+    expect(result).toEqual([
+      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-1', workItemId: 1 },
+    ]);
+  });
+
+  it('appends tabs missing from the given order at the end, keeping their relative order', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-3', workItemId: 3 },
+    ];
+
+    const result = reorderTabs(tabs, ['tab-3']);
+
+    expect(result).toEqual([
+      { id: 'tab-3', workItemId: 3 },
+      { id: 'tab-1', workItemId: 1 },
+      { id: 'tab-2', workItemId: 2 },
+    ]);
   });
 });
