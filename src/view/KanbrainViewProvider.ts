@@ -110,7 +110,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-tab') {
         this.selectTab(String(message.tabId ?? ''));
       } else if (message.type === 'close-tab') {
-        this.closeTabById(String(message.tabId ?? ''));
+        await this.confirmAndCloseTab(String(message.tabId ?? ''));
       } else if (message.type === 'rename-tab') {
         this.renameTabById(String(message.tabId ?? ''), String(message.label ?? ''));
       } else if (message.type === 'clear-work-item') {
@@ -274,6 +274,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.currentScreen = this.activeTabId === undefined ? 'home' : 'flow';
     this.lastState = '';
     void this.refresh();
+  }
+
+  private async confirmAndCloseTab(tabId: string): Promise<void> {
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) {
+      return;
+    }
+    const label = tab.label ?? `#${tab.workItemId}`;
+    const choice = await vscode.window.showWarningMessage(`Close tab "${label}"?`, { modal: true }, 'Close');
+    if (choice !== 'Close') {
+      return;
+    }
+    this.closeTabById(tabId);
   }
 
   renameTabById(tabId: string, label: string): void {
