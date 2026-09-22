@@ -1462,7 +1462,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     document.addEventListener('click', (e) => {
       const target = e.target;
-      if (target.id === 'kb-toggle-search-btn' || target.id === 'kb-footer-select-work-item-btn') {
+      if (
+        (target.closest && target.closest('#kb-toggle-search-btn')) ||
+        (target.closest && target.closest('#kb-footer-select-work-item-btn'))
+      ) {
         const section = document.getElementById('kb-search-section');
         if (section) {
           section.dataset.mode = 'replace';
