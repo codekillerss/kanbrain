@@ -36,6 +36,17 @@ describe('replaceActiveWorkItem', () => {
       activeTabId: 'tab-2',
     });
   });
+
+  it('keeps a custom label on the active tab when its work item is replaced', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, label: 'My Bug Fix' }];
+
+    const result = replaceActiveWorkItem(tabs, 'tab-1', 999, 'tab-2');
+
+    expect(result).toEqual({
+      tabs: [{ id: 'tab-1', workItemId: 999, label: 'My Bug Fix' }],
+      activeTabId: 'tab-1',
+    });
+  });
 });
 
 describe('addTab', () => {

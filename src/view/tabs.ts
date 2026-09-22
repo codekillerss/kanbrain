@@ -34,7 +34,7 @@ export function replaceActiveWorkItem(
     return { tabs: [...tabs, tab], activeTabId: tab.id };
   }
   const updated = tabs.slice();
-  updated[activeIndex] = { id: tabs[activeIndex].id, workItemId };
+  updated[activeIndex] = { ...tabs[activeIndex], workItemId };
   return { tabs: updated, activeTabId };
 }
 
