@@ -50,8 +50,15 @@ export function addTab(tabs: WorkItemTab[], workItemId: number, newTabId: string
   return { tabs: [...tabs, tab], activeTabId: tab.id };
 }
 
+const MIN_TAB_LABEL_LENGTH = 3;
+
 export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): WorkItemTab[] {
   const trimmed = label.trim();
+  if (trimmed !== '' && trimmed.length < MIN_TAB_LABEL_LENGTH) {
+    // Too short to leave enough clickable text to rename it again — reject and keep the tab
+    // as-is rather than accepting a name that's effectively a dead click target.
+    return tabs;
+  }
   return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
 }
 

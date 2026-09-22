@@ -93,13 +93,19 @@ function renderHomeTerminalSection(state: RenderState): string {
   const selectedValue = effective === '' ? 'none' : matchedPreset ? matchedPreset.id : 'custom';
   const customValue = selectedValue === 'custom' ? effective : '';
 
+  // Custom has no fixed command of its own, so it's the default option only when the box
+  // currently shows exactly the default's command — i.e. the default is itself a custom
+  // command and the project isn't overriding it with a different one.
+  const defaultIsCustom = defaultCommand !== '' && defaultPresetId === undefined;
+  const customIsDefault = defaultIsCustom && selectedValue === 'custom' && effective === defaultCommand;
+
   const options = [
-    `<option value="none" data-command=""${selectedValue === 'none' ? ' selected' : ''}>None — force no command for this project</option>`,
+    `<option value="none" data-command=""${selectedValue === 'none' ? ' selected' : ''}>None — force no command for this project${defaultCommand === '' ? ' (default)' : ''}</option>`,
     ...AI_PROVIDER_PRESETS.map(
       p =>
         `<option value="${p.id}" data-command="${escapeHtml(p.command)}"${selectedValue === p.id ? ' selected' : ''}>${escapeHtml(p.label)}${p.id === defaultPresetId ? ' (default)' : ''}</option>`,
     ),
-    `<option value="custom"${selectedValue === 'custom' ? ' selected' : ''}>Custom command...</option>`,
+    `<option value="custom"${selectedValue === 'custom' ? ' selected' : ''}>Custom command...${customIsDefault ? ' (default)' : ''}</option>`,
   ].join('');
 
   return `

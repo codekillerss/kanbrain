@@ -292,11 +292,16 @@ describe('renderHome', () => {
     expect(html).not.toContain('kb-assignee-picker');
   });
 
-  it('always shows a per-project Terminal section, selecting "None" when there is no project override and no default', () => {
+  it('always shows a per-project Terminal section, selecting "None" and marking it "(default)" when there is no project override and no default set', () => {
     const html = renderHome(state());
     expect(html).toContain('>Terminal<');
     expect(html).toContain('id="kb-project-ai-provider-select"');
-    expect(html).toMatch(/<option value="none"[^>]*selected[^>]*>None[^(]*<\/option>/);
+    expect(html).toMatch(/<option value="none"[^>]*selected[^>]*>None — force no command for this project \(default\)<\/option>/);
+  });
+
+  it('does not mark "None" as "(default)" when the user default is a preset', () => {
+    const html = renderHome(state({ defaultAiProviderCommand: 'claude' }));
+    expect(html).toMatch(/<option value="none"[^>]*>None[^(]*<\/option>/);
   });
 
   it('selects the option matching the user default and marks it "(default)" when the project has no override', () => {
@@ -328,6 +333,18 @@ describe('renderHome', () => {
     const inputTag = html.slice(html.lastIndexOf('<input', inputStart), html.indexOf('>', inputStart) + 1);
     expect(inputTag).not.toContain('kb-hidden');
     expect(inputTag).toContain('value="my-agent --flag"');
+  });
+
+  it('marks "Custom command..." as "(default)" when the user default is a custom command and the project inherits it', () => {
+    const html = renderHome(state({ defaultAiProviderCommand: 'my-agent --flag' }));
+    expect(html).toMatch(/<option value="custom"[^>]*selected[^>]*>Custom command\.\.\. \(default\)<\/option>/);
+  });
+
+  it('does not mark "Custom command..." as "(default)" when the project overrides with a different custom command', () => {
+    const html = renderHome(
+      state({ config: config({ aiProviderCommand: 'other-agent' }), defaultAiProviderCommand: 'my-agent --flag' }),
+    );
+    expect(html).toMatch(/<option value="custom"[^>]*selected[^>]*>Custom command\.\.\.<\/option>/);
   });
 
   it('hides the custom input when a preset (or none) is selected', () => {

@@ -2029,13 +2029,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
       .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
-      .kb-tab-wrap { position: relative; flex-shrink: 0; }
+      .kb-tab-wrap { position: relative; flex-shrink: 0; max-width: 140px; }
       .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
-      .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+      .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
+      .kb-tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
       .kb-tab-rename-input { position: absolute; inset: 0; box-sizing: border-box; width: 100%; height: 100%; padding: 5px 8px; font-family: var(--vscode-font-family); font-size: 12px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-focusBorder); }
       .kb-tab:hover { background: var(--vscode-list-hoverBackground); opacity: 1; }
       .kb-tab-active { opacity: 1; border-bottom-color: var(--vscode-focusBorder); }
-      .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 2px; opacity: 0.7; }
+      .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex-shrink: 0; border-radius: 2px; opacity: 0.7; }
       .kb-tab-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
       .kb-tab-add { flex-shrink: 0; width: 22px; height: 22px; padding: 0; background: transparent; border: none; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-tab-add:hover:not(:disabled) { opacity: 1; background: var(--vscode-list-hoverBackground); }
@@ -2044,14 +2045,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-open-browser-btn { position: absolute; top: 4px; right: 4px; }
       .kb-open-browser-btn.kb-with-pick { right: 32px; }
-      .kb-pick-btn, .kb-open-browser-btn { border: 1px solid var(--vscode-panel-border); border-radius: 3px; background: var(--vscode-editor-background); }
+      .kb-icon-btn.kb-pick-btn, .kb-icon-btn.kb-open-browser-btn { border: 1px solid var(--vscode-panel-border); border-radius: 3px; background: var(--vscode-editor-background); }
       .kb-team-card { margin: 10px; }
       .kb-team-card select { box-sizing: border-box; width: 100%; padding: 4px 6px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; font-family: var(--vscode-font-family); }
       .kb-card-header { display: flex; align-items: center; padding-right: 32px; }
       .kb-open-browser-btn.kb-with-pick ~ .kb-card-header { padding-right: 60px; }
       .kb-type-icon { display: inline-flex; width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }
       .kb-type-icon svg { width: 100%; height: 100%; }
-      .kb-status-row { display: flex; align-items: center; margin-top: 4px; font-size: 12px; opacity: 0.85; }
+      .kb-status-row { display: flex; align-items: center; margin-top: 8px; font-size: 12px; opacity: 0.85; }
       .kb-title { font-weight: 600; margin-left: 6px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .kb-title-clickable { cursor: pointer; }
       .kb-title-clickable:hover { color: var(--vscode-textLink-foreground); text-decoration: underline; }
@@ -2075,7 +2076,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-label:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-section-actions { display: flex; gap: 2px; }
       .kb-hidden { display: none; }
-      .kb-result-item { width: 100%; margin: 2px 0; padding-bottom: 4px; }
+      .kb-result-item { box-sizing: border-box; width: 100%; margin: 2px 0; padding-bottom: 4px; }
       .kb-result-item:not(:last-child) { border-bottom: 1px solid var(--vscode-panel-border); }
       .kb-group-items { padding-left: 6px; }
       .kb-result-item-footer { display: flex; align-items: center; margin-top: 2px; padding: 0 6px; }
@@ -2119,7 +2120,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-query-option:disabled { opacity: 0.5; cursor: default; }
       .kb-query-option:disabled:hover { background: none; }
       .kb-query-type-badge { margin-left: 4px; font-size: 10px; opacity: 0.7; }
-      #kb-search-results, #kb-history-results { overflow-y: auto; flex: 1; min-height: 0; }
+      #kb-search-results, #kb-history-results { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; }
       .kb-dialog-close-btn { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; border-radius: 2px; font-family: var(--vscode-font-family); font-size: 13px; }
       .kb-dialog-close-btn:hover { background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
       .kb-dialog-close-btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
@@ -2178,7 +2179,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-skill-picker-option-label { font-size: 12px; }
       .kb-skill-picker-option-path { font-size: 11px; color: var(--vscode-descriptionForeground); }
       .kb-status-picker, .kb-assignee-picker { position: relative; }
-      .kb-status-editable-row { display: flex; align-items: stretch; gap: 4px; margin-top: 4px; }
+      .kb-status-editable-row { display: flex; align-items: stretch; gap: 4px; margin-top: 8px; }
       .kb-status-editable-row .kb-status-picker { flex: 1; min-width: 0; }
       .kb-status-editable-row .kb-status-picker-trigger { margin-top: 0; }
       .kb-status-advance-btn { flex-shrink: 0; width: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); border-radius: 2px; padding: 0; cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: -1px; }
@@ -2207,7 +2208,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-config-parent-section-expanded > .kb-collapsible-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
       .kb-segment-scroll { flex: 1; min-height: 0; overflow-y: auto; }
       .kb-config-level { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; margin: 6px 0; }
-      .kb-config-level-header { display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 32px 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .kb-config-level-header { box-sizing: border-box; display: flex; align-items: center; width: 100%; text-align: left; padding: 6px 32px 6px 8px; background: var(--vscode-editor-background); border: none; cursor: pointer; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .kb-config-level-header:hover { background: var(--vscode-list-hoverBackground); }
       .kb-config-level-remove-btn { position: absolute; top: 3px; right: 4px; }
       .kb-icon-btn-danger { color: var(--vscode-errorForeground, #f14c4c); background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-foreground); border-radius: 3px; }
