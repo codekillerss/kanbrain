@@ -2,6 +2,16 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.5] - 2026-09-23
+
+### Added
+
+- Flow tabs can now be organized into groups, shown as folder-style markers above the tab bar. Tabs always belong to a group (a "General" group is used by default), new tabs open in whichever group is active, and the 8-tab-at-once limit now applies per group instead of across all of them.
+
+### Fixed
+
+- Closing a group's last tab no longer jumps you into an unrelated group's tab; it now shows that group's own "pick a work item" state, and only returns to Home once every group is empty.
+
 ## [0.19.4] - 2026-09-23
 
 ### Fixed
