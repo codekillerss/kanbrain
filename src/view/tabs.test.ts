@@ -16,6 +16,7 @@ import {
   renameGroup,
   removeGroup,
   reorderGroups,
+  moveTabToGroup,
 } from './tabs';
 import type { WorkItemTab, TabGroup } from './tabs';
 
@@ -284,6 +285,30 @@ describe('reorderGroups', () => {
     const result = reorderGroups(groups, ['g3']);
 
     expect(result.map(g => g.id)).toEqual([DEFAULT_GROUP_ID, 'g3', 'g1', 'g2']);
+  });
+});
+
+describe('moveTabToGroup', () => {
+  it('reassigns the tab to the given group, leaving other tabs untouched', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g1' },
+    ];
+
+    const result = moveTabToGroup(tabs, 'tab-1', 'g2');
+
+    expect(result).toEqual([
+      { id: 'tab-1', workItemId: 1, groupId: 'g2' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g1' },
+    ]);
+  });
+
+  it('is a no-op when the tab id does not exist', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, groupId: 'g1' }];
+
+    const result = moveTabToGroup(tabs, 'does-not-exist', 'g2');
+
+    expect(result).toEqual(tabs);
   });
 });
 

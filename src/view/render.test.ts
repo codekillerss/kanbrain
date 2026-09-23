@@ -741,9 +741,9 @@ describe('render', () => {
       activeTabId: 'tab-2',
     });
 
-    const tab1Start = html.indexOf('data-tab-id="tab-1"');
+    const tab1Start = html.indexOf('data-action="select-tab" data-tab-id="tab-1"');
     const tab1TagStart = html.lastIndexOf('<button', tab1Start);
-    const tab2Start = html.indexOf('data-tab-id="tab-2"');
+    const tab2Start = html.indexOf('data-action="select-tab" data-tab-id="tab-2"');
     const tab2TagStart = html.lastIndexOf('<button', tab2Start);
     expect(html.slice(tab1TagStart, html.indexOf('>', tab1TagStart))).not.toContain('kb-tab-active');
     expect(html.slice(tab2TagStart, html.indexOf('>', tab2TagStart))).toContain('kb-tab-active');

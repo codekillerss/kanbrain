@@ -146,6 +146,10 @@ export function reorderGroups(groups: TabGroup[], orderedGroupIds: string[]): Ta
   return defaultGroup ? [defaultGroup, ...rest] : rest;
 }
 
+export function moveTabToGroup(tabs: WorkItemTab[], tabId: string, groupId: string): WorkItemTab[] {
+  return tabs.map(t => (t.id === tabId ? { ...t, groupId } : t));
+}
+
 export function closeTab(tabs: WorkItemTab[], activeTabId: string | undefined, tabIdToClose: string): TabsUpdate {
   const tabToClose = tabs.find(t => t.id === tabIdToClose);
   if (!tabToClose) {

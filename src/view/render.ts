@@ -47,7 +47,7 @@ function renderTabBar(tabs: WorkItemTab[], activeGroupId: string, activeTabId: s
       const iconHtml = tab.type ? renderTypeAccent(tab.type, config).iconHtml : '';
       const label = tab.label ?? `#${tab.workItemId}`;
       return `
-      <div class="kb-tab-wrap" draggable="true">
+      <div class="kb-tab-wrap" draggable="true" data-tab-id="${tab.id}">
         <button type="button" class="kb-tab${tab.id === activeTabId ? ' kb-tab-active' : ''}" data-action="select-tab" data-tab-id="${tab.id}">
           ${iconHtml}
           <span class="kb-tab-label" data-action="rename-tab-trigger" data-tab-id="${tab.id}">${escapeHtml(label)}</span>

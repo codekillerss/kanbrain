@@ -32,6 +32,7 @@ import {
   renameGroup,
   removeGroup,
   reorderGroups,
+  moveTabToGroup,
   ensureDefaultGroup,
   tabsInGroup,
   DEFAULT_GROUP_ID,
@@ -150,6 +151,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         await this.confirmAndRemoveGroup(String(message.groupId ?? ''));
       } else if (message.type === 'reorder-groups') {
         this.reorderGroupsByIds(Array.isArray(message.groupIds) ? message.groupIds.map(String) : []);
+      } else if (message.type === 'move-tab-to-group') {
+        this.moveTabToGroupById(String(message.tabId ?? ''), String(message.groupId ?? ''));
       } else if (message.type === 'clear-work-item') {
         this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
@@ -422,6 +425,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   reorderGroupsByIds(groupIds: string[]): void {
     this.groups = reorderGroups(this.groups, groupIds);
     this.persistGroups(this.groups, this.activeGroupId);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  moveTabToGroupById(tabId: string, groupId: string): void {
+    if (!this.tabs.some(t => t.id === tabId) || !this.groups.some(g => g.id === groupId)) {
+      return;
+    }
+    this.applyTabsUpdate({ tabs: moveTabToGroup(this.tabs, tabId, groupId), activeTabId: tabId });
+    this.setActiveGroup(groupId);
+    this.currentScreen = 'flow';
     this.lastState = '';
     void this.refresh();
   }
@@ -1644,20 +1658,53 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             vscode.postMessage({ type: 'reorder-groups', groupIds });
           });
         });
+        let tabDropTarget = null;
+        function clearTabDropTarget() {
+          if (tabDropTarget) tabDropTarget.classList.remove('kb-group-pill-wrap-drop-target');
+          tabDropTarget = null;
+        }
         groupBar.addEventListener('dragover', e => {
-          if (!draggingGroupWrap) return;
-          e.preventDefault();
-          const target = e.target.closest && e.target.closest('.kb-group-pill-wrap');
-          if (!target || target === draggingGroupWrap) return;
-          const rect = target.getBoundingClientRect();
-          let before = e.clientX < rect.left + rect.width / 2;
-          if (target.dataset.groupId === 'default') {
-            // The default group is always first — never let another group land ahead of it.
-            before = false;
+          if (draggingGroupWrap) {
+            e.preventDefault();
+            const target = e.target.closest && e.target.closest('.kb-group-pill-wrap');
+            if (!target || target === draggingGroupWrap) return;
+            const rect = target.getBoundingClientRect();
+            let before = e.clientX < rect.left + rect.width / 2;
+            if (target.dataset.groupId === 'default') {
+              // The default group is always first — never let another group land ahead of it.
+              before = false;
+            }
+            target.parentNode.insertBefore(draggingGroupWrap, before ? target : target.nextSibling);
+            return;
           }
-          target.parentNode.insertBefore(draggingGroupWrap, before ? target : target.nextSibling);
+          // A tab from the tab bar is being dragged over a group marker — offer to move it in.
+          if (e.dataTransfer && e.dataTransfer.types && [...e.dataTransfer.types].includes('application/x-kb-tab-id')) {
+            const target = e.target.closest && e.target.closest('.kb-group-pill-wrap');
+            if (!target) {
+              clearTabDropTarget();
+              return;
+            }
+            e.preventDefault();
+            if (target !== tabDropTarget) {
+              clearTabDropTarget();
+              tabDropTarget = target;
+              tabDropTarget.classList.add('kb-group-pill-wrap-drop-target');
+            }
+          }
         });
-        groupBar.addEventListener('drop', e => e.preventDefault());
+        groupBar.addEventListener('dragleave', e => {
+          if (!groupBar.contains(e.relatedTarget)) clearTabDropTarget();
+        });
+        groupBar.addEventListener('drop', e => {
+          e.preventDefault();
+          if (draggingGroupWrap) return;
+          const tabId = e.dataTransfer && e.dataTransfer.getData('application/x-kb-tab-id');
+          const target = tabDropTarget || (e.target.closest && e.target.closest('.kb-group-pill-wrap'));
+          clearTabDropTarget();
+          if (tabId && target) {
+            vscode.postMessage({ type: 'move-tab-to-group', tabId, groupId: target.dataset.groupId });
+          }
+        });
       }
     }
 
@@ -1678,6 +1725,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             wrap.classList.add('kb-tab-wrap-dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', '');
+            e.dataTransfer.setData('application/x-kb-tab-id', wrap.dataset.tabId);
           });
           wrap.addEventListener('dragend', () => {
             if (draggingWrap) draggingWrap.classList.remove('kb-tab-wrap-dragging');
@@ -2300,7 +2348,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: var(--vscode-scrollbarSlider-background) transparent; }
+      body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: var(--vscode-scrollbarSlider-background) transparent; }
       * { scrollbar-width: thin; scrollbar-color: var(--vscode-scrollbarSlider-background) transparent; }
       ::-webkit-scrollbar { width: 6px; height: 4px; }
       ::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 4px; }
@@ -2323,6 +2371,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-bar { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; padding: 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); overflow-x: auto; overflow-y: hidden; }
       .kb-group-pill-wrap { position: relative; flex-shrink: 0; }
       .kb-group-pill-wrap-dragging { opacity: 0.4; }
+      .kb-group-pill-wrap-drop-target .kb-group-pill { opacity: 1; outline: 2px solid var(--vscode-focusBorder); outline-offset: 1px; }
       .kb-group-pill {
         display: inline-flex;
         align-items: center;
@@ -2423,7 +2472,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 640px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
-      #kb-search-section.kb-search-dialog { flex: 1; min-height: 0; box-shadow: none; margin-bottom: 8px; }
+      #kb-search-section.kb-search-dialog { flex: 1; min-height: 0; max-height: none; box-shadow: none; margin-bottom: 8px; }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
       .kb-query-combobox { position: relative; flex-shrink: 0; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-query-combobox:hover { background: var(--vscode-list-hoverBackground); }
