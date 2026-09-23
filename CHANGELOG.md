@@ -2,6 +2,20 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.8] - 2026-09-23
+
+### Added
+
+- Drag a Flow tab onto a group marker to move it into that group.
+
+### Changed
+
+- Every scrollable area in the panel now shares the same thin, theme-colored scrollbar.
+
+### Fixed
+
+- The "no active work item" screen no longer triggers page-level horizontal or vertical overflow.
+
 ## [0.19.7] - 2026-09-23
 
 ### Added
