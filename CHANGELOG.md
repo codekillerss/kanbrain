@@ -2,6 +2,21 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.7] - 2026-09-23
+
+### Added
+
+- Tab groups can now be reordered by dragging their markers. The default group can't be dragged and always stays first.
+
+### Changed
+
+- The "no active work item" screen (e.g. an empty group) now shows the same Search/History tabs as the "Switch work item" dialog, instead of a stripped-down search box.
+- The default group's marker shows a lock icon instead of a remove button, making it clearer why it can't be closed.
+
+### Fixed
+
+- The saved-query filter no longer stretches to fill the whole screen when there's no active work item.
+
 ## [0.19.6] - 2026-09-23
 
 ### Fixed
