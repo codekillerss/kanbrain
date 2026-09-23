@@ -2,6 +2,13 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.4] - 2026-09-23
+
+### Fixed
+
+- The Flow tab bar no longer resets its scroll position when you select a tab.
+- The "add tab" button now stays visible next to the tab bar instead of being scrolled out of view.
+
 ## [0.19.3] - 2026-09-22
 
 ### Added
