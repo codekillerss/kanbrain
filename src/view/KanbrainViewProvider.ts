@@ -1462,6 +1462,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const tabBar = document.querySelector('.kb-tab-bar');
       let draggingWrap = null;
       if (tabBar) {
+        // Every state change re-renders the whole webview HTML, which resets the tab bar's
+        // scroll position to 0. Re-assert the active tab's visibility each time so switching
+        // to a tab that's scrolled into view doesn't visibly snap the bar back to the start.
+        const activeTabButton = tabBar.querySelector('.kb-tab-active');
+        if (activeTabButton) {
+          activeTabButton.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
         tabBar.querySelectorAll('.kb-tab-wrap').forEach(wrap => {
           wrap.addEventListener('dragstart', e => {
             draggingWrap = wrap;
@@ -2096,8 +2103,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-active { opacity: 1; border-bottom-color: var(--vscode-focusBorder); }
       .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex-shrink: 0; border-radius: 2px; opacity: 0.7; }
       .kb-tab-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
-      .kb-tab-add { flex-shrink: 0; width: 22px; height: 22px; padding: 0; background: transparent; border: none; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-size: 14px; border-radius: 2px; }
-      .kb-tab-add:hover:not(:disabled) { opacity: 1; background: var(--vscode-list-hoverBackground); }
+      .kb-tab-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: none; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
+      .kb-tab-add:hover:not(:disabled) { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
