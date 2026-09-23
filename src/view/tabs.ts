@@ -5,6 +5,14 @@ export interface WorkItemTab {
   type?: string;
   /** Custom tab name set by the user; falls back to `#${workItemId}` when unset. */
   label?: string;
+  /** Group this tab belongs to; falls back to the default group when unset. Read via tabGroupId(). */
+  groupId?: string;
+}
+
+export interface TabGroup {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface TabsUpdate {
@@ -12,7 +20,45 @@ export interface TabsUpdate {
   activeTabId: string | undefined;
 }
 
+export interface TabsGroupUpdate extends TabsUpdate {
+  activeGroupId: string;
+}
+
 export const MAX_TABS = 8;
+export const DEFAULT_GROUP_ID = 'default';
+export const GROUP_COLORS = [
+  'var(--vscode-charts-blue)',
+  'var(--vscode-charts-green)',
+  'var(--vscode-charts-orange)',
+  'var(--vscode-charts-purple)',
+  'var(--vscode-charts-red)',
+  'var(--vscode-charts-yellow)',
+];
+
+export function tabGroupId(tab: WorkItemTab): string {
+  return tab.groupId ?? DEFAULT_GROUP_ID;
+}
+
+export function tabsInGroup(tabs: WorkItemTab[], groupId: string): WorkItemTab[] {
+  return tabs.filter(t => tabGroupId(t) === groupId);
+}
+
+export function createDefaultGroup(): TabGroup {
+  return { id: DEFAULT_GROUP_ID, name: 'General', color: GROUP_COLORS[0] };
+}
+
+export function ensureDefaultGroup(groups: TabGroup[]): TabGroup[] {
+  if (groups.some(g => g.id === DEFAULT_GROUP_ID)) {
+    return groups;
+  }
+  return [createDefaultGroup(), ...groups];
+}
+
+export function addGroup(groups: TabGroup[], newGroupId: string, name: string): { groups: TabGroup[]; activeGroupId: string } {
+  const color = GROUP_COLORS[groups.length % GROUP_COLORS.length];
+  const group: TabGroup = { id: newGroupId, name, color };
+  return { groups: [...groups, group], activeGroupId: group.id };
+}
 
 function findTabByWorkItemId(tabs: WorkItemTab[], workItemId: number): WorkItemTab | undefined {
   return tabs.find(t => t.workItemId === workItemId);
@@ -23,43 +69,62 @@ export function replaceActiveWorkItem(
   activeTabId: string | undefined,
   workItemId: number,
   newTabId: string,
-): TabsUpdate {
+  groupId: string,
+): TabsGroupUpdate {
   const existing = findTabByWorkItemId(tabs, workItemId);
   if (existing) {
-    return { tabs, activeTabId: existing.id };
+    return { tabs, activeTabId: existing.id, activeGroupId: tabGroupId(existing) };
   }
   const activeIndex = tabs.findIndex(t => t.id === activeTabId);
   if (activeIndex === -1) {
-    const tab: WorkItemTab = { id: newTabId, workItemId };
-    return { tabs: [...tabs, tab], activeTabId: tab.id };
+    const tab: WorkItemTab = { id: newTabId, workItemId, groupId };
+    return { tabs: [...tabs, tab], activeTabId: tab.id, activeGroupId: groupId };
   }
   const updated = tabs.slice();
   updated[activeIndex] = { ...tabs[activeIndex], workItemId };
-  return { tabs: updated, activeTabId };
+  return { tabs: updated, activeTabId, activeGroupId: tabGroupId(updated[activeIndex]) };
 }
 
-export function addTab(tabs: WorkItemTab[], workItemId: number, newTabId: string): TabsUpdate | null {
+export function addTab(tabs: WorkItemTab[], workItemId: number, newTabId: string, groupId: string): TabsGroupUpdate | null {
   const existing = findTabByWorkItemId(tabs, workItemId);
   if (existing) {
-    return { tabs, activeTabId: existing.id };
+    return { tabs, activeTabId: existing.id, activeGroupId: tabGroupId(existing) };
   }
-  if (tabs.length >= MAX_TABS) {
+  if (tabsInGroup(tabs, groupId).length >= MAX_TABS) {
     return null;
   }
-  const tab: WorkItemTab = { id: newTabId, workItemId };
-  return { tabs: [...tabs, tab], activeTabId: tab.id };
+  const tab: WorkItemTab = { id: newTabId, workItemId, groupId };
+  return { tabs: [...tabs, tab], activeTabId: tab.id, activeGroupId: groupId };
 }
 
-const MIN_TAB_LABEL_LENGTH = 3;
+const MIN_LABEL_LENGTH = 3;
 
 export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): WorkItemTab[] {
   const trimmed = label.trim();
-  if (trimmed !== '' && trimmed.length < MIN_TAB_LABEL_LENGTH) {
+  if (trimmed !== '' && trimmed.length < MIN_LABEL_LENGTH) {
     // Too short to leave enough clickable text to rename it again — reject and keep the tab
     // as-is rather than accepting a name that's effectively a dead click target.
     return tabs;
   }
   return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
+}
+
+export function renameGroup(groups: TabGroup[], groupId: string, name: string): TabGroup[] {
+  const trimmed = name.trim();
+  if (trimmed.length < MIN_LABEL_LENGTH) {
+    return groups;
+  }
+  return groups.map(g => (g.id === groupId ? { ...g, name: trimmed } : g));
+}
+
+export function removeGroup(groups: TabGroup[], tabs: WorkItemTab[], groupId: string): { groups: TabGroup[]; tabs: WorkItemTab[] } {
+  if (groupId === DEFAULT_GROUP_ID) {
+    return { groups, tabs };
+  }
+  return {
+    groups: groups.filter(g => g.id !== groupId),
+    tabs: tabs.map(t => (tabGroupId(t) === groupId ? { ...t, groupId: DEFAULT_GROUP_ID } : t)),
+  };
 }
 
 export function reorderTabs(tabs: WorkItemTab[], orderedTabIds: string[]): WorkItemTab[] {
@@ -71,17 +136,23 @@ export function reorderTabs(tabs: WorkItemTab[], orderedTabIds: string[]): WorkI
 }
 
 export function closeTab(tabs: WorkItemTab[], activeTabId: string | undefined, tabIdToClose: string): TabsUpdate {
-  const index = tabs.findIndex(t => t.id === tabIdToClose);
-  if (index === -1) {
+  const tabToClose = tabs.find(t => t.id === tabIdToClose);
+  if (!tabToClose) {
     return { tabs, activeTabId };
   }
   const remaining = tabs.filter(t => t.id !== tabIdToClose);
   if (activeTabId !== tabIdToClose) {
     return { tabs: remaining, activeTabId };
   }
-  if (remaining.length === 0) {
+  // Closing the active tab activates a sibling from the SAME group — never a tab from another
+  // group, even if one exists earlier in the flat list (grouping would otherwise leak).
+  const groupId = tabGroupId(tabToClose);
+  const siblingsBefore = tabsInGroup(tabs, groupId);
+  const closedIndexInGroup = siblingsBefore.findIndex(t => t.id === tabIdToClose);
+  const siblingsAfter = tabsInGroup(remaining, groupId);
+  if (siblingsAfter.length === 0) {
     return { tabs: remaining, activeTabId: undefined };
   }
-  const nextIndex = Math.min(index, remaining.length - 1);
-  return { tabs: remaining, activeTabId: remaining[nextIndex].id };
+  const nextIndex = Math.min(closedIndexInGroup, siblingsAfter.length - 1);
+  return { tabs: remaining, activeTabId: siblingsAfter[nextIndex].id };
 }

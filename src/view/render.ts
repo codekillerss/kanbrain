@@ -8,7 +8,7 @@ import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 import { isExtensionOutdated } from '../config/compareVersions';
 import { renderTypeAccent } from './renderTypeAccent';
-import { MAX_TABS, type WorkItemTab } from './tabs';
+import { DEFAULT_GROUP_ID, MAX_TABS, tabsInGroup, type TabGroup, type WorkItemTab } from './tabs';
 import { escapeHtml } from './escapeHtml';
 
 export interface RenderState {
@@ -32,13 +32,17 @@ export interface RenderState {
   tabs?: WorkItemTab[];
   activeTabId?: string;
   defaultAiProviderCommand?: string;
+  groups?: TabGroup[];
+  activeGroupId?: string;
+  pendingGroupRenameId?: string;
 }
 
-function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, config: KanbrainConfig): string {
-  if (tabs.length === 0) {
+function renderTabBar(tabs: WorkItemTab[], activeGroupId: string, activeTabId: string | undefined, config: KanbrainConfig): string {
+  const groupTabs = tabsInGroup(tabs, activeGroupId);
+  if (groupTabs.length === 0) {
     return '';
   }
-  const tabsHtml = tabs
+  const tabsHtml = groupTabs
     .map(tab => {
       const iconHtml = tab.type ? renderTypeAccent(tab.type, config).iconHtml : '';
       const label = tab.label ?? `#${tab.workItemId}`;
@@ -53,11 +57,38 @@ function renderTabBar(tabs: WorkItemTab[], activeTabId: string | undefined, conf
       </div>`;
     })
     .join('');
-  const atLimit = tabs.length >= MAX_TABS;
+  const atLimit = groupTabs.length >= MAX_TABS;
   return `
     <div class="kb-tab-bar">
       ${tabsHtml}
       <button type="button" id="kb-add-tab-btn" class="kb-tab-add" title="${atLimit ? `Up to ${MAX_TABS} tabs at once` : 'Open a work item in a new tab'}"${atLimit ? ' disabled' : ''}>+</button>
+    </div>
+  `;
+}
+
+function renderGroupBar(groups: TabGroup[], activeGroupId: string, pendingGroupRenameId: string | undefined): string {
+  const groupsHtml = groups
+    .map(group => {
+      const isActive = group.id === activeGroupId;
+      const isRenaming = group.id === pendingGroupRenameId;
+      const closeHtml =
+        group.id === DEFAULT_GROUP_ID
+          ? ''
+          : `<span class="kb-group-pill-close" data-action="remove-group" data-group-id="${group.id}" title="Remove group" aria-label="Remove group">&#10005;</span>`;
+      return `
+      <div class="kb-group-pill-wrap">
+        <button type="button" class="kb-group-pill${isActive ? ' kb-group-pill-active' : ''}" data-action="select-group" data-group-id="${group.id}" style="--kb-group-color: ${group.color}">
+          <span class="kb-group-pill-label" data-action="rename-group-trigger" data-group-id="${group.id}">${escapeHtml(group.name)}</span>
+          ${closeHtml}
+        </button>
+        <input type="text" class="kb-group-rename-input${isActive ? ' kb-group-rename-input-active' : ''}${isRenaming ? '' : ' kb-hidden'}" data-group-id="${group.id}" value="${escapeHtml(group.name)}">
+      </div>`;
+    })
+    .join('');
+  return `
+    <div class="kb-group-bar" title="Tab groups">
+      ${groupsHtml}
+      <button type="button" class="kb-group-add" data-action="add-group" title="New group">+</button>
     </div>
   `;
 }
@@ -131,20 +162,23 @@ export function render(state: RenderState): string {
       </div>
     `;
   }
-  const tabBarHtml = renderTabBar(state.tabs ?? [], state.activeTabId, state.config);
-
   if (state.screen === 'home') {
-    return `${tabBarHtml}${renderHome(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    return `${renderHome(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
-    return `${tabBarHtml}${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    return `${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'brain') {
-    return `${tabBarHtml}${renderBrain(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    return `${renderBrain(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
   }
   if (state.screen === 'reviews') {
-    return `${tabBarHtml}${renderReviews(state)}${renderFooter(state)}`;
+    return `${renderReviews(state)}${renderFooter(state)}`;
   }
+
+  const groups = state.groups ?? [];
+  const activeGroupId = state.activeGroupId ?? DEFAULT_GROUP_ID;
+  const tabBarHtml = renderTabBar(state.tabs ?? [], activeGroupId, state.activeTabId, state.config);
+  const groupBarHtml = (state.tabs ?? []).length > 0 ? renderGroupBar(groups, activeGroupId, state.pendingGroupRenameId) : '';
 
   if (!state.workItem) {
     return `
@@ -157,6 +191,7 @@ export function render(state: RenderState): string {
         </label>
         <div id="kb-search-results"></div>
       </div>
+      ${groupBarHtml}
       ${renderFooter(state)}
     `;
   }
@@ -203,6 +238,7 @@ export function render(state: RenderState): string {
       }
       <div class="kb-collapsible-body${state.childrenCollapsed ? ' kb-hidden' : ''}">${subtasksHtml}</div>
     </div>
+    ${groupBarHtml}
     ${renderFooter(state)}
   `;
 }

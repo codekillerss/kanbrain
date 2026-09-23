@@ -1,86 +1,218 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_TABS, addTab, replaceActiveWorkItem, closeTab, renameTab, reorderTabs } from './tabs';
-import type { WorkItemTab } from './tabs';
+import {
+  MAX_TABS,
+  DEFAULT_GROUP_ID,
+  GROUP_COLORS,
+  addTab,
+  replaceActiveWorkItem,
+  closeTab,
+  renameTab,
+  reorderTabs,
+  tabGroupId,
+  createDefaultGroup,
+  ensureDefaultGroup,
+  addGroup,
+  renameGroup,
+  removeGroup,
+} from './tabs';
+import type { WorkItemTab, TabGroup } from './tabs';
 
 describe('replaceActiveWorkItem', () => {
-  it('creates the first tab when there is no active tab', () => {
-    const result = replaceActiveWorkItem([], undefined, 123, 'tab-1');
+  it('creates the first tab in the given group when there is no active tab', () => {
+    const result = replaceActiveWorkItem([], undefined, 123, 'tab-1', 'g1');
 
-    expect(result).toEqual({ tabs: [{ id: 'tab-1', workItemId: 123 }], activeTabId: 'tab-1' });
+    expect(result).toEqual({ tabs: [{ id: 'tab-1', workItemId: 123, groupId: 'g1' }], activeTabId: 'tab-1', activeGroupId: 'g1' });
   });
 
-  it('focuses the existing tab instead of duplicating when the work item is already open in another tab', () => {
+  it('focuses the existing tab and switches to its group instead of duplicating when the work item is already open in another tab', () => {
     const tabs: WorkItemTab[] = [
-      { id: 'tab-1', workItemId: 1 },
-      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g2' },
     ];
 
-    const result = replaceActiveWorkItem(tabs, 'tab-1', 2, 'tab-new');
+    const result = replaceActiveWorkItem(tabs, 'tab-1', 2, 'tab-new', 'g1');
 
-    expect(result).toEqual({ tabs, activeTabId: 'tab-2' });
+    expect(result).toEqual({ tabs, activeTabId: 'tab-2', activeGroupId: 'g2' });
   });
 
-  it('replaces the work item shown in the active tab, keeping its id and position', () => {
+  it('replaces the work item shown in the active tab, keeping its id, position, and group', () => {
     const tabs: WorkItemTab[] = [
-      { id: 'tab-1', workItemId: 1 },
-      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g1' },
     ];
 
-    const result = replaceActiveWorkItem(tabs, 'tab-2', 999, 'tab-3');
+    const result = replaceActiveWorkItem(tabs, 'tab-2', 999, 'tab-3', 'g1');
 
     expect(result).toEqual({
       tabs: [
-        { id: 'tab-1', workItemId: 1 },
-        { id: 'tab-2', workItemId: 999 },
+        { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+        { id: 'tab-2', workItemId: 999, groupId: 'g1' },
       ],
       activeTabId: 'tab-2',
+      activeGroupId: 'g1',
     });
   });
 
   it('keeps a custom label on the active tab when its work item is replaced', () => {
-    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, label: 'My Bug Fix' }];
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, label: 'My Bug Fix', groupId: 'g1' }];
 
-    const result = replaceActiveWorkItem(tabs, 'tab-1', 999, 'tab-2');
+    const result = replaceActiveWorkItem(tabs, 'tab-1', 999, 'tab-2', 'g1');
 
     expect(result).toEqual({
-      tabs: [{ id: 'tab-1', workItemId: 999, label: 'My Bug Fix' }],
+      tabs: [{ id: 'tab-1', workItemId: 999, label: 'My Bug Fix', groupId: 'g1' }],
       activeTabId: 'tab-1',
+      activeGroupId: 'g1',
     });
   });
 });
 
 describe('addTab', () => {
-  it('appends a new tab and makes it active', () => {
-    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1 }];
+  it('appends a new tab to the given group and makes it active', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, groupId: 'g1' }];
 
-    const result = addTab(tabs, 2, 'tab-2');
+    const result = addTab(tabs, 2, 'tab-2', 'g1');
 
     expect(result).toEqual({
       tabs: [
-        { id: 'tab-1', workItemId: 1 },
-        { id: 'tab-2', workItemId: 2 },
+        { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+        { id: 'tab-2', workItemId: 2, groupId: 'g1' },
       ],
       activeTabId: 'tab-2',
+      activeGroupId: 'g1',
     });
   });
 
-  it('focuses the existing tab instead of creating a duplicate when the work item is already open', () => {
+  it('focuses the existing tab and switches to its group instead of creating a duplicate when the work item is already open elsewhere', () => {
     const tabs: WorkItemTab[] = [
-      { id: 'tab-1', workItemId: 1 },
-      { id: 'tab-2', workItemId: 2 },
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g2' },
     ];
 
-    const result = addTab(tabs, 2, 'tab-new');
+    const result = addTab(tabs, 2, 'tab-new', 'g1');
 
-    expect(result).toEqual({ tabs, activeTabId: 'tab-2' });
+    expect(result).toEqual({ tabs, activeTabId: 'tab-2', activeGroupId: 'g2' });
   });
 
-  it('refuses to add a tab past the max limit', () => {
-    const tabs: WorkItemTab[] = Array.from({ length: MAX_TABS }, (_, i) => ({ id: `tab-${i}`, workItemId: i }));
+  it('refuses to add a tab past the max limit within the target group', () => {
+    const tabs: WorkItemTab[] = Array.from({ length: MAX_TABS }, (_, i) => ({ id: `tab-${i}`, workItemId: i, groupId: 'g1' }));
 
-    const result = addTab(tabs, 999, 'tab-new');
+    const result = addTab(tabs, 999, 'tab-new', 'g1');
 
     expect(result).toBeNull();
+  });
+
+  it('allows adding a tab to a different group even when another group is already at the max limit', () => {
+    const tabs: WorkItemTab[] = Array.from({ length: MAX_TABS }, (_, i) => ({ id: `tab-${i}`, workItemId: i, groupId: 'g1' }));
+
+    const result = addTab(tabs, 999, 'tab-new', 'g2');
+
+    expect(result).toEqual({
+      tabs: [...tabs, { id: 'tab-new', workItemId: 999, groupId: 'g2' }],
+      activeTabId: 'tab-new',
+      activeGroupId: 'g2',
+    });
+  });
+});
+
+describe('tabGroupId', () => {
+  it("returns the tab's groupId when set", () => {
+    expect(tabGroupId({ id: 't', workItemId: 1, groupId: 'g1' })).toBe('g1');
+  });
+
+  it('falls back to the default group when unset', () => {
+    expect(tabGroupId({ id: 't', workItemId: 1 })).toBe(DEFAULT_GROUP_ID);
+  });
+});
+
+describe('createDefaultGroup', () => {
+  it('creates a group with the default id and the first palette color', () => {
+    expect(createDefaultGroup()).toEqual({ id: DEFAULT_GROUP_ID, name: 'General', color: GROUP_COLORS[0] });
+  });
+});
+
+describe('ensureDefaultGroup', () => {
+  it('prepends the default group when missing', () => {
+    const custom: TabGroup = { id: 'g1', name: 'Custom', color: GROUP_COLORS[1] };
+
+    const result = ensureDefaultGroup([custom]);
+
+    expect(result).toEqual([createDefaultGroup(), custom]);
+  });
+
+  it('leaves groups untouched when the default group already exists', () => {
+    const groups: TabGroup[] = [createDefaultGroup(), { id: 'g1', name: 'Custom', color: GROUP_COLORS[1] }];
+
+    const result = ensureDefaultGroup(groups);
+
+    expect(result).toEqual(groups);
+  });
+});
+
+describe('addGroup', () => {
+  it('appends a new group with the next palette color and makes it active', () => {
+    const groups: TabGroup[] = [createDefaultGroup()];
+
+    const result = addGroup(groups, 'g2', 'Code Review');
+
+    expect(result).toEqual({
+      groups: [createDefaultGroup(), { id: 'g2', name: 'Code Review', color: GROUP_COLORS[1] }],
+      activeGroupId: 'g2',
+    });
+  });
+
+  it('cycles back to the first color once the palette is exhausted', () => {
+    const groups: TabGroup[] = GROUP_COLORS.map((color, i) => ({ id: `g${i}`, name: `Group ${i}`, color }));
+
+    const result = addGroup(groups, 'g-extra', 'Extra');
+
+    expect(result.groups[result.groups.length - 1]).toEqual({ id: 'g-extra', name: 'Extra', color: GROUP_COLORS[0] });
+  });
+});
+
+describe('renameGroup', () => {
+  it('sets a trimmed name on the matching group', () => {
+    const groups: TabGroup[] = [{ id: 'g1', name: 'Old', color: GROUP_COLORS[0] }];
+
+    const result = renameGroup(groups, 'g1', '  New name  ');
+
+    expect(result).toEqual([{ id: 'g1', name: 'New name', color: GROUP_COLORS[0] }]);
+  });
+
+  it('is a no-op when given an empty or whitespace-only name', () => {
+    const groups: TabGroup[] = [{ id: 'g1', name: 'Old', color: GROUP_COLORS[0] }];
+
+    const result = renameGroup(groups, 'g1', '   ');
+
+    expect(result).toEqual(groups);
+  });
+});
+
+describe('removeGroup', () => {
+  it('removes the group and reassigns its tabs to the default group', () => {
+    const groups: TabGroup[] = [createDefaultGroup(), { id: 'g1', name: 'Code Review', color: GROUP_COLORS[1] }];
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: DEFAULT_GROUP_ID },
+    ];
+
+    const result = removeGroup(groups, tabs, 'g1');
+
+    expect(result).toEqual({
+      groups: [createDefaultGroup()],
+      tabs: [
+        { id: 'tab-1', workItemId: 1, groupId: DEFAULT_GROUP_ID },
+        { id: 'tab-2', workItemId: 2, groupId: DEFAULT_GROUP_ID },
+      ],
+    });
+  });
+
+  it('refuses to remove the default group', () => {
+    const groups: TabGroup[] = [createDefaultGroup()];
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, groupId: DEFAULT_GROUP_ID }];
+
+    const result = removeGroup(groups, tabs, DEFAULT_GROUP_ID);
+
+    expect(result).toEqual({ groups, tabs });
   });
 });
 
@@ -139,6 +271,35 @@ describe('closeTab', () => {
     const result = closeTab(tabs, 'tab-1', 'does-not-exist');
 
     expect(result).toEqual({ tabs, activeTabId: 'tab-1' });
+  });
+
+  it('activates a sibling tab in the same group, never jumping to a tab in another group', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g1' },
+      { id: 'tab-3', workItemId: 3, groupId: 'g2' },
+    ];
+
+    const result = closeTab(tabs, 'tab-1', 'tab-1');
+
+    expect(result).toEqual({
+      tabs: [
+        { id: 'tab-2', workItemId: 2, groupId: 'g1' },
+        { id: 'tab-3', workItemId: 3, groupId: 'g2' },
+      ],
+      activeTabId: 'tab-2',
+    });
+  });
+
+  it('sets activeTabId to undefined when closing the last tab in a group, even though other groups still have tabs', () => {
+    const tabs: WorkItemTab[] = [
+      { id: 'tab-1', workItemId: 1, groupId: 'g1' },
+      { id: 'tab-2', workItemId: 2, groupId: 'g2' },
+    ];
+
+    const result = closeTab(tabs, 'tab-1', 'tab-1');
+
+    expect(result).toEqual({ tabs: [{ id: 'tab-2', workItemId: 2, groupId: 'g2' }], activeTabId: undefined });
   });
 });
 

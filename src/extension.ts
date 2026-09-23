@@ -5,7 +5,7 @@ import { AzureDevOpsClient } from './azureDevOps/client';
 import { KanbrainViewProvider } from './view/KanbrainViewProvider';
 import { registerTabTerminalCleanup } from './terminal/tabTerminal';
 import { randomUUID } from 'node:crypto';
-import type { WorkItemTab } from './view/tabs';
+import { ensureDefaultGroup, type TabGroup, type WorkItemTab } from './view/tabs';
 import { WorkItemDetailPanelManager } from './view/WorkItemDetailPanelManager';
 import { PullRequestDetailPanelManager } from './view/PullRequestDetailPanelManager';
 import { getCurrentBranch } from './git/getCurrentBranch';
@@ -38,6 +38,8 @@ const WORK_ITEM_HISTORY_KEY = 'kanbrain.workItemHistoryIds';
 const SELECTED_SAVED_QUERY_KEY = 'kanbrain.selectedSavedQueryId';
 const TABS_KEY = 'kanbrain.tabs';
 const ACTIVE_TAB_ID_KEY = 'kanbrain.activeTabId';
+const TAB_GROUPS_KEY = 'kanbrain.tabGroups';
+const ACTIVE_GROUP_ID_KEY = 'kanbrain.activeGroupId';
 
 // Reads the pre-tabs single active-work-item state so upgrading users don't lose their open item.
 function loadInitialTabs(context: vscode.ExtensionContext): { tabs: WorkItemTab[]; activeTabId: string | undefined } {
@@ -51,6 +53,14 @@ function loadInitialTabs(context: vscode.ExtensionContext): { tabs: WorkItemTab[
   }
   const tabId = randomUUID();
   return { tabs: [{ id: tabId, workItemId: legacyWorkItemId }], activeTabId: tabId };
+}
+
+function loadInitialGroups(context: vscode.ExtensionContext): { groups: TabGroup[]; activeGroupId: string | undefined } {
+  const savedGroups = context.workspaceState.get<TabGroup[]>(TAB_GROUPS_KEY);
+  return {
+    groups: ensureDefaultGroup(savedGroups ?? []),
+    activeGroupId: context.workspaceState.get<string>(ACTIVE_GROUP_ID_KEY),
+  };
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -72,6 +82,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const prDetailPanelManager = workspaceRoot && client ? new PullRequestDetailPanelManager(workspaceRoot, client, context.extensionUri) : undefined;
 
   const initialTabs = loadInitialTabs(context);
+  const initialGroups = loadInitialGroups(context);
 
   const provider = new KanbrainViewProvider(
     workspaceRoot,
@@ -94,6 +105,12 @@ export function activate(context: vscode.ExtensionContext): void {
     (tabs, activeTabId) => {
       context.workspaceState.update(TABS_KEY, tabs);
       context.workspaceState.update(ACTIVE_TAB_ID_KEY, activeTabId);
+    },
+    initialGroups.groups,
+    initialGroups.activeGroupId,
+    (groups, activeGroupId) => {
+      context.workspaceState.update(TAB_GROUPS_KEY, groups);
+      context.workspaceState.update(ACTIVE_GROUP_ID_KEY, activeGroupId);
     },
   );
   providerRef = provider;

@@ -22,7 +22,23 @@ import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
-import { addTab, closeTab, renameTab, reorderTabs, replaceActiveWorkItem, MAX_TABS, type WorkItemTab, type TabsUpdate } from './tabs';
+import {
+  addTab,
+  closeTab,
+  renameTab,
+  reorderTabs,
+  replaceActiveWorkItem,
+  addGroup,
+  renameGroup,
+  removeGroup,
+  ensureDefaultGroup,
+  tabsInGroup,
+  DEFAULT_GROUP_ID,
+  MAX_TABS,
+  type WorkItemTab,
+  type TabsUpdate,
+  type TabGroup,
+} from './tabs';
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
@@ -35,6 +51,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastState = '';
   private tabs: WorkItemTab[] = [];
   private activeTabId: string | undefined;
+  private groups: TabGroup[] = [];
+  private activeGroupId: string | undefined;
+  private pendingGroupRenameId: string | undefined;
   private tabTypesCache = new Map<number, string>();
   private cardCache = new Map<number, { workItem: WorkItem | null; parent: WorkItem | null; subtasks: WorkItem[]; polledAt: number }>();
   private activeWorkItemId: number | undefined;
@@ -72,6 +91,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     initialTabs: WorkItemTab[] = [],
     initialActiveTabId: string | undefined = undefined,
     private readonly persistTabs: (tabs: WorkItemTab[], activeTabId: string | undefined) => void = () => {},
+    initialGroups: TabGroup[] = [],
+    initialActiveGroupId: string | undefined = undefined,
+    private readonly persistGroups: (groups: TabGroup[], activeGroupId: string | undefined) => void = () => {},
   ) {
     this.workItemHistoryIds = initialWorkItemHistoryIds
       .filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
@@ -79,6 +101,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.selectedSavedQueryId = initialSelectedSavedQueryId;
     this.tabs = initialTabs;
     this.activeTabId = initialActiveTabId;
+    this.groups = ensureDefaultGroup(initialGroups);
+    this.activeGroupId = initialActiveGroupId;
     this.activeWorkItemId = this.tabs.find(t => t.id === this.activeTabId)?.workItemId;
     this.currentScreen = this.activeWorkItemId !== undefined ? 'flow' : 'home';
   }
@@ -115,6 +139,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.renameTabById(String(message.tabId ?? ''), String(message.label ?? ''));
       } else if (message.type === 'reorder-tabs') {
         this.reorderTabsByIds(Array.isArray(message.tabIds) ? message.tabIds.map(String) : []);
+      } else if (message.type === 'select-group') {
+        this.selectGroup(String(message.groupId ?? ''));
+      } else if (message.type === 'add-group') {
+        this.addGroupAndSelect();
+      } else if (message.type === 'rename-group') {
+        this.renameGroupById(String(message.groupId ?? ''), String(message.label ?? ''));
+      } else if (message.type === 'remove-group') {
+        await this.confirmAndRemoveGroup(String(message.groupId ?? ''));
       } else if (message.type === 'clear-work-item') {
         this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
@@ -237,7 +269,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   setActiveWorkItem(id: number, recordHistory = true): void {
-    this.applyTabsUpdate(replaceActiveWorkItem(this.tabs, this.activeTabId, id, randomUUID()));
+    const result = replaceActiveWorkItem(this.tabs, this.activeTabId, id, randomUUID(), this.activeGroupId ?? DEFAULT_GROUP_ID);
+    this.applyTabsUpdate(result);
+    this.setActiveGroup(result.activeGroupId);
     if (recordHistory) {
       this.workItemHistoryIds = [id, ...this.workItemHistoryIds.filter(historyId => historyId !== id)].slice(0, 50);
       this.persistWorkItemHistory(this.workItemHistoryIds);
@@ -248,17 +282,94 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   openNewTab(id: number): void {
-    const update = addTab(this.tabs, id, randomUUID());
+    const groupId = this.activeGroupId ?? DEFAULT_GROUP_ID;
+    const update = addTab(this.tabs, id, randomUUID(), groupId);
     if (!update) {
-      vscode.window.showInformationMessage(`You can have up to ${MAX_TABS} work items open at once. Close a tab before opening another.`);
+      vscode.window.showInformationMessage(`You can have up to ${MAX_TABS} work items open at once in this group. Close a tab before opening another.`);
       return;
     }
     this.applyTabsUpdate(update);
+    this.setActiveGroup(update.activeGroupId);
     this.workItemHistoryIds = [id, ...this.workItemHistoryIds.filter(historyId => historyId !== id)].slice(0, 50);
     this.persistWorkItemHistory(this.workItemHistoryIds);
     this.currentScreen = 'flow';
     this.lastState = '';
     void this.refresh();
+  }
+
+  private setActiveGroup(groupId: string): void {
+    if (groupId === this.activeGroupId) {
+      return;
+    }
+    this.activeGroupId = groupId;
+    this.persistGroups(this.groups, this.activeGroupId);
+  }
+
+  selectGroup(groupId: string): void {
+    if (groupId === this.activeGroupId || !this.groups.some(g => g.id === groupId)) {
+      return;
+    }
+    this.setActiveGroup(groupId);
+    const groupTabs = tabsInGroup(this.tabs, groupId);
+    if (!groupTabs.some(t => t.id === this.activeTabId)) {
+      this.applyTabsUpdate({ tabs: this.tabs, activeTabId: groupTabs[0]?.id });
+    }
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  addGroupAndSelect(): void {
+    const result = addGroup(this.groups, randomUUID(), 'New group');
+    this.groups = result.groups;
+    this.activeGroupId = result.activeGroupId;
+    this.pendingGroupRenameId = result.activeGroupId;
+    this.persistGroups(this.groups, this.activeGroupId);
+    // The new group starts empty — drop the previous group's active tab so the view doesn't
+    // keep showing a work item that no longer belongs to the now-active group.
+    this.applyTabsUpdate({ tabs: this.tabs, activeTabId: undefined });
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  renameGroupById(groupId: string, label: string): void {
+    this.groups = renameGroup(this.groups, groupId, label);
+    if (this.pendingGroupRenameId === groupId) {
+      this.pendingGroupRenameId = undefined;
+    }
+    this.persistGroups(this.groups, this.activeGroupId);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  removeGroupById(groupId: string): void {
+    if (groupId === DEFAULT_GROUP_ID) {
+      return;
+    }
+    const result = removeGroup(this.groups, this.tabs, groupId);
+    this.groups = result.groups;
+    this.tabs = result.tabs;
+    if (this.activeGroupId === groupId) {
+      this.activeGroupId = DEFAULT_GROUP_ID;
+    }
+    this.persistGroups(this.groups, this.activeGroupId);
+    this.persistTabs(this.tabs, this.activeTabId);
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  private async confirmAndRemoveGroup(groupId: string): Promise<void> {
+    if (groupId === DEFAULT_GROUP_ID) {
+      return;
+    }
+    const group = this.groups.find(g => g.id === groupId);
+    if (!group) {
+      return;
+    }
+    const choice = await vscode.window.showWarningMessage(`Remove group "${group.name}"? Its tabs will move to General.`, { modal: true }, 'Remove');
+    if (choice !== 'Remove') {
+      return;
+    }
+    this.removeGroupById(groupId);
   }
 
   selectTab(tabId: string): void {
@@ -273,7 +384,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   closeTabById(tabId: string): void {
     this.applyTabsUpdate(closeTab(this.tabs, this.activeTabId, tabId));
-    this.currentScreen = this.activeTabId === undefined ? 'home' : 'flow';
+    // Only leave the Flow screen once every group is out of tabs — closing the active group's
+    // last tab should land on that group's own "pick a work item" state, not bounce elsewhere.
+    this.currentScreen = this.tabs.length === 0 ? 'home' : 'flow';
     this.lastState = '';
     void this.refresh();
   }
@@ -1195,12 +1308,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     const tabsForRender = this.tabs.map(tab => ({ ...tab, type: this.tabTypesCache.get(tab.workItemId) }));
     const defaultAiProviderCommand = this.getDefaultAiProviderCommand();
+    const activeGroupId = this.activeGroupId ?? DEFAULT_GROUP_ID;
     const reviewsExtra = {
       pullRequests: this.reviewsPullRequests,
       failedCount: this.reviewsFetchFailedCount,
       tabs: tabsForRender,
       activeTabId: this.activeTabId,
       defaultAiProviderCommand,
+      groups: this.groups,
+      activeGroupId,
+      pendingGroupRenameId: this.pendingGroupRenameId,
     };
     if (!hasStateChanged(this.lastState, config, workItem, parent, subtasks, avatars, reviewsExtra)) {
       return;
@@ -1227,6 +1344,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         tabs: tabsForRender,
         activeTabId: this.activeTabId,
         defaultAiProviderCommand,
+        groups: this.groups,
+        activeGroupId,
+        pendingGroupRenameId: this.pendingGroupRenameId,
       }),
     );
   }
@@ -1458,6 +1578,35 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     });
 
+    document.querySelectorAll('[data-action="rename-group-trigger"]').forEach(label => {
+      label.addEventListener('dblclick', () => {
+        const wrap = label.closest('.kb-group-pill-wrap');
+        const input = wrap && wrap.querySelector('.kb-group-rename-input');
+        if (!input) return;
+        input.classList.remove('kb-hidden');
+        input.focus();
+        input.select();
+      });
+    });
+    document.querySelectorAll('.kb-group-rename-input').forEach(input => {
+      input.addEventListener('blur', () => {
+        input.classList.add('kb-hidden');
+        vscode.postMessage({ type: 'rename-group', groupId: input.dataset.groupId, label: input.value });
+      });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          input.blur();
+        } else if (e.key === 'Escape') {
+          input.value = input.defaultValue;
+          input.blur();
+        }
+      });
+    });
+    document.querySelectorAll('.kb-group-rename-input:not(.kb-hidden)').forEach(input => {
+      input.focus();
+      input.select();
+    });
+
     {
       const tabBar = document.querySelector('.kb-tab-bar');
       let draggingWrap = null;
@@ -1627,6 +1776,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'close-tab', tabId: target.closest('[data-action="close-tab"]').dataset.tabId });
       } else if (target.closest && target.closest('[data-action="select-tab"]')) {
         vscode.postMessage({ type: 'select-tab', tabId: target.closest('[data-action="select-tab"]').dataset.tabId });
+      } else if (target.closest && target.closest('[data-action="remove-group"]')) {
+        vscode.postMessage({ type: 'remove-group', groupId: target.closest('[data-action="remove-group"]').dataset.groupId });
+      } else if (target.closest && target.closest('[data-action="select-group"]')) {
+        vscode.postMessage({ type: 'select-group', groupId: target.closest('[data-action="select-group"]').dataset.groupId });
+      } else if (target.closest && target.closest('[data-action="add-group"]')) {
+        vscode.postMessage({ type: 'add-group' });
       } else if (target.closest && target.closest('[data-action="select-dialog-tab"]')) {
         const tab = target.closest('[data-action="select-dialog-tab"]').dataset.dialogTab;
         activeDialogTab = tab;
@@ -2091,8 +2246,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); padding: 8px 8px 48px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
-      .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+      body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
+      .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); scrollbar-width: thin; }
+      .kb-tab-bar::-webkit-scrollbar { height: 4px; }
+      .kb-tab-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
+      .kb-tab-bar::-webkit-scrollbar-track { background: transparent; }
       .kb-tab-wrap { position: relative; flex-shrink: 0; max-width: 140px; }
       .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
       .kb-tab-wrap-dragging { opacity: 0.4; }
@@ -2106,6 +2264,48 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: none; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-tab-add:hover:not(:disabled) { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
+      .kb-group-bar { position: fixed; left: 0; right: 0; bottom: 33px; z-index: 9; display: flex; align-items: flex-end; gap: 6px; height: 16px; padding: 0 8px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); }
+      .kb-group-pill-wrap { position: relative; flex-shrink: 0; }
+      .kb-group-pill {
+        position: relative;
+        top: -11px;
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px 4px;
+        background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+        border: 1px solid var(--vscode-panel-border);
+        border-bottom: none;
+        border-top: 3px solid var(--kb-group-color);
+        border-radius: 5px 5px 0 0;
+        color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+        opacity: 0.65;
+        cursor: pointer;
+        font-family: var(--vscode-font-family);
+        font-size: 11px;
+        white-space: nowrap;
+        box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.12);
+      }
+      .kb-group-pill:hover { opacity: 0.9; }
+      .kb-group-pill-active { opacity: 1; top: -14px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+      .kb-group-pill-close { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; margin-left: 5px; flex-shrink: 0; border-radius: 2px; opacity: 0.6; font-size: 9px; }
+      .kb-group-pill-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
+      .kb-group-rename-input {
+        position: absolute;
+        top: -11px;
+        left: 0;
+        right: 0;
+        box-sizing: border-box;
+        padding: 5px 10px 4px;
+        font-family: var(--vscode-font-family);
+        font-size: 11px;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-focusBorder);
+        border-radius: 5px 5px 0 0;
+      }
+      .kb-group-rename-input-active { top: -14px; }
+      .kb-group-add { position: relative; top: -11px; flex-shrink: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: none; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
+      .kb-group-add:hover { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-open-browser-btn { position: absolute; top: 4px; right: 4px; }
