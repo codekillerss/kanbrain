@@ -1608,6 +1608,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     {
+      // Same fix as the tab bar: every state change re-renders the whole webview and resets
+      // this bar's scroll position, so re-assert the active group's visibility each time.
+      const activeGroupPill = document.querySelector('.kb-group-pill-active');
+      if (activeGroupPill) {
+        activeGroupPill.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
+
+    {
       const tabBar = document.querySelector('.kb-tab-bar');
       let draggingWrap = null;
       if (tabBar) {
@@ -2247,11 +2256,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private css(): string {
     return `
       body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
-      .kb-tab-bar { display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); scrollbar-width: thin; }
+      .kb-tab-bar { position: fixed; left: 0; right: 0; bottom: 33px; z-index: 9; display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 4px 6px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); scrollbar-width: thin; }
       .kb-tab-bar::-webkit-scrollbar { height: 4px; }
       .kb-tab-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
       .kb-tab-bar::-webkit-scrollbar-track { background: transparent; }
-      .kb-tab-wrap { position: relative; flex-shrink: 0; max-width: 140px; }
+      .kb-tab-wrap { position: relative; flex-shrink: 0; min-width: 56px; max-width: 140px; }
       .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
       .kb-tab-wrap-dragging { opacity: 0.4; }
       .kb-tab { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--vscode-foreground); opacity: 0.75; cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; white-space: nowrap; flex-shrink: 0; max-width: 100%; box-sizing: border-box; }
@@ -2261,16 +2270,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-active { opacity: 1; border-bottom-color: var(--vscode-focusBorder); }
       .kb-tab-close { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex-shrink: 0; border-radius: 2px; opacity: 0.7; }
       .kb-tab-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
-      .kb-tab-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: none; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
+      .kb-tab-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-tab-add:hover:not(:disabled) { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
-      .kb-group-bar { position: fixed; left: 0; right: 0; bottom: 33px; z-index: 9; display: flex; align-items: flex-end; gap: 6px; height: 16px; padding: 0 8px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); }
+      .kb-group-bar { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; padding: 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+      .kb-group-bar::-webkit-scrollbar { height: 4px; }
+      .kb-group-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
+      .kb-group-bar::-webkit-scrollbar-track { background: transparent; }
       .kb-group-pill-wrap { position: relative; flex-shrink: 0; }
       .kb-group-pill {
-        position: relative;
-        top: -11px;
         display: inline-flex;
         align-items: center;
+        min-width: 56px;
+        max-width: 140px;
+        box-sizing: border-box;
         padding: 5px 10px 4px;
         background: var(--vscode-sideBar-background, var(--vscode-editor-background));
         border: 1px solid var(--vscode-panel-border);
@@ -2283,18 +2296,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         font-family: var(--vscode-font-family);
         font-size: 11px;
         white-space: nowrap;
-        box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.12);
       }
       .kb-group-pill:hover { opacity: 0.9; }
-      .kb-group-pill-active { opacity: 1; top: -14px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+      .kb-group-pill-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+      .kb-group-pill-active { opacity: 1; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
       .kb-group-pill-close { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; margin-left: 5px; flex-shrink: 0; border-radius: 2px; opacity: 0.6; font-size: 9px; }
       .kb-group-pill-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
       .kb-group-rename-input {
         position: absolute;
-        top: -11px;
-        left: 0;
-        right: 0;
+        inset: 0;
         box-sizing: border-box;
+        width: 100%;
+        height: 100%;
         padding: 5px 10px 4px;
         font-family: var(--vscode-font-family);
         font-size: 11px;
@@ -2303,8 +2316,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         border: 1px solid var(--vscode-focusBorder);
         border-radius: 5px 5px 0 0;
       }
-      .kb-group-rename-input-active { top: -14px; }
-      .kb-group-add { position: relative; top: -11px; flex-shrink: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: none; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
+      .kb-group-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-group-add:hover { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }

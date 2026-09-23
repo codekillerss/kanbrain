@@ -81,7 +81,7 @@ function renderGroupBar(groups: TabGroup[], activeGroupId: string, pendingGroupR
           <span class="kb-group-pill-label" data-action="rename-group-trigger" data-group-id="${group.id}">${escapeHtml(group.name)}</span>
           ${closeHtml}
         </button>
-        <input type="text" class="kb-group-rename-input${isActive ? ' kb-group-rename-input-active' : ''}${isRenaming ? '' : ' kb-hidden'}" data-group-id="${group.id}" value="${escapeHtml(group.name)}">
+        <input type="text" class="kb-group-rename-input${isRenaming ? '' : ' kb-hidden'}" data-group-id="${group.id}" value="${escapeHtml(group.name)}">
       </div>`;
     })
     .join('');
@@ -182,7 +182,7 @@ export function render(state: RenderState): string {
 
   if (!state.workItem) {
     return `
-      ${tabBarHtml}
+      ${groupBarHtml}
       <div id="kb-search-section">
         <input id="kb-search-input" placeholder="Search by title or #id...">
         <label class="kb-checkbox-row">
@@ -191,7 +191,7 @@ export function render(state: RenderState): string {
         </label>
         <div id="kb-search-results"></div>
       </div>
-      ${groupBarHtml}
+      ${tabBarHtml}
       ${renderFooter(state)}
     `;
   }
@@ -215,7 +215,7 @@ export function render(state: RenderState): string {
     : '<div class="kb-empty">No child items.</div>';
 
   return `
-    ${tabBarHtml}
+    ${groupBarHtml}
     ${renderSearchDialog(state.config)}
     ${parentSectionHtml}
     <div class="kb-section-card kb-section-card-current">
@@ -238,7 +238,7 @@ export function render(state: RenderState): string {
       }
       <div class="kb-collapsible-body${state.childrenCollapsed ? ' kb-hidden' : ''}">${subtasksHtml}</div>
     </div>
-    ${groupBarHtml}
+    ${tabBarHtml}
     ${renderFooter(state)}
   `;
 }

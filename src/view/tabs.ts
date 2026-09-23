@@ -97,21 +97,17 @@ export function addTab(tabs: WorkItemTab[], workItemId: number, newTabId: string
   return { tabs: [...tabs, tab], activeTabId: tab.id, activeGroupId: groupId };
 }
 
-const MIN_LABEL_LENGTH = 3;
-
 export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): WorkItemTab[] {
   const trimmed = label.trim();
-  if (trimmed !== '' && trimmed.length < MIN_LABEL_LENGTH) {
-    // Too short to leave enough clickable text to rename it again — reject and keep the tab
-    // as-is rather than accepting a name that's effectively a dead click target.
-    return tabs;
-  }
+  // No minimum length here — the tab bar guarantees a minimum clickable width via CSS instead.
   return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
 }
 
+const MIN_GROUP_NAME_LENGTH = 3;
+
 export function renameGroup(groups: TabGroup[], groupId: string, name: string): TabGroup[] {
   const trimmed = name.trim();
-  if (trimmed.length < MIN_LABEL_LENGTH) {
+  if (trimmed.length < MIN_GROUP_NAME_LENGTH) {
     return groups;
   }
   return groups.map(g => (g.id === groupId ? { ...g, name: trimmed } : g));

@@ -334,20 +334,12 @@ describe('renameTab', () => {
     expect(result).toEqual(tabs);
   });
 
-  it('rejects a name shorter than 3 characters, leaving the tab unchanged (too little text left to click to rename it again)', () => {
-    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1, label: 'Old name' }];
+  it('accepts a single-character name (the tab bar guarantees a minimum clickable width via CSS, not name length)', () => {
+    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1 }];
 
     const result = renameTab(tabs, 'tab-1', '1');
 
-    expect(result).toEqual(tabs);
-  });
-
-  it('accepts a name exactly 3 characters long', () => {
-    const tabs: WorkItemTab[] = [{ id: 'tab-1', workItemId: 1 }];
-
-    const result = renameTab(tabs, 'tab-1', 'abc');
-
-    expect(result).toEqual([{ id: 'tab-1', workItemId: 1, label: 'abc' }]);
+    expect(result).toEqual([{ id: 'tab-1', workItemId: 1, label: '1' }]);
   });
 });
 
