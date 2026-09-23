@@ -8,7 +8,7 @@ import { renderFooter } from './renderFooter';
 import { resolveShowParent } from '../config/resolveCardFieldVisibility';
 import { isExtensionOutdated } from '../config/compareVersions';
 import { renderTypeAccent } from './renderTypeAccent';
-import { DEFAULT_GROUP_ID, MAX_TABS, tabsInGroup, type TabGroup, type WorkItemTab } from './tabs';
+import { DEFAULT_GROUP_ID, MAX_GROUP_NAME_LENGTH, MAX_TABS, tabsInGroup, type TabGroup, type WorkItemTab } from './tabs';
 import { escapeHtml } from './escapeHtml';
 
 export interface RenderState {
@@ -81,7 +81,7 @@ function renderGroupBar(groups: TabGroup[], activeGroupId: string, pendingGroupR
           <span class="kb-group-pill-label" data-action="rename-group-trigger" data-group-id="${group.id}">${escapeHtml(group.name)}</span>
           ${closeHtml}
         </button>
-        <input type="text" class="kb-group-rename-input${isRenaming ? '' : ' kb-hidden'}" data-group-id="${group.id}" value="${escapeHtml(group.name)}">
+        <input type="text" class="kb-group-rename-input${isRenaming ? '' : ' kb-hidden'}" data-group-id="${group.id}" value="${escapeHtml(group.name)}" maxlength="${MAX_GROUP_NAME_LENGTH}">
       </div>`;
     })
     .join('');

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   MAX_TABS,
+  MAX_GROUP_NAME_LENGTH,
   DEFAULT_GROUP_ID,
   GROUP_COLORS,
   addTab,
@@ -184,6 +185,23 @@ describe('renameGroup', () => {
     const result = renameGroup(groups, 'g1', '   ');
 
     expect(result).toEqual(groups);
+  });
+
+  it('accepts a single-character name', () => {
+    const groups: TabGroup[] = [{ id: 'g1', name: 'Old', color: GROUP_COLORS[0] }];
+
+    const result = renameGroup(groups, 'g1', 'a');
+
+    expect(result).toEqual([{ id: 'g1', name: 'a', color: GROUP_COLORS[0] }]);
+  });
+
+  it('truncates a name longer than the max length', () => {
+    const groups: TabGroup[] = [{ id: 'g1', name: 'Old', color: GROUP_COLORS[0] }];
+    const tooLong = 'a'.repeat(MAX_GROUP_NAME_LENGTH + 10);
+
+    const result = renameGroup(groups, 'g1', tooLong);
+
+    expect(result).toEqual([{ id: 'g1', name: 'a'.repeat(MAX_GROUP_NAME_LENGTH), color: GROUP_COLORS[0] }]);
   });
 });
 

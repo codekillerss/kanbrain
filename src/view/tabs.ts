@@ -103,14 +103,16 @@ export function renameTab(tabs: WorkItemTab[], tabId: string, label: string): Wo
   return tabs.map(t => (t.id === tabId ? { ...t, label: trimmed === '' ? undefined : trimmed } : t));
 }
 
-const MIN_GROUP_NAME_LENGTH = 3;
+export const MAX_GROUP_NAME_LENGTH = 30;
 
 export function renameGroup(groups: TabGroup[], groupId: string, name: string): TabGroup[] {
   const trimmed = name.trim();
-  if (trimmed.length < MIN_GROUP_NAME_LENGTH) {
+  if (trimmed === '') {
+    // Unlike a tab (which falls back to displaying #id), a group has nothing sensible to show
+    // for an empty name — reject and keep the group as-is instead.
     return groups;
   }
-  return groups.map(g => (g.id === groupId ? { ...g, name: trimmed } : g));
+  return groups.map(g => (g.id === groupId ? { ...g, name: trimmed.slice(0, MAX_GROUP_NAME_LENGTH) } : g));
 }
 
 export function removeGroup(groups: TabGroup[], tabs: WorkItemTab[], groupId: string): { groups: TabGroup[]; tabs: WorkItemTab[] } {
