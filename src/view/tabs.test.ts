@@ -15,6 +15,7 @@ import {
   addGroup,
   renameGroup,
   removeGroup,
+  reorderGroups,
 } from './tabs';
 import type { WorkItemTab, TabGroup } from './tabs';
 
@@ -231,6 +232,58 @@ describe('removeGroup', () => {
     const result = removeGroup(groups, tabs, DEFAULT_GROUP_ID);
 
     expect(result).toEqual({ groups, tabs });
+  });
+});
+
+describe('reorderGroups', () => {
+  it('keeps the default group first regardless of the requested order', () => {
+    const groups: TabGroup[] = [
+      createDefaultGroup(),
+      { id: 'g1', name: 'Code Review', color: GROUP_COLORS[1] },
+      { id: 'g2', name: 'My Work', color: GROUP_COLORS[2] },
+    ];
+
+    const result = reorderGroups(groups, ['g2', DEFAULT_GROUP_ID, 'g1']);
+
+    expect(result).toEqual([
+      createDefaultGroup(),
+      { id: 'g2', name: 'My Work', color: GROUP_COLORS[2] },
+      { id: 'g1', name: 'Code Review', color: GROUP_COLORS[1] },
+    ]);
+  });
+
+  it('reorders the non-default groups to match the given order', () => {
+    const groups: TabGroup[] = [
+      createDefaultGroup(),
+      { id: 'g1', name: 'A', color: GROUP_COLORS[1] },
+      { id: 'g2', name: 'B', color: GROUP_COLORS[2] },
+      { id: 'g3', name: 'C', color: GROUP_COLORS[3] },
+    ];
+
+    const result = reorderGroups(groups, ['g3', 'g1', 'g2']);
+
+    expect(result.map(g => g.id)).toEqual([DEFAULT_GROUP_ID, 'g3', 'g1', 'g2']);
+  });
+
+  it('ignores group ids that do not exist', () => {
+    const groups: TabGroup[] = [createDefaultGroup(), { id: 'g1', name: 'A', color: GROUP_COLORS[1] }, { id: 'g2', name: 'B', color: GROUP_COLORS[2] }];
+
+    const result = reorderGroups(groups, ['g2', 'does-not-exist', 'g1']);
+
+    expect(result.map(g => g.id)).toEqual([DEFAULT_GROUP_ID, 'g2', 'g1']);
+  });
+
+  it('appends groups missing from the given order at the end, keeping their relative order', () => {
+    const groups: TabGroup[] = [
+      createDefaultGroup(),
+      { id: 'g1', name: 'A', color: GROUP_COLORS[1] },
+      { id: 'g2', name: 'B', color: GROUP_COLORS[2] },
+      { id: 'g3', name: 'C', color: GROUP_COLORS[3] },
+    ];
+
+    const result = reorderGroups(groups, ['g3']);
+
+    expect(result.map(g => g.id)).toEqual([DEFAULT_GROUP_ID, 'g3', 'g1', 'g2']);
   });
 });
 

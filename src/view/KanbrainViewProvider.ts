@@ -31,6 +31,7 @@ import {
   addGroup,
   renameGroup,
   removeGroup,
+  reorderGroups,
   ensureDefaultGroup,
   tabsInGroup,
   DEFAULT_GROUP_ID,
@@ -147,6 +148,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.renameGroupById(String(message.groupId ?? ''), String(message.label ?? ''));
       } else if (message.type === 'remove-group') {
         await this.confirmAndRemoveGroup(String(message.groupId ?? ''));
+      } else if (message.type === 'reorder-groups') {
+        this.reorderGroupsByIds(Array.isArray(message.groupIds) ? message.groupIds.map(String) : []);
       } else if (message.type === 'clear-work-item') {
         this.closeActiveTab();
       } else if (message.type === 'load-work-item-history') {
@@ -412,6 +415,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   reorderTabsByIds(tabIds: string[]): void {
     this.applyTabsUpdate({ tabs: reorderTabs(this.tabs, tabIds), activeTabId: this.activeTabId });
+    this.lastState = '';
+    void this.refresh();
+  }
+
+  reorderGroupsByIds(groupIds: string[]): void {
+    this.groups = reorderGroups(this.groups, groupIds);
+    this.persistGroups(this.groups, this.activeGroupId);
     this.lastState = '';
     void this.refresh();
   }
@@ -1617,6 +1627,41 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     {
+      const groupBar = document.querySelector('.kb-group-bar');
+      let draggingGroupWrap = null;
+      if (groupBar) {
+        groupBar.querySelectorAll('.kb-group-pill-wrap[draggable="true"]').forEach(wrap => {
+          wrap.addEventListener('dragstart', e => {
+            draggingGroupWrap = wrap;
+            wrap.classList.add('kb-group-pill-wrap-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '');
+          });
+          wrap.addEventListener('dragend', () => {
+            if (draggingGroupWrap) draggingGroupWrap.classList.remove('kb-group-pill-wrap-dragging');
+            draggingGroupWrap = null;
+            const groupIds = [...groupBar.querySelectorAll('.kb-group-pill-wrap')].map(w => w.dataset.groupId).filter(Boolean);
+            vscode.postMessage({ type: 'reorder-groups', groupIds });
+          });
+        });
+        groupBar.addEventListener('dragover', e => {
+          if (!draggingGroupWrap) return;
+          e.preventDefault();
+          const target = e.target.closest && e.target.closest('.kb-group-pill-wrap');
+          if (!target || target === draggingGroupWrap) return;
+          const rect = target.getBoundingClientRect();
+          let before = e.clientX < rect.left + rect.width / 2;
+          if (target.dataset.groupId === 'default') {
+            // The default group is always first — never let another group land ahead of it.
+            before = false;
+          }
+          target.parentNode.insertBefore(draggingGroupWrap, before ? target : target.nextSibling);
+        });
+        groupBar.addEventListener('drop', e => e.preventDefault());
+      }
+    }
+
+    {
       const tabBar = document.querySelector('.kb-tab-bar');
       let draggingWrap = null;
       if (tabBar) {
@@ -2278,6 +2323,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
       .kb-group-bar::-webkit-scrollbar-track { background: transparent; }
       .kb-group-pill-wrap { position: relative; flex-shrink: 0; }
+      .kb-group-pill-wrap-dragging { opacity: 0.4; }
       .kb-group-pill {
         display: inline-flex;
         align-items: center;
@@ -2302,6 +2348,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-pill-active { opacity: 1; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
       .kb-group-pill-close { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; margin-left: 5px; flex-shrink: 0; border-radius: 2px; opacity: 0.6; font-size: 9px; }
       .kb-group-pill-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)); }
+      .kb-group-pill-lock { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; margin-left: 5px; flex-shrink: 0; opacity: 0.4; font-size: 9px; cursor: default; pointer-events: none; }
       .kb-group-rename-input {
         position: absolute;
         inset: 0;
@@ -2377,8 +2424,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 100; }
       .kb-search-overlay.kb-hidden { display: none; }
       .kb-search-dialog { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; width: 100%; max-width: 640px; max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+      #kb-search-section.kb-search-dialog { flex: 1; min-height: 0; box-shadow: none; margin-bottom: 8px; }
       .kb-search-dialog-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 6px; }
-      .kb-query-combobox { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
+      .kb-query-combobox { position: relative; flex-shrink: 0; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 0 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 2px; }
       .kb-query-combobox:hover { background: var(--vscode-list-hoverBackground); }
       .kb-query-combobox:focus-within { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-query-trigger { flex: 1; min-width: 0; padding: 4px 2px; cursor: pointer; }

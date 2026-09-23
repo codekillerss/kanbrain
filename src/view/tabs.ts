@@ -133,6 +133,19 @@ export function reorderTabs(tabs: WorkItemTab[], orderedTabIds: string[]): WorkI
   return [...reordered, ...missing];
 }
 
+export function reorderGroups(groups: TabGroup[], orderedGroupIds: string[]): TabGroup[] {
+  // The default group is never repositioned — it's always first, and it's dropped from the
+  // requested order below even if a caller tried to move it.
+  const byId = new Map(groups.map(g => [g.id, g]));
+  const requestedIds = orderedGroupIds.filter(id => id !== DEFAULT_GROUP_ID);
+  const reordered = requestedIds.map(id => byId.get(id)).filter((g): g is TabGroup => g !== undefined);
+  const includedIds = new Set(reordered.map(g => g.id));
+  const missing = groups.filter(g => g.id !== DEFAULT_GROUP_ID && !includedIds.has(g.id));
+  const defaultGroup = groups.find(g => g.id === DEFAULT_GROUP_ID);
+  const rest = [...reordered, ...missing];
+  return defaultGroup ? [defaultGroup, ...rest] : rest;
+}
+
 export function closeTab(tabs: WorkItemTab[], activeTabId: string | undefined, tabIdToClose: string): TabsUpdate {
   const tabToClose = tabs.find(t => t.id === tabIdToClose);
   if (!tabToClose) {

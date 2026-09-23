@@ -71,12 +71,12 @@ function renderGroupBar(groups: TabGroup[], activeGroupId: string, pendingGroupR
     .map(group => {
       const isActive = group.id === activeGroupId;
       const isRenaming = group.id === pendingGroupRenameId;
-      const closeHtml =
-        group.id === DEFAULT_GROUP_ID
-          ? ''
-          : `<span class="kb-group-pill-close" data-action="remove-group" data-group-id="${group.id}" title="Remove group" aria-label="Remove group">&#10005;</span>`;
+      const isDefault = group.id === DEFAULT_GROUP_ID;
+      const closeHtml = isDefault
+        ? `<span class="kb-group-pill-lock" title="The default group can't be removed" aria-label="Default group, can't be removed">&#128274;</span>`
+        : `<span class="kb-group-pill-close" data-action="remove-group" data-group-id="${group.id}" title="Remove group" aria-label="Remove group">&#10005;</span>`;
       return `
-      <div class="kb-group-pill-wrap">
+      <div class="kb-group-pill-wrap" draggable="${isDefault ? 'false' : 'true'}" data-group-id="${group.id}">
         <button type="button" class="kb-group-pill${isActive ? ' kb-group-pill-active' : ''}" data-action="select-group" data-group-id="${group.id}" style="--kb-group-color: ${group.color}">
           <span class="kb-group-pill-label" data-action="rename-group-trigger" data-group-id="${group.id}">${escapeHtml(group.name)}</span>
           ${closeHtml}
@@ -93,44 +93,63 @@ function renderGroupBar(groups: TabGroup[], activeGroupId: string, pendingGroupR
   `;
 }
 
+function renderSearchTabsContent(config: KanbrainConfig, closable: boolean): string {
+  const closeButtonHtml = closable ? `<button id="kb-search-close-btn">✕</button>` : '';
+  return `
+    <div class="kb-search-dialog-header">
+      <div class="kb-dialog-tabs">
+        <button type="button" class="kb-dialog-tab kb-dialog-tab-active" data-action="select-dialog-tab" data-dialog-tab="search">Search</button>
+        <button type="button" class="kb-dialog-tab" data-action="select-dialog-tab" data-dialog-tab="history">History</button>
+      </div>
+      ${closeButtonHtml}
+    </div>
+
+    <div class="kb-dialog-panel" data-dialog-panel="search">
+      <div class="kb-query-combobox">
+        <div id="kb-query-trigger" class="kb-query-trigger">
+          <span id="kb-query-trigger-label" class="kb-query-trigger-label kb-query-trigger-placeholder">Filter by saved query...</span>
+        </div>
+        <button id="kb-query-clear-btn" class="kb-query-clear-btn kb-hidden" title="Clear query" aria-label="Clear query">✕</button>
+        <span id="kb-query-combobox-icon" class="kb-query-combobox-icon" aria-hidden="true">▼</span>
+        <div id="kb-query-options" class="kb-query-dropdown kb-hidden">
+          <input id="kb-query-filter-input" placeholder="Filter by saved query..." autocomplete="off">
+          <div id="kb-query-options-list"></div>
+        </div>
+      </div>
+      <input id="kb-search-input" placeholder="Search by title or #id...">
+      <div class="kb-search-filters-row">
+        <label class="kb-checkbox-row">
+          <input type="checkbox" id="kb-search-assigned-to-me" ${config.searchAssignedToMe ? 'checked' : ''}>
+          Assigned to me
+        </label>
+      </div>
+      <div id="kb-search-results"></div>
+    </div>
+
+    <div class="kb-dialog-panel kb-hidden" data-dialog-panel="history">
+      <div id="kb-history-results"><div class="kb-empty">Loading...</div></div>
+    </div>
+  `;
+}
+
+// Used when a work item is already active — a real overlay/modal on top of it, hidden until
+// "Switch work item" is clicked.
 function renderSearchDialog(config: KanbrainConfig): string {
   return `
     <div id="kb-search-section" class="kb-search-overlay kb-hidden">
       <div class="kb-search-dialog">
-        <div class="kb-search-dialog-header">
-          <div class="kb-dialog-tabs">
-            <button type="button" class="kb-dialog-tab kb-dialog-tab-active" data-action="select-dialog-tab" data-dialog-tab="search">Search</button>
-            <button type="button" class="kb-dialog-tab" data-action="select-dialog-tab" data-dialog-tab="history">History</button>
-          </div>
-          <button id="kb-search-close-btn">✕</button>
-        </div>
-
-        <div class="kb-dialog-panel" data-dialog-panel="search">
-          <div class="kb-query-combobox">
-            <div id="kb-query-trigger" class="kb-query-trigger">
-              <span id="kb-query-trigger-label" class="kb-query-trigger-label kb-query-trigger-placeholder">Filter by saved query...</span>
-            </div>
-            <button id="kb-query-clear-btn" class="kb-query-clear-btn kb-hidden" title="Clear query" aria-label="Clear query">✕</button>
-            <span id="kb-query-combobox-icon" class="kb-query-combobox-icon" aria-hidden="true">▼</span>
-            <div id="kb-query-options" class="kb-query-dropdown kb-hidden">
-              <input id="kb-query-filter-input" placeholder="Filter by saved query..." autocomplete="off">
-              <div id="kb-query-options-list"></div>
-            </div>
-          </div>
-          <input id="kb-search-input" placeholder="Search by title or #id...">
-          <div class="kb-search-filters-row">
-            <label class="kb-checkbox-row">
-              <input type="checkbox" id="kb-search-assigned-to-me" ${config.searchAssignedToMe ? 'checked' : ''}>
-              Assigned to me
-            </label>
-          </div>
-          <div id="kb-search-results"></div>
-        </div>
-
-        <div class="kb-dialog-panel kb-hidden" data-dialog-panel="history">
-          <div id="kb-history-results"><div class="kb-empty">Loading...</div></div>
-        </div>
+        ${renderSearchTabsContent(config, true)}
       </div>
+    </div>
+  `;
+}
+
+// Used when there's no active work item (e.g. an empty group) — plain page content, not a
+// modal, but with the same Search/History tabs the overlay above uses.
+function renderInlineSearch(config: KanbrainConfig): string {
+  return `
+    <div id="kb-search-section" class="kb-search-dialog">
+      ${renderSearchTabsContent(config, false)}
     </div>
   `;
 }
@@ -183,14 +202,7 @@ export function render(state: RenderState): string {
   if (!state.workItem) {
     return `
       ${groupBarHtml}
-      <div id="kb-search-section">
-        <input id="kb-search-input" placeholder="Search by title or #id...">
-        <label class="kb-checkbox-row">
-          <input type="checkbox" id="kb-search-assigned-to-me" ${state.config.searchAssignedToMe ? 'checked' : ''}>
-          Assigned to me
-        </label>
-        <div id="kb-search-results"></div>
-      </div>
+      ${renderInlineSearch(state.config)}
       ${tabBarHtml}
       ${renderFooter(state)}
     `;
