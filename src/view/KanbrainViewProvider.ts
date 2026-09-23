@@ -2300,11 +2300,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   private css(): string {
     return `
-      body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }
-      .kb-tab-bar { position: fixed; left: 0; right: 0; bottom: 33px; z-index: 9; display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 4px 6px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); scrollbar-width: thin; }
-      .kb-tab-bar::-webkit-scrollbar { height: 4px; }
-      .kb-tab-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
-      .kb-tab-bar::-webkit-scrollbar-track { background: transparent; }
+      body { font-family: var(--vscode-font-family); padding: 8px 8px 84px; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: var(--vscode-scrollbarSlider-background) transparent; }
+      * { scrollbar-width: thin; scrollbar-color: var(--vscode-scrollbarSlider-background) transparent; }
+      ::-webkit-scrollbar { width: 6px; height: 4px; }
+      ::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--vscode-scrollbarSlider-hoverBackground, var(--vscode-scrollbarSlider-background)); }
+      ::-webkit-scrollbar-track { background: transparent; }
+      .kb-tab-bar { position: fixed; left: 0; right: 0; bottom: 33px; z-index: 9; display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 4px 6px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-top: 1px solid var(--vscode-panel-border); }
       .kb-tab-wrap { position: relative; flex-shrink: 0; min-width: 56px; max-width: 140px; }
       .kb-tab-wrap + .kb-tab-wrap { border-left: 1px solid var(--vscode-panel-border); }
       .kb-tab-wrap-dragging { opacity: 0.4; }
@@ -2318,10 +2320,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-tab-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-tab-add:hover:not(:disabled) { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-tab-add:disabled { opacity: 0.3; cursor: not-allowed; }
-      .kb-group-bar { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; padding: 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-      .kb-group-bar::-webkit-scrollbar { height: 4px; }
-      .kb-group-bar::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 2px; }
-      .kb-group-bar::-webkit-scrollbar-track { background: transparent; }
+      .kb-group-bar { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; padding: 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--vscode-panel-border); overflow-x: auto; overflow-y: hidden; }
       .kb-group-pill-wrap { position: relative; flex-shrink: 0; }
       .kb-group-pill-wrap-dragging { opacity: 0.4; }
       .kb-group-pill {
