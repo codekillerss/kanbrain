@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.6] - 2026-09-23
+
+### Fixed
+
+- A tab group's name now only requires 1 character (previously 3), matching Flow tabs, and is capped at 30 characters.
+
 ## [0.19.5] - 2026-09-23
 
 ### Added
