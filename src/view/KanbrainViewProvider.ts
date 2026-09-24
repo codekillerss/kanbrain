@@ -15,6 +15,7 @@ import { cloneRepository } from '../git/cloneRepository';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommandForTab } from '../terminal/tabTerminal';
 import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig, WorkItem } from '../types';
+import { configForStateDiff } from './configForStateDiff';
 import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
 import { render } from './render';
@@ -1343,10 +1344,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       activeGroupId,
       pendingGroupRenameId: this.pendingGroupRenameId,
     };
-    if (!hasStateChanged(this.lastState, config, workItem, parent, subtasks, avatars, reviewsExtra)) {
+    const configForDiff = configForStateDiff(config);
+    if (!hasStateChanged(this.lastState, configForDiff, workItem, parent, subtasks, avatars, reviewsExtra)) {
       return;
     }
-    this.lastState = serializeState(config, workItem, parent, subtasks, avatars, reviewsExtra);
+    this.lastState = serializeState(configForDiff, workItem, parent, subtasks, avatars, reviewsExtra);
     this.view.webview.html = this.wrapHtml(
       render({
         hasWorkspace: !!this.workspaceRoot,
