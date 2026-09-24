@@ -181,8 +181,15 @@ export function render(state: RenderState): string {
       </div>
     `;
   }
+  const groups = state.groups ?? [];
+  const activeGroupId = state.activeGroupId ?? DEFAULT_GROUP_ID;
+  const tabBarHtml = renderTabBar(state.tabs ?? [], activeGroupId, state.activeTabId, state.config);
+  const groupBarHtml = (state.tabs ?? []).length > 0 ? renderGroupBar(groups, activeGroupId, state.pendingGroupRenameId) : '';
+
   if (state.screen === 'home') {
-    return `${renderHome(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
+    // Tabs/groups are global, not scoped to the Flow screen — without this, work items opened in
+    // previous sessions become invisible on Home until the user picks a card and lands in Flow.
+    return `${groupBarHtml}${renderHome(state)}${renderSearchDialog(state.config)}${tabBarHtml}${renderFooter(state)}`;
   }
   if (state.screen === 'config') {
     return `${renderConfig(state)}${renderSearchDialog(state.config)}${renderFooter(state)}`;
@@ -193,11 +200,6 @@ export function render(state: RenderState): string {
   if (state.screen === 'reviews') {
     return `${renderReviews(state)}${renderFooter(state)}`;
   }
-
-  const groups = state.groups ?? [];
-  const activeGroupId = state.activeGroupId ?? DEFAULT_GROUP_ID;
-  const tabBarHtml = renderTabBar(state.tabs ?? [], activeGroupId, state.activeTabId, state.config);
-  const groupBarHtml = (state.tabs ?? []).length > 0 ? renderGroupBar(groups, activeGroupId, state.pendingGroupRenameId) : '';
 
   if (!state.workItem) {
     return `

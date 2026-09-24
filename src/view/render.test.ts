@@ -711,6 +711,24 @@ describe('render', () => {
     expect(html).not.toContain('kb-tab-bar');
   });
 
+  it('still shows the tab bar and group bar on the home screen when tabs are already open', () => {
+    const html = render({
+      hasWorkspace: true, extensionVersion: '1.0.0',
+      config,
+      workItem: null,
+      parent: null,
+      subtasks: [],
+      screen: 'home',
+      tabs: [{ id: 'tab-1', workItemId: 482 }, { id: 'tab-2', workItemId: 900 }],
+      activeTabId: undefined,
+    });
+
+    expect(html).toContain('kb-tab-bar');
+    expect(html).toContain('data-tab-id="tab-1"');
+    expect(html).toContain('data-tab-id="tab-2"');
+    expect(html).toContain('kb-group-bar');
+  });
+
   it('shows a tab bar with one tab per open work item', () => {
     const html = render({
       hasWorkspace: true, extensionVersion: '1.0.0',
