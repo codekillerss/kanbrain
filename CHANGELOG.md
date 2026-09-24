@@ -2,6 +2,23 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.11] - 2026-09-24
+
+### Changed
+
+- The sidebar now keeps its on-screen state when it refreshes automatically: an open search dialog stays open with its text, saved query, type filter and results; scroll positions are kept; and text being typed into a field (including the Brain forms) is no longer lost when another field saves.
+- The search type filter no longer shows per-type counts. They were always 0 and cost one extra query per type every time the dialog opened.
+
+### Fixed
+
+- The sidebar no longer stays blank after being moved to another location until something changes.
+- Automatic refreshes no longer pile up duplicate requests on a slow network, in the sidebar and in the work item and pull request detail panels.
+
+### Security
+
+- "Open in browser" only opens https Azure DevOps addresses.
+- The sidebar now declares a Content-Security-Policy, so only Kanbrain's own script can run in it.
+
 ## [0.19.10] - 2026-09-24
 
 ### Fixed
