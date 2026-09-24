@@ -34,13 +34,13 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
 
 describe('renderSearchResults', () => {
   it('shows an empty message when there are no results', () => {
-    expect(renderSearchResults([], config(), {})).toContain('No work items found.');
+    expect(renderSearchResults([], config())).toContain('No work items found.');
   });
 
   it('groups results into collapsible status sections with counts', () => {
     const items = [workItem({ id: 1, status: 'Active' }), workItem({ id: 2, status: 'New' })];
 
-    const html = renderSearchResults(items, config(), {});
+    const html = renderSearchResults(items, config());
 
     expect(html).toContain('Active (1)');
     expect(html).toContain('New (1)');
@@ -49,7 +49,7 @@ describe('renderSearchResults', () => {
   });
 
   it('renders each item as a pickable button with its id, escaping the title', () => {
-    const html = renderSearchResults([workItem({ id: 482, title: 'Fix <bug>' })], config(), {});
+    const html = renderSearchResults([workItem({ id: 482, title: 'Fix <bug>' })], config());
 
     expect(html).toContain('data-action="pick-work-item"');
     expect(html).toContain('data-id="482"');
@@ -58,21 +58,21 @@ describe('renderSearchResults', () => {
   });
 
   it('shows a status dot on the group header when a color is known for the status', () => {
-    const html = renderSearchResults([workItem({ status: 'Active' })], config({ statusColors: { Active: 'b2b2b2' } }), {});
+    const html = renderSearchResults([workItem({ status: 'Active' })], config({ statusColors: { Active: 'b2b2b2' } }));
 
     expect(html).toContain('kb-status-dot');
     expect(html).toContain('#b2b2b2');
   });
 
   it('shows a colored left border on the group of items when a color is known for the status', () => {
-    const html = renderSearchResults([workItem({ status: 'Active' })], config({ statusColors: { Active: 'b2b2b2' } }), {});
+    const html = renderSearchResults([workItem({ status: 'Active' })], config({ statusColors: { Active: 'b2b2b2' } }));
 
     expect(html).toContain('kb-group-items');
     expect(html).toContain('border-left: 3px solid #b2b2b2');
   });
 
   it('omits the group left border when the status has no configured color', () => {
-    const html = renderSearchResults([workItem({ status: 'Active' })], config(), {});
+    const html = renderSearchResults([workItem({ status: 'Active' })], config());
 
     expect(html).not.toContain('border-left');
   });
@@ -90,27 +90,27 @@ describe('renderSearchResults', () => {
   });
 
   it('omits the icon and border when the type has no configured color or icon', () => {
-    const html = renderSearchResults([workItem({ type: 'Task' })], config(), {});
+    const html = renderSearchResults([workItem({ type: 'Task' })], config());
 
     expect(html).not.toContain('kb-type-icon');
     expect(html).not.toContain('border-right');
   });
 
   it('does not show an action button on search result items', () => {
-    const html = renderSearchResults([workItem({ id: 482 })], config(), {});
+    const html = renderSearchResults([workItem({ id: 482 })], config());
 
     expect(html).not.toContain('data-action="run-skill"');
   });
 
   it('renders no type filter when there are no configured work item types', () => {
-    const html = renderSearchResults([workItem()], config(), {});
+    const html = renderSearchResults([workItem()], config());
 
     expect(html).not.toContain('kb-search-type-filter');
   });
 
   it('renders a filter option per work item type, in config order, plus an "all" option first', () => {
     const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
-    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 3, Task: 7 });
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }));
 
     const allIndex = html.indexOf('data-type="all"');
     const epicIndex = html.indexOf('data-type="Epic"');
@@ -119,7 +119,15 @@ describe('renderSearchResults', () => {
     expect(allIndex).toBeGreaterThanOrEqual(0);
     expect(epicIndex).toBeGreaterThan(allIndex);
     expect(taskIndex).toBeGreaterThan(epicIndex);
-    expect(html).toContain('All (2)');
+  });
+
+  it('shows no counts on the type filter options or its trigger', () => {
+    const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }));
+
+    const filter = html.slice(html.indexOf('kb-search-type-filter'), html.indexOf('data-type-panel'));
+    expect(filter).toContain('All');
+    expect(filter).not.toMatch(/\(\d+\)/);
   });
 
   it('shows the type icon on each filter option, but not on the "all" option', () => {
@@ -127,7 +135,6 @@ describe('renderSearchResults', () => {
     const html = renderSearchResults(
       items,
       config({ workflowSteps: { Epic: {} }, typeIcons: { Epic: '<svg><path d="M0 0"/></svg>' } }),
-      { Epic: 1 },
     );
 
     const allOptionStart = html.indexOf('data-type="all"');
@@ -139,23 +146,20 @@ describe('renderSearchResults', () => {
     expect(html.slice(allOptionStart, allOptionEnd)).not.toContain('<svg>');
   });
 
-  it('marks a filter option as empty when its count is 0', () => {
-    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 5, Task: 0 });
+  it('marks a filter option as empty only when the listed results have no items of that type', () => {
+    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }));
 
-    expect(html).toContain('kb-search-type-filter-option-empty');
-    expect(html).toContain('Task (0)');
-  });
-
-  it('shows the type option count from typeCounts, not from the filtered item list', () => {
-    const items = [workItem({ id: 1, type: 'Epic' })];
-    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {} } }), { Epic: 12 });
-
-    expect(html).toContain('Epic (12)');
+    const optionTag = (type: string) => {
+      const start = html.lastIndexOf('<button', html.indexOf(`data-type="${type}"`));
+      return html.slice(start, html.indexOf('>', start));
+    };
+    expect(optionTag('Task')).toContain('kb-search-type-filter-option-empty');
+    expect(optionTag('Epic')).not.toContain('kb-search-type-filter-option-empty');
   });
 
   it("scopes each type panel to only that type's items", () => {
     const items = [workItem({ id: 1, type: 'Epic', title: 'An epic' }), workItem({ id: 2, type: 'Task', title: 'A task' })];
-    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }), { Epic: 1, Task: 1 });
+    const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }));
 
     const epicPanelStart = html.indexOf('data-type-panel="Epic"');
     const taskPanelStart = html.indexOf('data-type-panel="Task"');
@@ -166,35 +170,35 @@ describe('renderSearchResults', () => {
   });
 
   it('shows "Unassigned" on a result item when the item has no assignee', () => {
-    const html = renderSearchResults([workItem({ assignedTo: null })], config(), {});
+    const html = renderSearchResults([workItem({ assignedTo: null })], config());
     expect(html).toContain('kb-result-item-assignee');
     expect(html).toContain('Unassigned');
   });
 
   it('shows the assignee name on a result item when assigned', () => {
-    const html = renderSearchResults([workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } })], config(), {});
+    const html = renderSearchResults([workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } })], config());
     expect(html).toContain('Jane Doe');
   });
 
   it('shows the resolved avatar image on a result item when provided', () => {
     const item = workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: 'https://example.com/avatar.png' } });
-    const html = renderSearchResults([item], config(), {}, { 'https://example.com/avatar.png': 'data:image/png;base64,X' });
+    const html = renderSearchResults([item], config(), { 'https://example.com/avatar.png': 'data:image/png;base64,X' });
     expect(html).toContain('<img class="kb-avatar" src="data:image/png;base64,X"');
   });
 
   it('hides the assignee row on result items when config.showAssignedTo is false', () => {
-    const html = renderSearchResults([workItem()], config({ showAssignedTo: false }), {});
+    const html = renderSearchResults([workItem()], config({ showAssignedTo: false }));
     expect(html).not.toContain('kb-result-item-assignee');
   });
 
   it('wraps the id+title in a single-line ellipsis span', () => {
-    const html = renderSearchResults([workItem({ id: 482, title: 'A very long title that should be truncated' })], config(), {});
+    const html = renderSearchResults([workItem({ id: 482, title: 'A very long title that should be truncated' })], config());
 
     expect(html).toContain('<span class="kb-result-item-title">#482 A very long title that should be truncated</span>');
   });
 
   it('shows a View details button for each item, separate from the pick-work-item button', () => {
-    const html = renderSearchResults([workItem({ id: 482 })], config(), {});
+    const html = renderSearchResults([workItem({ id: 482 })], config());
 
     expect(html).toContain('data-action="open-work-item-detail"');
     expect(html).toContain('kb-view-details-link');
@@ -202,7 +206,7 @@ describe('renderSearchResults', () => {
 
   it('scopes the View details button to the correct item id', () => {
     const items = [workItem({ id: 1 }), workItem({ id: 2 })];
-    const html = renderSearchResults(items, config(), {});
+    const html = renderSearchResults(items, config());
 
     expect(html).toContain('data-action="open-work-item-detail" data-id="1"');
     expect(html).toContain('data-action="open-work-item-detail" data-id="2"');

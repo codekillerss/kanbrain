@@ -40,11 +40,3 @@ export function filterWorkItemsByText(items: WorkItem[], searchText: string): Wo
 export function filterByAssignedTo(items: WorkItem[], userId: string): WorkItem[] {
   return items.filter(item => item.assignedTo?.id === userId);
 }
-
-export function countItemsByType(items: WorkItem[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const item of items) {
-    counts[item.type] = (counts[item.type] ?? 0) + 1;
-  }
-  return counts;
-}

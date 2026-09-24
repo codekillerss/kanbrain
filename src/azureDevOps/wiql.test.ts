@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchQuery, buildTypeCountQuery, filterWorkItemsByText, filterByAssignedTo, countItemsByType } from './wiql';
+import { buildSearchQuery, buildTypeCountQuery, filterWorkItemsByText, filterByAssignedTo } from './wiql';
 import type { WorkItem } from '../types';
 
 describe('buildSearchQuery', () => {
@@ -110,20 +110,5 @@ describe('filterByAssignedTo', () => {
   it('excludes unassigned items', () => {
     const items = [workItem({ id: 1, assignedTo: null })];
     expect(filterByAssignedTo(items, 'user-1')).toEqual([]);
-  });
-});
-
-describe('countItemsByType', () => {
-  it('groups items by their type', () => {
-    const items = [
-      workItem({ id: 1, type: 'Bug' }),
-      workItem({ id: 2, type: 'Bug' }),
-      workItem({ id: 3, type: 'Task' }),
-    ];
-    expect(countItemsByType(items)).toEqual({ Bug: 2, Task: 1 });
-  });
-
-  it('returns an empty object for an empty list', () => {
-    expect(countItemsByType([])).toEqual({});
   });
 });

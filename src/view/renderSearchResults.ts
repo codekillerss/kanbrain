@@ -44,12 +44,7 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: 
     .join('');
 }
 
-export function renderSearchResults(
-  items: WorkItem[],
-  config: KanbrainConfig,
-  typeCounts: Record<string, number>,
-  avatars: Record<string, string> = {},
-): string {
+export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, avatars: Record<string, string> = {}): string {
   if (items.length === 0) {
     return '<div class="kb-empty">No work items found.</div>';
   }
@@ -60,19 +55,14 @@ export function renderSearchResults(
   }
 
   const tabs = [
-    { id: 'all', label: 'All', count: items.length, items },
-    ...types.map(type => ({
-      id: type,
-      label: type,
-      count: typeCounts[type] ?? 0,
-      items: items.filter(item => item.type === type),
-    })),
+    { id: 'all', label: 'All', items },
+    ...types.map(type => ({ id: type, label: type, items: items.filter(item => item.type === type) })),
   ];
 
   const options = tabs
     .map(tab => {
       const iconHtml = tab.id === 'all' ? '' : renderTypeAccent(tab.id, config).iconHtml;
-      return `<button type="button" class="kb-search-type-filter-option${tab.count === 0 ? ' kb-search-type-filter-option-empty' : ''}" data-action="select-search-type" data-type="${escapeHtml(tab.id)}">${iconHtml}${escapeHtml(tab.label)} (${tab.count})</button>`;
+      return `<button type="button" class="kb-search-type-filter-option${tab.items.length === 0 ? ' kb-search-type-filter-option-empty' : ''}" data-action="select-search-type" data-type="${escapeHtml(tab.id)}">${iconHtml}${escapeHtml(tab.label)}</button>`;
     })
     .join('');
 
@@ -83,7 +73,7 @@ export function renderSearchResults(
   const filter = `
     <div class="kb-search-type-filter">
       <button type="button" class="kb-search-type-filter-trigger" data-action="toggle-search-type-filter">
-        <span class="kb-search-type-filter-trigger-label">${escapeHtml(tabs[0].label)} (${tabs[0].count})</span>
+        <span class="kb-search-type-filter-trigger-label">${escapeHtml(tabs[0].label)}</span>
         <span class="kb-search-type-filter-icon">▾</span>
       </button>
       <div class="kb-search-type-filter-menu kb-hidden">${options}</div>

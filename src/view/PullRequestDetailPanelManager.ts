@@ -7,6 +7,7 @@ import { readConfig } from '../config/config';
 import { renderPullRequestDetail } from './renderPullRequestDetail';
 import { detailPanelCss } from './detailPanelCss';
 import { extractMarkdownImageUrls } from './inlineImages';
+import { skipWhileRunning } from './skipWhileRunning';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -16,6 +17,7 @@ export class PullRequestDetailPanelManager {
   private avatarCache = new Map<string, string | null>();
   private inlineImageCache = new Map<string, string | null>();
   private pollHandle: ReturnType<typeof setInterval> | undefined;
+  private readonly pollTick = skipWhileRunning(() => this.pollAll());
   private gitLensIconDataUriCache: string | null | undefined;
 
   constructor(
@@ -82,7 +84,7 @@ export class PullRequestDetailPanelManager {
     });
 
     if (!this.pollHandle) {
-      this.pollHandle = setInterval(() => void this.pollAll(), POLL_INTERVAL_MS);
+      this.pollHandle = setInterval(() => void this.pollTick(), POLL_INTERVAL_MS);
     }
 
     await this.loadAndRender(repositoryId, pullRequestId, panel);

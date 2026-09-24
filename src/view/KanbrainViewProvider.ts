@@ -5,7 +5,7 @@ import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation } from '../azureDevOps/client';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
-import { countItemsByType, filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
+import { filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveActiveProfile } from '../config/resolveActiveProfile';
@@ -18,6 +18,8 @@ import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig
 import { configForStateDiff } from './configForStateDiff';
 import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
+import { sidebarCsp } from './sidebarCsp';
+import { skipWhileRunning } from './skipWhileRunning';
 import { render } from './render';
 import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
@@ -61,7 +63,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private cardCache = new Map<number, { workItem: WorkItem | null; parent: WorkItem | null; subtasks: WorkItem[]; polledAt: number }>();
   private activeWorkItemId: number | undefined;
   private selectedTeam: string | undefined;
-  private typeCounts: Record<string, number> = {};
   private hasCheckedBoardConfig = false;
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
@@ -112,6 +113,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
+    // A re-resolved view starts blank, so the first refresh must render even if nothing changed.
+    this.lastState = '';
     webviewView.webview.options = {
       enableScripts: true,
       enableCommandUris: ['kanbrain.openPullRequestDetail', 'kanbrain.checkoutBranch', 'kanbrain.openWorkItemInBrowser'],
@@ -254,7 +257,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     void this.refresh();
-    this.pollHandle = setInterval(() => void this.refresh(), POLL_INTERVAL_MS);
+    const pollTick = skipWhileRunning(() => this.refresh());
+    this.pollHandle = setInterval(() => void pollTick(), POLL_INTERVAL_MS);
     webviewView.onDidDispose(() => {
       if (this.pollHandle) {
         clearInterval(this.pollHandle);
@@ -646,26 +650,20 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     let html: string;
     try {
       let items: WorkItem[];
-      let typeCounts: Record<string, number>;
       if (queryId) {
         const ids = await this.client.runSavedQuery(config.organization, config.project, queryId);
         const queryItems = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-        typeCounts = countItemsByType(queryItems);
         items = filterWorkItemsByText(queryItems, query);
         if (assignedToMe) {
           const userId = await this.resolveCurrentUserId();
           items = userId ? filterByAssignedTo(items, userId) : [];
         }
       } else {
-        if (query.trim() === '') {
-          this.typeCounts = await this.fetchTypeCounts(this.client, config);
-        }
         const ids = await this.client.searchWorkItems(config.organization, config.project, query, assignedToMe);
         items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-        typeCounts = this.typeCounts;
       }
       const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(items) : {};
-      html = renderSearchResults(items, config, typeCounts, avatars);
+      html = renderSearchResults(items, config, avatars);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
@@ -692,14 +690,6 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       this.currentUserId = this.client ? await this.client.getCurrentUserId() : null;
     }
     return this.currentUserId ?? null;
-  }
-
-  private async fetchTypeCounts(client: AzureDevOpsClient, config: KanbrainConfig): Promise<Record<string, number>> {
-    const types = Object.keys(config.skills);
-    const entries = await Promise.all(
-      types.map(async type => [type, await client.countWorkItemsByType(config.organization, config.project, [type])] as const),
-    );
-    return Object.fromEntries(entries);
   }
 
   private async resolveAvatars(items: WorkItem[]): Promise<Record<string, string>> {
@@ -1086,6 +1076,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         screen: this.currentScreen,
         connectionStatus: 'disconnected',
       }),
+      'disconnected',
     );
   }
 
@@ -1374,19 +1365,147 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         activeGroupId,
         pendingGroupRenameId: this.pendingGroupRenameId,
       }),
+      this.viewKey(),
     );
   }
 
-  private wrapHtml(body: string): string {
+  private viewKey(): string {
+    return `${this.currentScreen}:${this.activeWorkItemId ?? ''}:${this.activeTabId ?? ''}`;
+  }
+
+  private wrapHtml(body: string, viewKey: string): string {
+    const nonce = randomUUID().replace(/-/g, '');
     return `<!DOCTYPE html>
 <html>
-<head><style>${this.css()}</style></head>
+<head>
+<meta http-equiv="Content-Security-Policy" content="${sidebarCsp(nonce)}">
+<style>${this.css()}</style>
+</head>
 <body>
   ${body}
-  <script>
+  <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     let activeDialogTab = 'search';
     let activeSearchType = 'all';
+
+    // The extension replaces webview.html on every re-render, which wipes anything that only lives
+    // in this document. vscode.setState survives that swap, so the search dialog, scroll positions
+    // and the field being edited are mirrored there and restored at the end of this script.
+    // VIEW_KEY scopes that state to one screen + active work item, so it never leaks across views.
+    const VIEW_KEY = ${JSON.stringify(viewKey)};
+    let uiState = vscode.getState() || {};
+
+    function saveUiState(patch) {
+      uiState = Object.assign({}, uiState, patch);
+      vscode.setState(uiState);
+    }
+
+    function snapshotSearch() {
+      const section = document.getElementById('kb-search-section');
+      if (!section) return;
+      const results = document.getElementById('kb-search-results');
+      const history = document.getElementById('kb-history-results');
+      const label = document.getElementById('kb-query-trigger-label');
+      const input = document.getElementById('kb-search-input');
+      saveUiState({
+        search: {
+          viewKey: VIEW_KEY,
+          open: !section.classList.contains('kb-hidden'),
+          mode: section.dataset.mode || 'replace',
+          dialogTab: activeDialogTab,
+          text: input ? input.value : '',
+          queryId: activeQueryId,
+          queryPath: activeQueryId && label ? label.textContent : null,
+          searchType: activeSearchType,
+          resultsHtml: results ? results.innerHTML : '',
+          historyHtml: history ? history.innerHTML : '',
+        },
+      });
+    }
+
+    let snapshotSearchTimer = null;
+    function scheduleSnapshotSearch() {
+      clearTimeout(snapshotSearchTimer);
+      snapshotSearchTimer = setTimeout(snapshotSearch, 150);
+    }
+
+    function clearSearchState() {
+      clearTimeout(snapshotSearchTimer);
+      saveUiState({ search: null });
+    }
+
+    function isTextField(el) {
+      return !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'search')));
+    }
+
+    // Stable identity for a field across re-renders: its own id/class/data attributes plus the
+    // config row it belongs to (skill, profile, repository or workflow step).
+    function fieldKey(el) {
+      const parts = [el.tagName, el.id || '', (el.getAttribute('class') || '').split(' ')[0]];
+      ['field', 'tabId', 'groupId', 'id'].forEach((name) => parts.push(el.dataset[name] || ''));
+      const row = el.closest('[data-skill-id], [data-profile-id], [data-repository-id], [data-level]');
+      if (row) {
+        parts.push(row.dataset.skillId || '', row.dataset.profileId || '', row.dataset.repositoryId || '', row.dataset.level || '', row.dataset.status || '');
+      }
+      return parts.join('|');
+    }
+
+    function saveDraft(el) {
+      saveUiState({ draft: { viewKey: VIEW_KEY, key: fieldKey(el), value: el.value, start: el.selectionStart, end: el.selectionEnd } });
+    }
+
+    document.addEventListener('focusin', (e) => {
+      if (isTextField(e.target)) saveDraft(e.target);
+    });
+    document.addEventListener('input', (e) => {
+      if (isTextField(e.target)) saveDraft(e.target);
+    }, true);
+    document.addEventListener('selectionchange', () => {
+      if (isTextField(document.activeElement)) saveDraft(document.activeElement);
+    });
+    // Deferred so a real blur can see where focus went. When the document is being torn down by a
+    // re-render this never runs, which is exactly what keeps the draft for the next document.
+    document.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (isTextField(document.activeElement)) {
+          saveDraft(document.activeElement);
+        } else {
+          saveUiState({ draft: null });
+        }
+      }, 0);
+    });
+
+    function scrollKey(el) {
+      if (el === document || el === document.documentElement || el === document.body) return 'page';
+      if (!el || !el.getAttribute) return null;
+      if (el.id) return '#' + el.id;
+      const cls = (el.getAttribute('class') || '').split(' ')[0];
+      if (!cls) return null;
+      return '.' + cls + ':' + Array.prototype.indexOf.call(document.getElementsByClassName(cls), el);
+    }
+
+    function findByScrollKey(key) {
+      if (key === 'page') return document.scrollingElement || document.documentElement;
+      if (key.charAt(0) === '#') return document.getElementById(key.slice(1));
+      const separator = key.lastIndexOf(':');
+      return document.getElementsByClassName(key.slice(1, separator))[Number(key.slice(separator + 1))] || null;
+    }
+
+    let saveScrollTimer = null;
+    function saveScroll(key, top) {
+      const scroll = uiState.scroll && uiState.scroll.viewKey === VIEW_KEY ? uiState.scroll : { viewKey: VIEW_KEY, positions: {} };
+      scroll.positions[key] = top;
+      uiState.scroll = scroll;
+      clearTimeout(saveScrollTimer);
+      saveScrollTimer = setTimeout(() => saveUiState({ scroll: uiState.scroll }), 100);
+    }
+
+    document.addEventListener('scroll', (e) => {
+      const key = scrollKey(e.target);
+      if (!key) return;
+      const el = key === 'page' ? findByScrollKey('page') : e.target;
+      saveScroll(key, key === 'page' ? Math.max(el.scrollTop, document.body.scrollTop) : el.scrollTop);
+    }, true);
 
     function applyDialogTab() {
       document.querySelectorAll('.kb-dialog-tab').forEach((btn) => {
@@ -1860,6 +1979,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             // correctly-scoped search once it knows.
             vscode.postMessage({ type: 'load-saved-queries' });
             document.getElementById('kb-search-input')?.focus();
+            snapshotSearch();
+          } else {
+            clearSearchState();
           }
         }
       } else if (target.id === 'kb-add-tab-btn') {
@@ -1875,6 +1997,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           closeQueryDropdown();
           vscode.postMessage({ type: 'load-saved-queries' });
           document.getElementById('kb-search-input')?.focus();
+          snapshotSearch();
         }
       } else if (target.closest && target.closest('[data-action="close-tab"]')) {
         vscode.postMessage({ type: 'close-tab', tabId: target.closest('[data-action="close-tab"]').dataset.tabId });
@@ -1893,6 +2016,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (tab === 'history') {
           vscode.postMessage({ type: 'load-work-item-history' });
         }
+        snapshotSearch();
       } else if (target.id === 'kb-clear-btn') {
         vscode.postMessage({ type: 'clear-work-item' });
       } else if (target.id === 'kb-run-setup-btn') {
@@ -1940,11 +2064,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (section) {
           section.classList.add('kb-hidden');
         }
+        clearSearchState();
       } else if (target.id === 'kb-search-section' && target.classList.contains('kb-search-overlay')) {
         target.classList.add('kb-hidden');
+        clearSearchState();
       } else if (target.dataset && target.dataset.action === 'run-skill') {
         vscode.postMessage({ type: 'run-skill', id: target.dataset.id });
       } else if (target.closest && target.closest('[data-action="pick-work-item"]')) {
+        // Picking used to close the dialog only as a side effect of the re-render; with the
+        // dialog state now surviving re-renders, it has to be dropped explicitly.
+        clearSearchState();
         const pickedId = target.closest('[data-action="pick-work-item"]').dataset.id;
         const searchSectionEl = document.getElementById('kb-search-section');
         if (searchSectionEl && searchSectionEl.dataset.mode === 'add') {
@@ -1962,6 +2091,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
         triggerSearch();
         vscode.postMessage({ type: 'set-selected-saved-query', queryId: activeQueryId });
+        snapshotSearch();
       } else if (target.closest && target.closest('a.kb-repo-tag-unmapped')) {
         // Let the command: link navigate instead of toggling the enclosing group header.
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
@@ -2124,6 +2254,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         activeSearchType = btn.dataset.type;
         closeAllSearchTypeFilters();
         applySearchTypeFilter();
+        snapshotSearch();
       }
 
       if (
@@ -2230,7 +2361,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (searchInput) {
-      searchInput.addEventListener('input', triggerSearch);
+      searchInput.addEventListener('input', () => {
+        triggerSearch();
+        scheduleSnapshotSearch();
+      });
     }
 
     const assignedToMeCheckbox = document.getElementById('kb-search-assigned-to-me');
@@ -2285,6 +2419,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         closeQueryDropdown();
         triggerSearch();
         vscode.postMessage({ type: 'set-selected-saved-query', queryId: undefined });
+        snapshotSearch();
       });
     }
 
@@ -2294,10 +2429,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         if (results) {
           results.innerHTML = event.data.html;
           applySearchTypeFilter();
+          saveScroll('#kb-search-results', results.scrollTop);
+          snapshotSearch();
         }
       } else if (event.data.type === 'work-item-history') {
         const results = document.getElementById('kb-history-results');
-        if (results) results.innerHTML = event.data.html;
+        if (results) {
+          results.innerHTML = event.data.html;
+          saveScroll('#kb-history-results', results.scrollTop);
+          snapshotSearch();
+        }
       } else if (event.data.type === 'saved-queries') {
         if (queryOptionsList) queryOptionsList.innerHTML = event.data.html;
         if (event.data.selectedQueryId && event.data.selectedQueryPath) {
@@ -2308,6 +2449,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         // Exactly one search fires per dialog open, only now that we know whether a saved
         // query was previously selected — see the comment at the load-saved-queries call site.
         triggerSearch();
+        snapshotSearch();
       } else if (event.data.type === 'identity-results') {
         const results = document.querySelector('.kb-assignee-picker[data-id="' + event.data.workItemId + '"] .kb-assignee-picker-results');
         if (results) results.innerHTML = event.data.html;
@@ -2340,8 +2482,74 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     const searchSection = document.getElementById('kb-search-section');
-    if (searchSection && !searchSection.classList.contains('kb-hidden')) {
-      vscode.postMessage({ type: 'search-work-items', query: '' });
+    const restoredSearch = uiState.search;
+    if (searchSection && restoredSearch && restoredSearch.open && restoredSearch.viewKey === VIEW_KEY) {
+      const isOverlay = searchSection.classList.contains('kb-search-overlay');
+      if (isOverlay) {
+        searchSection.dataset.mode = restoredSearch.mode;
+        searchSection.classList.remove('kb-hidden');
+      }
+      activeDialogTab = restoredSearch.dialogTab || 'search';
+      applyDialogTab();
+      if (searchInput) searchInput.value = restoredSearch.text || '';
+      activeQueryId = restoredSearch.queryId || null;
+      if (activeQueryId) {
+        setQueryTriggerLabel(restoredSearch.queryPath || '', false);
+        if (queryClearBtn) queryClearBtn.classList.remove('kb-hidden');
+      }
+      activeSearchType = restoredSearch.searchType || 'all';
+      const cachedResults = document.getElementById('kb-search-results');
+      if (cachedResults && restoredSearch.resultsHtml) {
+        cachedResults.innerHTML = restoredSearch.resultsHtml;
+        applySearchTypeFilter();
+      }
+      const cachedHistory = document.getElementById('kb-history-results');
+      if (cachedHistory && restoredSearch.historyHtml) cachedHistory.innerHTML = restoredSearch.historyHtml;
+      // Show the cached results right away, then refresh them in the background. The overlay
+      // reloads the saved-query list too, whose handler fires the refreshing search. The inline
+      // search is deferred so it reads the input only after the draft below has been restored.
+      if (isOverlay) {
+        vscode.postMessage({ type: 'load-saved-queries' });
+      } else {
+        setTimeout(triggerSearch, 0);
+      }
+      if (activeDialogTab === 'history') vscode.postMessage({ type: 'load-work-item-history' });
+    } else {
+      if (restoredSearch) clearSearchState();
+      if (searchSection && !searchSection.classList.contains('kb-hidden')) {
+        vscode.postMessage({ type: 'search-work-items', query: '' });
+      }
+    }
+
+    const restoredScroll = uiState.scroll;
+    if (restoredScroll && restoredScroll.viewKey === VIEW_KEY) {
+      Object.keys(restoredScroll.positions).forEach((key) => {
+        const el = findByScrollKey(key);
+        if (!el) return;
+        el.scrollTop = restoredScroll.positions[key];
+        if (key === 'page') document.body.scrollTop = restoredScroll.positions[key];
+      });
+    } else if (restoredScroll) {
+      saveUiState({ scroll: null });
+    }
+
+    const draft = uiState.draft;
+    const draftField = draft && draft.viewKey === VIEW_KEY
+      ? Array.prototype.find.call(document.querySelectorAll('input, textarea'), (field) => isTextField(field) && fieldKey(field) === draft.key)
+      : null;
+    if (draftField) {
+      // Rename inputs stay hidden until edited, so an in-progress rename has to be revealed again.
+      draftField.classList.remove('kb-hidden');
+      draftField.value = draft.value;
+      if (draftField.classList.contains('kb-autosize-textarea')) autosizeTextarea(draftField);
+      draftField.focus();
+      try {
+        draftField.setSelectionRange(draft.start, draft.end);
+      } catch (e) {
+        // Some input types don't support selection ranges; the value and focus are what matter.
+      }
+    } else if (draft) {
+      saveUiState({ draft: null });
     }
   </script>
 </body>

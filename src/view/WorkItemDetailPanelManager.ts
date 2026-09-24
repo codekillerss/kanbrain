@@ -8,6 +8,7 @@ import { renderWorkItemDetail } from './renderWorkItemDetail';
 import { detailPanelCss } from './detailPanelCss';
 import { extractImageUrls } from './inlineImages';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { skipWhileRunning } from './skipWhileRunning';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -19,6 +20,7 @@ export class WorkItemDetailPanelManager {
   private layoutCache = new Map<number, WorkItemTypeLayout | null>();
   private lastStateByPanel = new Map<number, string>();
   private pollHandle: ReturnType<typeof setInterval> | undefined;
+  private readonly pollTick = skipWhileRunning(() => this.pollAll());
 
   constructor(
     private readonly workspaceRoot: string,
@@ -65,7 +67,7 @@ export class WorkItemDetailPanelManager {
     });
 
     if (!this.pollHandle) {
-      this.pollHandle = setInterval(() => void this.pollAll(), POLL_INTERVAL_MS);
+      this.pollHandle = setInterval(() => void this.pollTick(), POLL_INTERVAL_MS);
     }
 
     await this.loadAndRender(id, panel);
