@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.10] - 2026-09-24
+
+### Fixed
+
+- Checking "Assigned to me" in the search dialog no longer closes the dialog. It was being rebuilt from scratch on the next poll tick because the setting was included in the state diff.
+
 ## [0.19.9] - 2026-09-24
 
 ### Fixed
