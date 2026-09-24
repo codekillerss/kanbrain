@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [Unreleased]
+
+### Fixed
+
+- The guidance texts Kanbrain hands to your coding agent — `.kanbrain/USAGE.md`, and the context files written by the three "Configure with AI" commands — still said Kanbrain never writes to Azure DevOps. That stopped being true in 0.15.0, when the status became editable straight from the Flow cards. It mattered beyond accuracy: those texts are what instruct the agent, so asked to move a card to Closed it would reach for its own tooling instead of pointing at the panel the user is already looking at. They now say what is actually true — Kanbrain writes exactly one thing, the work item's status, from an explicit action on a Flow card — while still telling the agent that everything else (comments, any other field, board configuration) is its own job, with the user's confirmation. The README carried the same promise and gets the same correction. Existing projects keep the old wording in their `.kanbrain/USAGE.md`, which is only written when the file is missing — see #7.
+
 ## [0.19.11] - 2026-09-24
 
 ### Changed
