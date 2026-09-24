@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.9] - 2026-09-24
+
+### Fixed
+
+- The Home screen now shows the tab bar and group markers for work items that are already open, instead of hiding them until a card is selected and Flow opens.
+
 ## [0.19.8] - 2026-09-23
 
 ### Added
