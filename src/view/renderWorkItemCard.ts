@@ -152,11 +152,11 @@ export function renderWorkItemCard(
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
-  // Assignee editing is temporarily disabled — the picker's styling isn't ready yet — so this
-  // always renders the static row for now, regardless of `editable`. The rest of the write path
-  // (renderAssigneePicker, the message handlers, searchIdentities) is left in place to re-enable
-  // later.
-  const assigneeHtml = !showAssignedTo ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  const assigneeHtml = !showAssignedTo
+    ? ''
+    : editable
+      ? renderAssigneePicker(workItem, avatars)
+      : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
   const statusHtml = editable
     ? renderStatusPicker(workItem, config)
     : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;
