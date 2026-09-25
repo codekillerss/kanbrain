@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [Unreleased]
+
+### Added
+
+- A work item's assignee can now be changed from the Flow cards — the main card, the parent card and the subtasks, the same set that already allows changing the status. The card reads exactly as it does today until you click the name: then a picker opens, with a search box over your organization's people and an "Unassigned" option to clear the field. Nothing on the card changes appearance while you are only reading it, so the extra capability costs no visual noise.
+
 ## [0.19.11] - 2026-09-24
 
 ### Changed
