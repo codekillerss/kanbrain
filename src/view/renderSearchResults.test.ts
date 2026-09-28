@@ -32,6 +32,41 @@ function config(overrides: Partial<KanbrainConfig> = {}): KanbrainConfig {
   };
 }
 
+describe('renderSearchResults scroll area', () => {
+  const SCROLL_OPEN = '<div class="kb-search-results-scroll">';
+  const withTypes = config({ workflowSteps: { Task: {}, Bug: {} } });
+
+  it('keeps the type filter outside the scrolling area, before it', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], withTypes);
+    const filterIndex = html.indexOf('class="kb-search-type-filter"');
+    const scrollIndex = html.indexOf(SCROLL_OPEN);
+
+    expect(filterIndex).toBeGreaterThanOrEqual(0);
+    expect(scrollIndex).toBeGreaterThan(filterIndex);
+    expect(html.slice(scrollIndex)).not.toContain('kb-search-type-filter-trigger');
+  });
+
+  it('puts the type panels inside the scrolling area', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], withTypes);
+
+    expect(html.indexOf('kb-search-type-panel')).toBeGreaterThan(html.indexOf(SCROLL_OPEN));
+  });
+
+  it('wraps the status groups in the scrolling area when there are no configured types', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], config());
+
+    expect(html.trimStart().startsWith(SCROLL_OPEN)).toBe(true);
+    expect(html.indexOf('kb-result-group')).toBeGreaterThan(html.indexOf(SCROLL_OPEN));
+  });
+
+  it('wraps the empty message in the scrolling area too', () => {
+    const html = renderSearchResults([], withTypes);
+
+    expect(html.trimStart().startsWith(SCROLL_OPEN)).toBe(true);
+    expect(html).toContain('No work items found.');
+  });
+});
+
 describe('renderSearchResults', () => {
   it('shows an empty message when there are no results', () => {
     expect(renderSearchResults([], config())).toContain('No work items found.');

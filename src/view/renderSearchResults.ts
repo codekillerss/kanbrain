@@ -44,14 +44,20 @@ function renderStatusGroups(items: WorkItem[], config: KanbrainConfig, avatars: 
     .join('');
 }
 
+// Only this area scrolls (#kb-search-results itself doesn't), so the type filter above it stays
+// pinned at the top of the results.
+function scrollArea(content: string): string {
+  return `<div class="kb-search-results-scroll">${content}</div>`;
+}
+
 export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, avatars: Record<string, string> = {}): string {
   if (items.length === 0) {
-    return '<div class="kb-empty">No work items found.</div>';
+    return scrollArea('<div class="kb-empty">No work items found.</div>');
   }
 
   const types = Object.keys(config.workflowSteps);
   if (types.length === 0) {
-    return renderStatusGroups(items, config, avatars);
+    return scrollArea(renderStatusGroups(items, config, avatars));
   }
 
   const tabs = [
@@ -80,5 +86,5 @@ export function renderSearchResults(items: WorkItem[], config: KanbrainConfig, a
     </div>
   `;
 
-  return `${filter}${panels}`;
+  return `${filter}${scrollArea(panels)}`;
 }
