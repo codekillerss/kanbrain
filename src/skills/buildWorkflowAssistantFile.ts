@@ -94,6 +94,6 @@ ${renderDiscoveredBoards(boards)}
 2. For each step, think through a concrete **Definition of Done** — what "finished with this step" looks like for that kind of work item — and write it as a short checklist (each item is one line). Do the same for **expected artifacts** (e.g. "Pull request opened", "Tests passing", "Validation comment published") when the step has any worth naming; skip it when a step genuinely has none.
 3. Present your full proposed mapping (status → skill, plus its Definition of Done and artifacts) to the user in one message and ask them to confirm it or correct any entries before writing anything.
 4. Once confirmed, update \`.kanbrain/config.json\`'s \`workflowSteps\` map accordingly. Never invent or rename an entry in the \`skills\` registry from here — if a needed skill doesn't exist, go back to Step 0.
-5. Only touch the real Azure DevOps board (moving statuses between columns, renaming columns, etc.) if the user explicitly asks, and only using your own tools/credentials — never through Kanbrain, which stays read-only.
+5. Only touch the real Azure DevOps board (moving statuses between columns, renaming columns, etc.) if the user explicitly asks, and only using your own tools/credentials. The one thing Kanbrain writes on its own is the work item's status, when the user changes it from a Flow card; everything else is still yours to do.
 `;
 }
