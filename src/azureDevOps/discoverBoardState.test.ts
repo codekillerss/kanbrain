@@ -12,6 +12,7 @@ function stubClient(overrides: Partial<{
   listBoards: () => Promise<{ id: string; name: string }[]>;
   getCardSettings: () => Promise<Record<string, CardFieldSettings>>;
   getTaskBacklogWorkItemTypes: () => Promise<string[]>;
+  getBacklogLevels: () => Promise<Record<string, number>>;
   countWorkItemsByType: (organization: string, project: string, types: string[]) => Promise<number>;
 }> = {}): AzureDevOpsClient {
   return {
@@ -23,6 +24,7 @@ function stubClient(overrides: Partial<{
     listBoards: vi.fn().mockResolvedValue([{ id: 'b1', name: 'Tasks' }]),
     getCardSettings: vi.fn().mockResolvedValue({ Task: { parent: true, assignedTo: true } }),
     getTaskBacklogWorkItemTypes: vi.fn().mockResolvedValue(['Task']),
+    getBacklogLevels: vi.fn().mockResolvedValue({ 'User Story': 1, Task: 0 }),
     countWorkItemsByType: vi.fn().mockResolvedValue(1),
     ...overrides,
   } as unknown as AzureDevOpsClient;
@@ -66,6 +68,13 @@ describe('discoverBoardState', () => {
     const result = await discoverBoardState(client, 'my-org', 'MyProject');
 
     expect(result.taskBacklogTypesByTeam).toEqual({ 'MyProject Team': ['Task'] });
+  });
+
+  it('fetches backlog levels for every team', async () => {
+    const client = stubClient();
+    const result = await discoverBoardState(client, 'my-org', 'MyProject');
+
+    expect(result.backlogLevelsByTeam).toEqual({ 'MyProject Team': { 'User Story': 1, Task: 0 } });
   });
 
   it('excludes work item types with zero real work items in the project from discoveredStatusesByType, typeColors, and typeIcons', async () => {

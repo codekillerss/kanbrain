@@ -72,7 +72,7 @@ export function registerSetupCommand(
       );
       return;
     }
-    const { discoveredStatusesByType, typeColors, typeIcons, defaultTeam, cardSettingsByTeam, taskBacklogTypesByTeam } = boardState;
+    const { discoveredStatusesByType, typeColors, typeIcons, defaultTeam, cardSettingsByTeam, taskBacklogTypesByTeam, backlogLevelsByTeam } = boardState;
 
     let types;
     try {
@@ -141,10 +141,12 @@ export function registerSetupCommand(
       skills: ensureSeededSkills(preset.skills),
       workflowSteps: preset.workflowSteps,
       statusColors,
+      statusCategoriesByType: discoveredStatusesByType,
       typeColors,
       typeIcons,
       cardSettingsByTeam,
       taskBacklogTypesByTeam,
+      backlogLevelsByTeam,
       repositories,
       profiles: ensureDefaultProfiles(undefined),
       lastSyncedVersion: extensionVersion,

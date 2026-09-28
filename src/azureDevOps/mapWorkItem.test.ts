@@ -118,6 +118,21 @@ describe('mapWorkItem', () => {
     );
     expect(item.createdDate).toBe('2026-01-15T10:00:00Z');
   });
+
+  it('maps Microsoft.VSTS.Common.StackRank into backlogOrder (Agile/CMMI/Basic)', () => {
+    const item = mapWorkItem(raw({ fields: { ...raw().fields, 'Microsoft.VSTS.Common.StackRank': 1999.5 } }), 'my-org', 'MyProject');
+    expect(item.backlogOrder).toBe(1999.5);
+  });
+
+  it('maps Microsoft.VSTS.Common.BacklogPriority into backlogOrder (Scrum)', () => {
+    const item = mapWorkItem(raw({ fields: { ...raw().fields, 'Microsoft.VSTS.Common.BacklogPriority': 42 } }), 'my-org', 'MyProject');
+    expect(item.backlogOrder).toBe(42);
+  });
+
+  it('leaves backlogOrder undefined when the item has no backlog order field', () => {
+    const item = mapWorkItem(raw(), 'my-org', 'MyProject');
+    expect(item.backlogOrder).toBeUndefined();
+  });
 });
 
 describe('parseDevelopmentLink', () => {

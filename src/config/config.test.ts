@@ -205,6 +205,22 @@ describe('machine-local config split', () => {
     expect(readConfig(workspaceRoot)).toEqual(config);
   });
 
+  it('writes childrenSortCriteria to config.local.json, not config.json', () => {
+    writeConfig(workspaceRoot, { ...baseConfig, childrenSortCriteria: ['created', 'status'] });
+
+    const sharedRaw = JSON.parse(fs.readFileSync(getConfigPath(workspaceRoot), 'utf-8'));
+    expect(sharedRaw.childrenSortCriteria).toBeUndefined();
+
+    const localRaw = JSON.parse(fs.readFileSync(getConfigLocalPath(workspaceRoot), 'utf-8'));
+    expect(localRaw).toEqual({ childrenSortCriteria: ['created', 'status'] });
+  });
+
+  it('round-trips an empty childrenSortCriteria (no sorting) through readConfig', () => {
+    const config = { ...baseConfig, childrenSortCriteria: [] };
+    writeConfig(workspaceRoot, config);
+    expect(readConfig(workspaceRoot)).toEqual(config);
+  });
+
   it('writes selectedProfileId to config.local.json, not config.json', () => {
     writeConfig(workspaceRoot, { ...baseConfig, selectedProfileId: 'developer' });
 

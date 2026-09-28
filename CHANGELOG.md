@@ -8,6 +8,18 @@ All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 wer
 
 - The guidance texts Kanbrain hands to your coding agent — `.kanbrain/USAGE.md`, and the context files written by the three "Configure with AI" commands — still said Kanbrain never writes to Azure DevOps. That stopped being true in 0.15.0, when the status became editable straight from the Flow cards. It mattered beyond accuracy: those texts are what instruct the agent, so asked to move a card to Closed it would reach for its own tooling instead of pointing at the panel the user is already looking at. They now say what is actually true — Kanbrain writes exactly one thing, the work item's status, from an explicit action on a Flow card — while still telling the agent that everything else (comments, any other field, board configuration) is its own job, with the user's confirmation. The README carried the same promise and gets the same correction. Existing projects keep the old wording in their `.kanbrain/USAGE.md`, which is only written when the file is missing — see #7.
 
+## [0.19.12] - 2026-09-28
+
+### Added
+
+- A sort control at the end of the Flow's "Children (n)" header. Pick which criteria apply — Status, Backlog level, Work item type, Board position, Created — in priority order: each selected option shows its position (1, 2, …), each has an info tooltip explaining it, and "Reset to default" restores the default order. The choice is saved per machine; clearing every criterion keeps Azure DevOps' order.
+- Children in a Completed state are shown muted, in the Flow and in the detail panel's Child list.
+
+### Changed
+
+- Children now follow the backlog by default instead of their creation date: status (state category along the lifecycle, then the status's position in the process), backlog level (higher levels first), board position, then creation date. The detail panel's Child list and the context handed to skills use the same order.
+- Setup and Sync now also read each team's backlog levels, and setup records the status categories right away. Run **Kanbrain: Sync Board Configuration** once so ordering by backlog level applies to an existing configuration.
+
 ## [0.19.11] - 2026-09-24
 
 ### Changed

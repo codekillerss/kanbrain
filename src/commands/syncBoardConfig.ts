@@ -74,6 +74,7 @@ export function registerSyncBoardConfigCommand(client: AzureDevOpsClient, worksp
       boardState.cardSettingsByTeam,
       boardState.taskBacklogTypesByTeam,
       freshRepositories,
+      boardState.backlogLevelsByTeam,
     );
     writeConfig(workspaceRoot, {
       ...updated,

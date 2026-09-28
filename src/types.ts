@@ -16,6 +16,7 @@ export interface WorkItem {
   assignedTo: AssignedTo | null;
   development: DevelopmentLink[];
   createdDate?: string;
+  backlogOrder?: number;
 }
 
 export type DevelopmentLink =
@@ -114,6 +115,8 @@ export interface SavedQuery {
   queryType: 'flat' | 'tree' | 'oneHop';
 }
 
+export type ChildSortCriterion = 'status' | 'backlogLevel' | 'workItemType' | 'stackRank' | 'created';
+
 export interface KanbrainConfig {
   organization: string;
   project: string;
@@ -126,8 +129,13 @@ export interface KanbrainConfig {
   typeIcons: Record<string, string>;
   cardSettingsByTeam?: Record<string, Record<string, Record<string, CardFieldSettings>>>;
   taskBacklogTypesByTeam?: Record<string, string[]>;
+  // Team → work item type → backlog level (higher = further up the hierarchy, e.g. Epic > Task).
+  backlogLevelsByTeam?: Record<string, Record<string, number>>;
   showAssignedTo?: boolean;
   searchAssignedToMe?: boolean;
+  // Children sort criteria in priority order (local, per machine). Undefined → the default order;
+  // an empty array → no sorting (API order).
+  childrenSortCriteria?: ChildSortCriterion[];
   lastSyncedVersion?: string;
   repositories?: Record<string, RepositoryPathEntry>;
   repoScanDepth?: number;

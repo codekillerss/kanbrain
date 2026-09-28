@@ -204,8 +204,9 @@ export class AzureDevOpsClient {
   }
 
   async getChildren(organization: string, project: string, workItem: WorkItem): Promise<WorkItem[]> {
-    const children = await this.getWorkItems(organization, project, workItem.childIds);
-    return children.sort((a, b) => new Date(a.createdDate ?? 0).getTime() - new Date(b.createdDate ?? 0).getTime());
+    // Display order depends on config (state categories, backlog levels), so it's applied by
+    // sortChildren at render time rather than here.
+    return this.getWorkItems(organization, project, workItem.childIds);
   }
 
   async getAuthenticatedImageDataUri(url: string): Promise<string | null> {
@@ -382,6 +383,32 @@ export class AzureDevOpsClient {
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/backlogconfiguration?api-version=7.1`,
     );
     return (data.taskBacklog?.workItemTypes ?? []).map(t => t.name);
+  }
+
+  // Maps each work item type to its backlog level (higher = further up the hierarchy: Epic >
+  // Feature > requirement > task). The task and requirement backlogs are placed structurally rather
+  // than by their `rank`, and only the portfolios are ordered by `rank` among themselves. The
+  // team's "bugs behavior" is already reflected in which backlog lists the Bug type.
+  async getBacklogLevels(organization: string, project: string, team: string): Promise<Record<string, number>> {
+    interface RawBacklog {
+      rank?: number;
+      workItemTypes?: { name: string }[];
+    }
+    const data = await this.request<{ portfolioBacklogs?: RawBacklog[]; requirementBacklog?: RawBacklog; taskBacklog?: RawBacklog }>(
+      `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/backlogconfiguration?api-version=7.1`,
+    );
+    const levels: Record<string, number> = {};
+    const assign = (backlog: RawBacklog | undefined, level: number) => {
+      for (const type of backlog?.workItemTypes ?? []) {
+        levels[type.name] = level;
+      }
+    };
+    assign(data.taskBacklog, 0);
+    assign(data.requirementBacklog, 1);
+    [...(data.portfolioBacklogs ?? [])]
+      .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+      .forEach((backlog, index) => assign(backlog, 2 + index));
+    return levels;
   }
 
   async getPullRequest(organization: string, project: string, repositoryId: string, pullRequestId: number): Promise<PullRequestDetails | null> {

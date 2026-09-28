@@ -28,6 +28,43 @@ const config: KanbrainConfig = {
   typeIcons: { Task: '<svg><path d="M0 0"/></svg>' },
 };
 
+describe('renderRelatedWorkSection children order and muting', () => {
+  const cfg: KanbrainConfig = {
+    ...config,
+    statusCategoriesByType: { Task: { Active: 'InProgress', Closed: 'Completed' }, 'User Story': { Active: 'InProgress' } },
+    backlogLevelsByTeam: { 'MyProject Team': { 'User Story': 1, Task: 0 } },
+  };
+
+  it('lists children in sortChildren order, using the default team backlog levels', () => {
+    const children = [
+      workItem({ id: 101, title: 'Done task', status: 'Closed' }),
+      workItem({ id: 102, title: 'Active task' }),
+      workItem({ id: 103, title: 'Active story', type: 'User Story' }),
+    ];
+    const html = renderRelatedWorkSection(null, children, cfg);
+
+    const positions = ['#103', '#102', '#101'].map(id => html.indexOf(id));
+    expect(positions.every(p => p > 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it('marks only Completed children with the muted class', () => {
+    const html = renderRelatedWorkSection(null, [workItem({ id: 101, status: 'Closed' }), workItem({ id: 102 })], cfg);
+
+    const tagFor = (id: number) => {
+      const start = html.lastIndexOf('<a class="kb-related-item', html.indexOf(`#${id}`));
+      return html.slice(start, html.indexOf('>', start) + 1);
+    };
+    expect(tagFor(101)).toContain('kb-related-item-completed');
+    expect(tagFor(102)).not.toContain('kb-related-item-completed');
+  });
+
+  it('never mutes the parent, even when it is Completed', () => {
+    const html = renderRelatedWorkSection(workItem({ id: 900, status: 'Closed' }), [], cfg);
+    expect(html).not.toContain('kb-related-item-completed');
+  });
+});
+
 describe('renderRelatedWorkSection', () => {
   it('returns an empty string when there is no parent and no children', () => {
     expect(renderRelatedWorkSection(null, [], config)).toBe('');
