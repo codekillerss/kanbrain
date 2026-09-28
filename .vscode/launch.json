@@ -21,7 +21,10 @@
       "preLaunchTask": "kanbrain: launch dev host (paused)"
     },
     {
-      "name": "Run Extension",
+      // Renamed from "Run Extension" so VS Code forgets it as the last-selected configuration
+      // and F5 falls back to the first one above. Make it the default again once VS Code ships
+      // the js-debug fix.
+      "name": "Run Extension (legacy — broken on VS Code 1.139)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
