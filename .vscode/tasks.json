@@ -2,6 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "npm: compile",
       "type": "npm",
       "script": "compile",
       "group": {
@@ -12,6 +13,23 @@
         "reveal": "silent"
       },
       "problemMatcher": "$tsc"
+    },
+    {
+      // Opens the Extension Development Host with its extension host paused on a fixed inspector
+      // port, for "Run Extension (attach via 127.0.0.1)" to attach to. See launch.json for why.
+      "label": "kanbrain: launch dev host (paused)",
+      "type": "shell",
+      "command": "code",
+      "args": [
+        "--new-window",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--inspect-brk-extensions=9377"
+      ],
+      "dependsOn": "npm: compile",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
     }
   ]
 }

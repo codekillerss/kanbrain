@@ -2,6 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // Workaround for VS Code 1.139's js-debug: the "extensionHost" launch probes localhost on
+      // ::1 and 127.0.0.1 at once, and the fast ::1 refusal aborts the 127.0.0.1 probe, leaving
+      // the dev host stuck with "Extension host did not start in 10 seconds"
+      // (https://github.com/microsoft/vscode-js-debug/issues/2420). Attaching to an explicit
+      // 127.0.0.1 address skips that race. The task opens the dev host paused on port 9377, so
+      // only one dev host at a time; Stop detaches, close the dev host window yourself.
+      "name": "Run Extension (attach via 127.0.0.1)",
+      "type": "node",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 9377,
+      "continueOnAttach": true,
+      "timeout": 30000,
+      "outFiles": [
+        "${workspaceFolder}/out/**/*.js"
+      ],
+      "preLaunchTask": "kanbrain: launch dev host (paused)"
+    },
+    {
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
