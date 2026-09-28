@@ -252,7 +252,7 @@ describe('AzureDevOpsClient', () => {
     expect(children[0].id).toBe(101);
   });
 
-  it('getChildren sorts the returned work items by createdDate ascending, regardless of API response order', async () => {
+  it('getChildren keeps the API response order, leaving the display order to sortChildren', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         value: [
@@ -266,7 +266,7 @@ describe('AzureDevOpsClient', () => {
 
     const children = await client.getChildren('my-org', 'MyProject', parent);
 
-    expect(children.map(c => c.id)).toEqual([101, 102]);
+    expect(children.map(c => c.id)).toEqual([102, 101]);
   });
 
   it("gets the project's default team name", async () => {
@@ -764,6 +764,56 @@ describe('AzureDevOpsClient.getTaskBacklogWorkItemTypes', () => {
     const types = await client.getTaskBacklogWorkItemTypes('my-org', 'MyProject', 'MyProject Team');
 
     expect(types).toEqual([]);
+  });
+});
+
+describe('AzureDevOpsClient.getBacklogLevels', () => {
+  it('maps each work item type to its backlog level, higher meaning further up the hierarchy', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        portfolioBacklogs: [
+          { name: 'Features', rank: 3, workItemTypes: [{ name: 'Feature' }] },
+          { name: 'Epics', rank: 4, workItemTypes: [{ name: 'Epic' }] },
+        ],
+        requirementBacklog: { name: 'Stories', rank: 2, workItemTypes: [{ name: 'User Story' }, { name: 'Bug' }] },
+        taskBacklog: { name: 'Tasks', rank: 1, workItemTypes: [{ name: 'Task' }] },
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const levels = await client.getBacklogLevels('my-org', 'MyProject', 'MyProject Team');
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/MyProject%20Team/_apis/work/backlogconfiguration?api-version=7.1',
+      expect.anything(),
+    );
+    expect(levels['Epic']).toBeGreaterThan(levels['Feature']);
+    expect(levels['Feature']).toBeGreaterThan(levels['User Story']);
+    expect(levels['User Story']).toBe(levels['Bug']);
+    expect(levels['User Story']).toBeGreaterThan(levels['Task']);
+  });
+
+  it('places Bug at the task level when the team tracks bugs as tasks', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        portfolioBacklogs: [],
+        requirementBacklog: { rank: 2, workItemTypes: [{ name: 'Product Backlog Item' }] },
+        taskBacklog: { rank: 1, workItemTypes: [{ name: 'Task' }, { name: 'Bug' }] },
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const levels = await client.getBacklogLevels('my-org', 'MyProject', 'MyProject Team');
+
+    expect(levels['Bug']).toBe(levels['Task']);
+    expect(levels['Product Backlog Item']).toBeGreaterThan(levels['Bug']);
+  });
+
+  it('returns an empty map when the response has no backlogs', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({}));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    expect(await client.getBacklogLevels('my-org', 'MyProject', 'MyProject Team')).toEqual({});
   });
 });
 

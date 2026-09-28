@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
 import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation } from '../azureDevOps/client';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
+import { sortChildren, parseChildSortCriteria } from './sortChildren';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
 import { filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
@@ -20,7 +21,7 @@ import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
 import { sidebarCsp } from './sidebarCsp';
 import { skipWhileRunning } from './skipWhileRunning';
-import { render } from './render';
+import { render, renderChildrenList } from './render';
 import { renderIdentityOptions } from './renderIdentityOptions';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
@@ -133,6 +134,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           String(message.query ?? ''),
           message.queryId ? String(message.queryId) : undefined,
         );
+      } else if (message.type === 'set-children-sort') {
+        await this.setChildrenSort(message.criteria);
       } else if (message.type === 'pick-work-item') {
         this.setActiveWorkItem(Number(message.id));
       } else if (message.type === 'add-tab') {
@@ -685,6 +688,30 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     await this.searchWorkItems(query, queryId);
   }
 
+  // Saves the new criteria and swaps just the children list in place: the sort menu is still open
+  // and already shows the new numbering, so a full webview.html rebuild would only close it.
+  private async setChildrenSort(rawCriteria: unknown): Promise<void> {
+    if (!this.view || !this.workspaceRoot) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    config.childrenSortCriteria = parseChildSortCriteria(rawCriteria);
+    writeConfig(this.workspaceRoot, config);
+
+    const cached = this.activeWorkItemId !== undefined ? this.cardCache.get(this.activeWorkItemId) : undefined;
+    if (!cached) {
+      return;
+    }
+    const avatars = await this.resolveAvatars(cached.subtasks);
+    this.view.webview.postMessage({
+      type: 'children-list',
+      html: renderChildrenList(cached.subtasks, config, avatars, this.selectedTeam),
+    });
+  }
+
   private async resolveCurrentUserId(): Promise<string | null> {
     if (this.currentUserId === undefined) {
       this.currentUserId = this.client ? await this.client.getCurrentUserId() : null;
@@ -1026,7 +1053,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const [parent] = workItem.parentId
       ? await this.client.getWorkItems(config.organization, config.project, [workItem.parentId])
       : [];
-    const subtasks = filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config);
+    const subtasks = sortChildren(
+      filterOutRemoved(await this.client.getChildren(config.organization, config.project, workItem), config),
+      config,
+      this.selectedTeam,
+    );
     const branch = await this.getCurrentBranch();
 
     const profile = resolveActiveProfile(config);
@@ -1628,6 +1659,40 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       document.querySelectorAll('.kb-status-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
 
+    function closeChildrenSortMenus() {
+      document.querySelectorAll('.kb-children-sort-menu').forEach((menu) => menu.classList.add('kb-hidden'));
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeChildrenSortMenus();
+    });
+
+    // Mirrors renderChildrenSortControl: updates each option's position badge and the trigger's
+    // count right away, so the menu stays open and responsive while the extension re-sorts.
+    function applyChildrenSortCriteria(control, criteria) {
+      const menu = control.querySelector('.kb-children-sort-menu');
+      menu.dataset.criteria = criteria.join(',');
+      menu.querySelectorAll('.kb-children-sort-option').forEach((opt) => {
+        const position = criteria.indexOf(opt.dataset.criterion);
+        opt.classList.toggle('kb-children-sort-option-active', position >= 0);
+        opt.querySelector('.kb-children-sort-rank').textContent = position >= 0 ? String(position + 1) : '';
+      });
+      const reset = menu.querySelector('.kb-children-sort-reset');
+      if (reset) reset.disabled = menu.dataset.criteria === menu.dataset.defaultCriteria;
+      const trigger = control.querySelector('.kb-children-sort-trigger');
+      let count = trigger.querySelector('.kb-children-sort-count');
+      if (criteria.length === 0) {
+        if (count) count.remove();
+      } else {
+        if (!count) {
+          count = document.createElement('span');
+          count.className = 'kb-children-sort-count';
+          trigger.appendChild(count);
+        }
+        count.textContent = String(criteria.length);
+      }
+    }
+
     function closeAllAssigneePickers() {
       document.querySelectorAll('.kb-assignee-picker-menu').forEach((menu) => menu.classList.add('kb-hidden'));
     }
@@ -2097,7 +2162,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (target.closest && target.closest('[data-action="toggle-group"]')) {
         const toggle = target.closest('[data-action="toggle-group"]');
         const parentHeader = toggle.closest('.kb-config-parent-header');
-        const container = parentHeader || toggle;
+        // A header row with more than the toggle in it (e.g. Children + its sort control) wraps
+        // them in .kb-section-header, and the collapsible body follows that wrapper instead.
+        const container = parentHeader || toggle.closest('.kb-section-header') || toggle;
         const items = container.nextElementSibling;
         if (items) {
           const wasHidden = items.classList.contains('kb-hidden');
@@ -2206,6 +2273,46 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             menu.classList.remove('kb-hidden');
           }
         }
+      } else if (target.closest && target.closest('[data-action="toggle-children-sort"]')) {
+        const control = target.closest('.kb-children-sort');
+        const menu = control ? control.querySelector('.kb-children-sort-menu') : null;
+        if (menu) {
+          const isOpen = !menu.classList.contains('kb-hidden');
+          closeChildrenSortMenus();
+          if (!isOpen) {
+            // Right-aligned under the trigger, which sits at the end of the header row.
+            const rect = control.getBoundingClientRect();
+            menu.style.top = rect.bottom + 2 + 'px';
+            menu.style.right = Math.max(4, document.documentElement.clientWidth - rect.right) + 'px';
+            menu.classList.remove('kb-hidden');
+          }
+        }
+      } else if (target.closest && target.closest('.kb-children-sort-info')) {
+        // The info icon only carries a tooltip — clicking it must not toggle its option.
+      } else if (target.closest && target.closest('[data-action="reset-children-sort"]')) {
+        const control = target.closest('.kb-children-sort');
+        const menu = control ? control.querySelector('.kb-children-sort-menu') : null;
+        if (menu) {
+          const criteria = menu.dataset.defaultCriteria ? menu.dataset.defaultCriteria.split(',') : [];
+          applyChildrenSortCriteria(control, criteria);
+          vscode.postMessage({ type: 'set-children-sort', criteria });
+        }
+      } else if (target.closest && target.closest('[data-action="toggle-children-sort-criterion"]')) {
+        const option = target.closest('[data-action="toggle-children-sort-criterion"]');
+        const control = option.closest('.kb-children-sort');
+        const menu = option.closest('.kb-children-sort-menu');
+        if (control && menu) {
+          const criteria = menu.dataset.criteria ? menu.dataset.criteria.split(',') : [];
+          const criterion = option.dataset.criterion;
+          const index = criteria.indexOf(criterion);
+          if (index >= 0) {
+            criteria.splice(index, 1);
+          } else {
+            criteria.push(criterion);
+          }
+          applyChildrenSortCriteria(control, criteria);
+          vscode.postMessage({ type: 'set-children-sort', criteria });
+        }
       } else if (target.closest && target.closest('[data-action="select-status"]')) {
         const btn = target.closest('[data-action="select-status"]');
         closeAllStatusPickers();
@@ -2272,6 +2379,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         closeAllStatusPickers();
       }
 
+      if (!target.closest || !target.closest('.kb-children-sort')) {
+        closeChildrenSortMenus();
+      }
+
       if (!target.closest || !target.closest('.kb-assignee-picker')) {
         closeAllAssigneePickers();
       }
@@ -2311,6 +2422,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
       if (!(event.target && event.target.closest && event.target.closest('.kb-status-picker-menu'))) {
         closeAllStatusPickers();
+      }
+      if (!(event.target && event.target.closest && event.target.closest('.kb-children-sort-menu'))) {
+        closeChildrenSortMenus();
       }
       if (!(event.target && event.target.closest && event.target.closest('.kb-assignee-picker-menu'))) {
         closeAllAssigneePickers();
@@ -2424,7 +2538,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
 
     window.addEventListener('message', (event) => {
-      if (event.data.type === 'search-results') {
+      if (event.data.type === 'children-list') {
+        const body = document.querySelector('.kb-section-card-children > .kb-collapsible-body');
+        if (body) {
+          body.innerHTML = event.data.html;
+        }
+      } else if (event.data.type === 'search-results') {
         const results = document.getElementById('kb-search-results');
         if (results) {
           results.innerHTML = event.data.html;
@@ -2624,6 +2743,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-group-add { flex-shrink: 0; position: sticky; right: 0; width: 22px; height: 22px; padding: 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground, var(--vscode-foreground)); cursor: pointer; font-size: 14px; border-radius: 2px; }
       .kb-group-add:hover { color: var(--vscode-foreground); background: var(--vscode-list-hoverBackground); }
       .kb-main-card, .kb-subtask-card { position: relative; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin: 8px 0; }
+      .kb-card-completed { opacity: 0.55; transition: opacity 0.1s; }
+      .kb-card-completed:hover, .kb-card-completed:focus-within { opacity: 1; }
       .kb-pick-btn { position: absolute; top: 4px; right: 4px; }
       .kb-open-browser-btn { position: absolute; top: 4px; right: 4px; }
       .kb-open-browser-btn.kb-with-pick { right: 32px; }
@@ -2657,6 +2778,25 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-section-label[data-action="toggle-group"] { width: 100%; box-sizing: border-box; cursor: pointer; }
       .kb-section-label:has(+ .kb-hidden) .kb-chevron { transform: rotate(-90deg); }
       .kb-section-actions { display: flex; gap: 2px; }
+      .kb-section-header { padding: 0 6px 0 0; }
+      .kb-section-header:has(> .kb-section-toggle:hover) { background: var(--vscode-list-hoverBackground); }
+      .kb-section-toggle { flex: 1; min-width: 0; display: flex; align-items: center; appearance: none; -webkit-appearance: none; border: none; background: transparent; color: inherit; font-family: var(--vscode-font-family); font-size: inherit; font-weight: inherit; text-align: left; padding: 6px 10px; cursor: pointer; }
+      .kb-children-sort { flex-shrink: 0; }
+      .kb-icon-btn.kb-children-sort-trigger { width: auto; min-width: 24px; padding: 0 4px; gap: 3px; }
+      .kb-children-sort-count { min-width: 14px; height: 14px; line-height: 14px; padding: 0 3px; box-sizing: border-box; border-radius: 7px; font-size: 10px; font-weight: 600; text-align: center; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+      .kb-children-sort-menu { position: fixed; z-index: 50; min-width: 160px; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+      .kb-children-sort-menu.kb-hidden { display: none; }
+      .kb-children-sort-option { display: flex; align-items: center; gap: 8px; appearance: none; -webkit-appearance: none; border: none; border-radius: 3px; background: transparent; color: var(--vscode-dropdown-foreground, var(--vscode-foreground)); font-family: var(--vscode-font-family); font-size: 12px; font-weight: normal; text-align: left; padding: 4px 6px; cursor: pointer; }
+      .kb-children-sort-option:hover { background: var(--vscode-list-hoverBackground); }
+      .kb-children-sort-rank { flex-shrink: 0; width: 16px; height: 16px; line-height: 14px; box-sizing: border-box; border: 1px solid var(--vscode-panel-border); border-radius: 3px; font-size: 10px; font-weight: 600; text-align: center; }
+      .kb-children-sort-label { flex: 1; }
+      .kb-children-sort-info { flex-shrink: 0; margin-left: 12px; font-size: 12px; line-height: 1; opacity: 0.6; cursor: help; }
+      .kb-children-sort-info:hover { opacity: 1; }
+      .kb-children-sort-divider { height: 1px; margin: 2px 0; background: var(--vscode-dropdown-border, var(--vscode-panel-border)); }
+      .kb-children-sort-reset { appearance: none; -webkit-appearance: none; border: none; border-radius: 3px; background: transparent; color: var(--vscode-textLink-foreground); font-family: var(--vscode-font-family); font-size: 12px; text-align: left; padding: 4px 6px; cursor: pointer; }
+      .kb-children-sort-reset:hover:not(:disabled) { background: var(--vscode-list-hoverBackground); }
+      .kb-children-sort-reset:disabled { color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground)); opacity: 0.6; cursor: default; }
+      .kb-children-sort-option-active .kb-children-sort-rank { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: var(--vscode-button-background); }
       .kb-hidden { display: none; }
       .kb-result-item { box-sizing: border-box; width: 100%; margin: 2px 0; padding-bottom: 4px; }
       .kb-result-item:not(:last-child) { border-bottom: 1px solid var(--vscode-panel-border); }

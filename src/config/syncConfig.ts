@@ -28,6 +28,7 @@ export function syncConfig(
   freshCardSettingsByTeam: Record<string, Record<string, Record<string, CardFieldSettings>>>,
   freshTaskBacklogTypesByTeam: Record<string, string[]>,
   freshRepositories: Record<string, RepositoryPathEntry>,
+  freshBacklogLevelsByTeam: Record<string, Record<string, number>>,
 ): KanbrainConfig {
   const workflowSteps: Record<string, Record<string, WorkflowStepConfig | null>> = {};
 
@@ -64,8 +65,10 @@ export function syncConfig(
     typeIcons: freshTypeIcons,
     cardSettingsByTeam: freshCardSettingsByTeam,
     taskBacklogTypesByTeam: freshTaskBacklogTypesByTeam,
+    backlogLevelsByTeam: freshBacklogLevelsByTeam,
     showAssignedTo: config.showAssignedTo,
     searchAssignedToMe: config.searchAssignedToMe,
+    childrenSortCriteria: config.childrenSortCriteria,
     repositories: mergeRepositories(config.repositories, freshRepositories),
     profiles: config.profiles,
     selectedProfileId: config.selectedProfileId,

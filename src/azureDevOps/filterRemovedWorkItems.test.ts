@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterOutRemoved } from './filterRemovedWorkItems';
+import { filterOutRemoved, isCompleted } from './filterRemovedWorkItems';
 import type { WorkItem, KanbrainConfig } from '../types';
 
 function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
@@ -58,5 +58,22 @@ describe('filterOutRemoved', () => {
     const cfg = config();
 
     expect(filterOutRemoved(items, cfg).map(i => i.id)).toEqual([2]);
+  });
+});
+
+describe('isCompleted', () => {
+  it('is true when the status category is Completed, whatever the status is called', () => {
+    const cfg = config({ statusCategoriesByType: { Task: { Shipped: 'Completed' } } });
+    expect(isCompleted(workItem({ status: 'Shipped' }), cfg)).toBe(true);
+  });
+
+  it('is false for any other category, including Resolved', () => {
+    const cfg = config({ statusCategoriesByType: { Task: { Resolved: 'Resolved', Doing: 'InProgress' } } });
+    expect(isCompleted(workItem({ status: 'Resolved' }), cfg)).toBe(false);
+    expect(isCompleted(workItem({ status: 'Doing' }), cfg)).toBe(false);
+  });
+
+  it('is false when the category is unknown, without guessing from the status name', () => {
+    expect(isCompleted(workItem({ status: 'Done' }), config())).toBe(false);
   });
 });

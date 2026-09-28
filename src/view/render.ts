@@ -10,6 +10,71 @@ import { isExtensionOutdated } from '../config/compareVersions';
 import { renderTypeAccent } from './renderTypeAccent';
 import { DEFAULT_GROUP_ID, MAX_GROUP_NAME_LENGTH, MAX_TABS, tabsInGroup, type TabGroup, type WorkItemTab } from './tabs';
 import { escapeHtml } from './escapeHtml';
+import { sortChildren, DEFAULT_CHILD_SORT_CRITERIA } from './sortChildren';
+import { isCompleted } from '../azureDevOps/filterRemovedWorkItems';
+import type { ChildSortCriterion } from '../types';
+
+const CHILD_SORT_OPTIONS: { criterion: ChildSortCriterion; label: string; info: string }[] = [
+  {
+    criterion: 'status',
+    label: 'Status',
+    info: "Groups by the status's state category, in lifecycle order: Proposed → In Progress → Resolved → Completed. Works the same across processes, whatever each status is called. Within each category, statuses follow their order in the process.",
+  },
+  {
+    criterion: 'backlogLevel',
+    label: 'Backlog level',
+    info: "Higher backlog levels first (e.g. Epic → Feature → Story → Task), following your team's backlog configuration.",
+  },
+  { criterion: 'workItemType', label: 'Work item type', info: 'Alphabetical by work item type name.' },
+  {
+    criterion: 'stackRank',
+    label: 'Board position',
+    info: 'The manual order of cards on the backlog and board, as set by dragging them. Stored in Azure DevOps as Stack Rank (Backlog Priority on Scrum). Items never ranked go last.',
+  },
+  { criterion: 'created', label: 'Created', info: 'Oldest first, by creation date.' },
+];
+
+// Multi-select where click order is priority: each selected option shows its position (1, 2, …),
+// and the trigger shows how many are active. `data-criteria` on the menu is the source of truth the
+// webview script edits before posting the new list back; `data-default-criteria` is what "Reset to
+// default" restores.
+function renderChildrenSortControl(criteria: ChildSortCriterion[]): string {
+  const options = CHILD_SORT_OPTIONS.map(({ criterion, label, info }) => {
+    const position = criteria.indexOf(criterion);
+    const active = position >= 0;
+    return `<button type="button" class="kb-children-sort-option${active ? ' kb-children-sort-option-active' : ''}" data-action="toggle-children-sort-criterion" data-criterion="${criterion}"><span class="kb-children-sort-rank">${active ? position + 1 : ''}</span><span class="kb-children-sort-label">${label}</span><span class="kb-children-sort-info" title="${escapeHtml(info)}">ⓘ</span></button>`;
+  }).join('');
+  const countHtml = criteria.length ? `<span class="kb-children-sort-count">${criteria.length}</span>` : '';
+  const defaults = DEFAULT_CHILD_SORT_CRITERIA.join(',');
+  const isDefault = criteria.join(',') === defaults;
+  return `
+    <div class="kb-children-sort">
+      <button type="button" class="kb-icon-btn kb-children-sort-trigger" data-action="toggle-children-sort" title="Sort children">⇅${countHtml}</button>
+      <div class="kb-children-sort-menu kb-hidden" data-criteria="${criteria.join(',')}" data-default-criteria="${defaults}">
+        ${options}
+        <div class="kb-children-sort-divider"></div>
+        <button type="button" class="kb-children-sort-reset" data-action="reset-children-sort"${isDefault ? ' disabled' : ''}>Reset to default</button>
+      </div>
+    </div>
+  `;
+}
+
+export function renderChildrenList(
+  subtasks: WorkItem[],
+  config: KanbrainConfig,
+  avatars: Record<string, string>,
+  selectedTeam: string | undefined,
+): string {
+  if (subtasks.length === 0) {
+    return '<div class="kb-empty">No child items.</div>';
+  }
+  return sortChildren(subtasks, config, selectedTeam, config.childrenSortCriteria ?? DEFAULT_CHILD_SORT_CRITERIA)
+    .map(s => {
+      const cssClass = isCompleted(s, config) ? 'kb-subtask-card kb-card-completed' : 'kb-subtask-card';
+      return renderWorkItemCard(s, config, cssClass, true, avatars, true, null, false, selectedTeam, true, true);
+    })
+    .join('');
+}
 
 export interface RenderState {
   hasWorkspace: boolean;
@@ -222,11 +287,7 @@ export function render(state: RenderState): string {
     </div>
   `
     : '';
-  const subtasksHtml = state.subtasks.length
-    ? state.subtasks
-        .map(s => renderWorkItemCard(s, state.config!, 'kb-subtask-card', true, avatars, true, null, false, state.selectedTeam, true, true))
-        .join('')
-    : '<div class="kb-empty">No child items.</div>';
+  const subtasksHtml = renderChildrenList(state.subtasks, state.config, avatars, state.selectedTeam);
 
   return `
     ${groupBarHtml}
@@ -247,7 +308,10 @@ export function render(state: RenderState): string {
     <div class="kb-section-card kb-section-card-children">
       ${
         state.subtasks.length
-          ? `<button type="button" class="kb-section-label" data-action="toggle-group" data-section="children"><span><span class="kb-chevron">▾</span>Children (${state.subtasks.length})</span></button>`
+          ? `<div class="kb-section-label kb-section-header">
+              <button type="button" class="kb-section-toggle" data-action="toggle-group" data-section="children"><span><span class="kb-chevron">▾</span>Children (${state.subtasks.length})</span></button>
+              ${renderChildrenSortControl(state.config.childrenSortCriteria ?? DEFAULT_CHILD_SORT_CRITERIA)}
+            </div><!-- /kb-section-header -->`
           : `<div class="kb-section-label">Children (${state.subtasks.length})</div>`
       }
       <div class="kb-collapsible-body${state.childrenCollapsed ? ' kb-hidden' : ''}">${subtasksHtml}</div>

@@ -32,6 +32,12 @@ describe('configForStateDiff', () => {
     expect(changed).toBe(false);
   });
 
+  it('does not register a state change when only childrenSortCriteria changes', () => {
+    const previous = serializeState(configForStateDiff({ ...config, childrenSortCriteria: ['status'] }), { id: 1 }, null, []);
+    const changed = hasStateChanged(previous, configForStateDiff({ ...config, childrenSortCriteria: ['created', 'status'] }), { id: 1 }, null, []);
+    expect(changed).toBe(false);
+  });
+
   it('still registers a state change when another config field changes', () => {
     const previous = serializeState(configForStateDiff({ ...config, searchAssignedToMe: true }), { id: 1 }, null, []);
     const changed = hasStateChanged(previous, configForStateDiff({ ...config, searchAssignedToMe: true, defaultTeam: 'Other Team' }), { id: 1 }, null, []);

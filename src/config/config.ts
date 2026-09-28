@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { KanbrainConfig, RepositoryPathEntry } from '../types';
+import type { KanbrainConfig, RepositoryPathEntry, ChildSortCriterion } from '../types';
 import { runMigrations } from './migrations';
 
 export const DEFAULT_REPO_SCAN_DEPTH = 2;
@@ -9,6 +9,7 @@ interface LocalConfig {
   repositories?: Record<string, RepositoryPathEntry>;
   showAssignedTo?: boolean;
   searchAssignedToMe?: boolean;
+  childrenSortCriteria?: ChildSortCriterion[];
   selectedProfileId?: string;
   aiProviderCommand?: string;
 }
@@ -43,6 +44,9 @@ function extractLocalFields(config: KanbrainConfig): LocalConfig {
   }
   if (config.searchAssignedToMe !== undefined) {
     local.searchAssignedToMe = config.searchAssignedToMe;
+  }
+  if (config.childrenSortCriteria !== undefined) {
+    local.childrenSortCriteria = config.childrenSortCriteria;
   }
   if (config.selectedProfileId !== undefined) {
     local.selectedProfileId = config.selectedProfileId;
@@ -113,6 +117,9 @@ function applyLocalOverlay(config: KanbrainConfig, workspaceRoot: string): Kanbr
   if ('searchAssignedToMe' in local) {
     result.searchAssignedToMe = local.searchAssignedToMe;
   }
+  if ('childrenSortCriteria' in local) {
+    result.childrenSortCriteria = local.childrenSortCriteria;
+  }
   if ('selectedProfileId' in local) {
     result.selectedProfileId = local.selectedProfileId;
   }
@@ -155,7 +162,7 @@ export function writeConfig(workspaceRoot: string, config: KanbrainConfig): void
   const configPath = getConfigPath(workspaceRoot);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
-  const { repositories, showAssignedTo, searchAssignedToMe, selectedProfileId, aiProviderCommand, ...shared } = config;
+  const { repositories, showAssignedTo, searchAssignedToMe, childrenSortCriteria, selectedProfileId, aiProviderCommand, ...shared } = config;
   fs.writeFileSync(configPath, `${JSON.stringify(shared, null, 2)}\n`, 'utf-8');
 
   const local = extractLocalFields(config);

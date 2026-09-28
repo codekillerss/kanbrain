@@ -44,6 +44,8 @@ export function detailPanelCss(): string {
     .kb-related-subgroup-label:first-child { margin-top: 0; }
     .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; color: inherit; text-decoration: none; cursor: pointer; }
     .kb-related-item:hover { color: var(--vscode-textLink-foreground); }
+    .kb-related-item-completed { opacity: 0.55; }
+    .kb-related-item-completed:hover, .kb-related-item-completed:focus-visible { opacity: 1; }
     .kb-related-id { font-weight: 600; flex-shrink: 0; }
     .kb-related-item-row { display: flex; align-items: center; gap: 4px; }
     .kb-related-item-row .kb-related-item { flex: 1; min-width: 0; margin-bottom: 0; }

@@ -61,6 +61,14 @@ function mapAssignedTo(raw: unknown): AssignedTo | null {
   return { displayName: identity.displayName, imageUrl };
 }
 
+// The backlog's manual order lives in a process-specific field: StackRank on Agile/CMMI/Basic,
+// BacklogPriority on Scrum (inherited processes keep their base's field). A work item type only
+// ever carries one of them, so whichever is present is the order.
+function mapBacklogOrder(fields: Record<string, unknown>): number | undefined {
+  const value = fields['Microsoft.VSTS.Common.StackRank'] ?? fields['Microsoft.VSTS.Common.BacklogPriority'];
+  return typeof value === 'number' ? value : undefined;
+}
+
 export function mapWorkItem(raw: RawWorkItem, organization: string, project: string): WorkItem {
   const relations = raw.relations ?? [];
   const parentRelation = relations.find(r => r.rel === 'System.LinkTypes.Hierarchy-Reverse');
@@ -82,5 +90,6 @@ export function mapWorkItem(raw: RawWorkItem, organization: string, project: str
     assignedTo: mapAssignedTo(raw.fields['System.AssignedTo']),
     development,
     createdDate: raw.fields['System.CreatedDate'] ? String(raw.fields['System.CreatedDate']) : undefined,
+    backlogOrder: mapBacklogOrder(raw.fields),
   };
 }

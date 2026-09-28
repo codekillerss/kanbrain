@@ -144,6 +144,11 @@ describe('syncConfig', () => {
     expect(result.searchAssignedToMe).toBe(true);
   });
 
+  it('preserves childrenSortCriteria across a sync', () => {
+    const result = syncConfig(config({ childrenSortCriteria: ['created'] }), { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {}, {});
+    expect(result.childrenSortCriteria).toEqual(['created']);
+  });
+
   it('preserves the skill registry unchanged across a sync', () => {
     const withSkills = config({ skills: { 'global-skill-1': { path: 'effort.md', label: 'Avaliar Effort' } } });
     const result = syncConfig(withSkills, { Task: { 'To Do': 'Proposed' } }, {}, {}, {}, 'MyProject Team', {}, {}, {});
@@ -213,6 +218,24 @@ describe('syncConfig', () => {
     );
 
     expect(result.taskBacklogTypesByTeam).toEqual({ 'MyProject Team': ['Task', 'Bug'] });
+  });
+
+  it('replaces backlogLevelsByTeam with the fresh value, discarding the previous one', () => {
+    const withOldLevels = config({ backlogLevelsByTeam: { 'Old Team': { Task: 0 } } });
+    const result = syncConfig(
+      withOldLevels,
+      { Task: { 'To Do': 'Proposed' } },
+      {},
+      {},
+      {},
+      'MyProject Team',
+      {},
+      {},
+      {},
+      { 'MyProject Team': { 'User Story': 1, Task: 0 } },
+    );
+
+    expect(result.backlogLevelsByTeam).toEqual({ 'MyProject Team': { 'User Story': 1, Task: 0 } });
   });
 });
 

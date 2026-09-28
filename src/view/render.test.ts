@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, type RenderState } from './render';
+import { render, renderChildrenList, type RenderState } from './render';
 import type { WorkItem, KanbrainConfig } from '../types';
 
 function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
@@ -349,13 +349,135 @@ describe('render', () => {
     expect(html).toContain('kb-chevron');
   });
 
-  it('wraps the children list in a container that is the toggle button\'s next sibling', () => {
+  it('wraps the children list in a container that is the section header\'s next sibling', () => {
     const subtasks = [workItem({ id: 101, title: 'Sub 1', status: 'Active' })];
     const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
 
-    const buttonCloseIndex = html.indexOf('</button>', html.indexOf('data-action="toggle-group"'));
-    const afterButton = html.slice(buttonCloseIndex + '</button>'.length).trimStart();
-    expect(afterButton.startsWith('<div class="kb-collapsible-body">')).toBe(true);
+    const headerStart = html.lastIndexOf('<div class="kb-section-label kb-section-header"', html.indexOf('Children (1)'));
+    expect(headerStart).toBeGreaterThanOrEqual(0);
+    const headerEnd = html.indexOf('<!-- /kb-section-header -->', headerStart);
+    const afterHeader = html.slice(headerEnd + '<!-- /kb-section-header -->'.length).trimStart();
+    expect(afterHeader.startsWith('<div class="kb-collapsible-body">')).toBe(true);
+  });
+
+  describe('Children sort control', () => {
+    const subtasks = [workItem({ id: 101, title: 'Sub 1' })];
+    const flow = (cfg: KanbrainConfig, items: WorkItem[] = subtasks) =>
+      render({ hasWorkspace: true, extensionVersion: '1.0.0', config: cfg, workItem: workItem(), parent: null, subtasks: items, screen: 'flow' });
+    const optionTag = (html: string, criterion: string) => {
+      const index = html.indexOf(`data-criterion="${criterion}"`);
+      const start = html.lastIndexOf('<button', index);
+      return html.slice(start, html.indexOf('</button>', index));
+    };
+
+    it('puts the sort trigger in the Children header, after the label', () => {
+      const html = flow(config);
+      const labelIndex = html.indexOf('Children (1)');
+      const triggerIndex = html.indexOf('data-action="toggle-children-sort"');
+      const bodyIndex = html.indexOf('kb-collapsible-body', labelIndex);
+
+      expect(triggerIndex).toBeGreaterThan(labelIndex);
+      expect(triggerIndex).toBeLessThan(bodyIndex);
+    });
+
+    it('lists the five criteria as menu options, in a fixed order', () => {
+      const html = flow(config);
+      const positions = ['status', 'backlogLevel', 'workItemType', 'stackRank', 'created'].map(c => html.indexOf(`data-criterion="${c}"`));
+
+      expect(positions.every(p => p > 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      expect(optionTag(html, 'workItemType')).toContain('Work item type');
+    });
+
+    it('numbers the selected criteria by priority and shows the count on the trigger', () => {
+      const html = flow({ ...config, childrenSortCriteria: ['created', 'status'] });
+
+      expect(optionTag(html, 'created')).toContain('<span class="kb-children-sort-rank">1</span>');
+      expect(optionTag(html, 'status')).toContain('<span class="kb-children-sort-rank">2</span>');
+      expect(optionTag(html, 'stackRank')).toContain('<span class="kb-children-sort-rank"></span>');
+      expect(html).toContain('<span class="kb-children-sort-count">2</span>');
+      expect(html).toContain('data-criteria="created,status"');
+    });
+
+    it('uses the default criteria when the user never picked any', () => {
+      const html = flow(config);
+
+      expect(html).toContain('data-criteria="status,backlogLevel,stackRank,created"');
+      expect(html).toContain('<span class="kb-children-sort-count">4</span>');
+    });
+
+    it('shows no count and keeps the API order when every criterion is cleared', () => {
+      const items = [workItem({ id: 102, title: 'Second', backlogOrder: 2 }), workItem({ id: 101, title: 'First', backlogOrder: 1 })];
+      const html = flow({ ...config, childrenSortCriteria: [] }, items);
+
+      expect(html).toContain('data-criteria=""');
+      expect(html).not.toContain('kb-children-sort-count');
+      expect(html.indexOf('Second')).toBeLessThan(html.indexOf('First'));
+    });
+
+    it('applies the chosen criteria to the list', () => {
+      const items = [
+        workItem({ id: 101, title: 'Newest', createdDate: '2026-03-01T00:00:00Z' }),
+        workItem({ id: 102, title: 'Oldest', createdDate: '2026-01-01T00:00:00Z' }),
+      ];
+      const html = flow({ ...config, childrenSortCriteria: ['created'] }, items);
+
+      expect(html.indexOf('Oldest')).toBeLessThan(html.indexOf('Newest'));
+    });
+
+    it('labels the stack rank option "Board position" and explains Stack Rank in its info tooltip', () => {
+      const tag = optionTag(flow(config), 'stackRank');
+
+      expect(tag).toContain('Board position');
+      expect(tag).not.toContain('>Stack rank<');
+      expect(tag).toMatch(/class="kb-children-sort-info"[^>]*title="[^"]*Stack Rank[^"]*"/);
+    });
+
+    it('gives every option an info icon with a tooltip', () => {
+      const html = flow(config);
+      for (const criterion of ['status', 'backlogLevel', 'workItemType', 'stackRank', 'created']) {
+        expect(optionTag(html, criterion)).toMatch(/<span class="kb-children-sort-info" title="[^"]+"/);
+      }
+    });
+
+    it('offers a reset-to-default action carrying the default criteria', () => {
+      const html = flow({ ...config, childrenSortCriteria: ['created'] });
+      const start = html.indexOf('data-action="reset-children-sort"');
+      const tag = html.slice(html.lastIndexOf('<button', start), html.indexOf('>', start) + 1);
+
+      expect(start).toBeGreaterThan(0);
+      expect(tag).not.toContain('disabled');
+      expect(html).toContain('data-default-criteria="status,backlogLevel,stackRank,created"');
+    });
+
+    it('disables the reset action when the criteria already are the default', () => {
+      const html = flow(config);
+      const start = html.indexOf('data-action="reset-children-sort"');
+      const tag = html.slice(html.lastIndexOf('<button', start), html.indexOf('>', start) + 1);
+
+      expect(tag).toContain('disabled');
+    });
+
+    it('has no sort trigger when there are no children', () => {
+      expect(flow(config, [])).not.toContain('toggle-children-sort');
+    });
+  });
+
+  describe('renderChildrenList', () => {
+    it('renders just the sorted cards, for swapping into the open list without a full rebuild', () => {
+      const items = [
+        workItem({ id: 101, title: 'Newest', createdDate: '2026-03-01T00:00:00Z' }),
+        workItem({ id: 102, title: 'Oldest', createdDate: '2026-01-01T00:00:00Z' }),
+      ];
+      const html = renderChildrenList(items, { ...config, childrenSortCriteria: ['created'] }, {}, undefined);
+
+      expect(html).not.toContain('Children (');
+      expect(html.indexOf('Oldest')).toBeLessThan(html.indexOf('Newest'));
+    });
+
+    it('shows the empty message when there are no children', () => {
+      expect(renderChildrenList([], config, {}, undefined)).toContain('No child items');
+    });
   });
 
   it('does not show a collapse toggle on the Children header when there are no children', () => {
@@ -392,6 +514,38 @@ describe('render', () => {
     const bodyStart = html.indexOf('kb-collapsible-body', html.indexOf('Children (1)'));
     const bodyTag = html.slice(html.lastIndexOf('<div', bodyStart), html.indexOf('>', bodyStart) + 1);
     expect(bodyTag).toContain('kb-hidden');
+  });
+
+  it('renders the Children in sortChildren order (category, backlog level, backlog order)', () => {
+    const cfg: KanbrainConfig = {
+      ...config,
+      statusCategoriesByType: { Task: { Active: 'InProgress', Closed: 'Completed' }, 'User Story': { Active: 'InProgress' } },
+      backlogLevelsByTeam: { 'Team B': { 'User Story': 1, Task: 0 } },
+    };
+    const subtasks = [
+      workItem({ id: 101, title: 'Done task', status: 'Closed', backlogOrder: 1 }),
+      workItem({ id: 102, title: 'Active task', status: 'Active', backlogOrder: 2 }),
+      workItem({ id: 103, title: 'Active story', type: 'User Story', status: 'Active', backlogOrder: 3 }),
+    ];
+    const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config: cfg, workItem: workItem(), parent: null, subtasks, screen: 'flow', selectedTeam: 'Team B' });
+
+    const positions = ['Active story', 'Active task', 'Done task'].map(title => html.indexOf(title));
+    expect(positions.every(p => p > 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it('marks Children in the Completed state category with the muted class, and only those', () => {
+    const cfg: KanbrainConfig = { ...config, statusCategoriesByType: { Task: { Active: 'InProgress', Closed: 'Completed' } } };
+    const subtasks = [workItem({ id: 101, status: 'Closed' }), workItem({ id: 102, status: 'Active' })];
+    const html = render({ hasWorkspace: true, extensionVersion: '1.0.0', config: cfg, workItem: workItem(), parent: null, subtasks, screen: 'flow' });
+
+    const cardTagFor = (id: number) => {
+      const idIndex = html.indexOf(`#${id}</span>`);
+      const start = html.lastIndexOf('<div class="kb-subtask-card', idIndex);
+      return html.slice(start, html.indexOf('>', start) + 1);
+    };
+    expect(cardTagFor(101)).toContain('kb-card-completed');
+    expect(cardTagFor(102)).not.toContain('kb-card-completed');
   });
 
   it('renders the Children body expanded by default when childrenCollapsed is omitted', () => {
