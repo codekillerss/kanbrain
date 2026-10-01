@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.15] - 2026-10-01
+
+### Fixed
+
+- In the work item detail panel ("View details"), a description or comment with long unbroken text, preformatted blocks, tables or fixed widths no longer spills over the side column with State, Work Item Type, Assigned To and Area Path. Long words now wrap, and anything still too wide scrolls inside its own block. Long values in the side column (such as a deep Area Path) wrap too. The pull request detail panel gets the same fix.
+
 ## [0.19.14] - 2026-10-01
 
 ### Added
