@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { generateContextFile } from './generateContextFile';
+import { GENERATED_FILE_HEADER } from './writeGeneratedFile';
 import type { SkillTemplateContext } from './resolvePlaceholders';
 import type { WorkItem, ProfileEntry, WorkflowStepConfig } from '../types';
 
@@ -22,6 +23,14 @@ const workItem: WorkItem = {
 };
 
 const context: SkillTemplateContext = { workItem, parent: null, subtasks: [], branch: 'feature/90' };
+
+// Every generated file opens with the Kanbrain header (covered in writeGeneratedFile.test.ts);
+// these tests are about what comes after it.
+function readGenerated(relativePath: string): string {
+  const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+  expect(written.startsWith(GENERATED_FILE_HEADER)).toBe(true);
+  return written.slice(GENERATED_FILE_HEADER.length);
+}
 
 beforeEach(() => {
   workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kanbrain-ctx-'));
@@ -50,7 +59,7 @@ describe('generateContextFile', () => {
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
     expect(relativePath.startsWith(path.join('.kanbrain', 'generated'))).toBe(true);
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(`${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`);
   });
 
@@ -58,7 +67,7 @@ describe('generateContextFile', () => {
     fs.writeFileSync(path.join(workspaceRoot, 'skills', 'fix.md'), '## Instructions\nDo the thing.');
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(`${cardInfoBlock}\n\n---\n\n## Instructions\nDo the thing.`);
   });
 
@@ -101,7 +110,7 @@ describe('generateContextFile', () => {
     const profile: ProfileEntry = { label: 'Developer', description: 'I am a developer.' };
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, profile, null, new Date('2026-07-14T10:00:00.000Z'));
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(
       `## Requester profile\n**Developer** — I am a developer.\n\n---\n\n${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`,
     );
@@ -110,7 +119,7 @@ describe('generateContextFile', () => {
   it('does not add a Requester profile block when profile is null', () => {
     const relativePath = generateContextFile(workspaceRoot, 'skills/fix.md', context, null, null, new Date('2026-07-14T10:00:00.000Z'));
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).not.toContain('Requester profile');
   });
 
@@ -125,7 +134,7 @@ describe('generateContextFile', () => {
       new Date('2026-07-14T10:00:00.000Z'),
     );
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(
       `${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)\n\n---\n\n## Definition of Done\n- Tests passing\n- PR opened`,
     );
@@ -142,7 +151,7 @@ describe('generateContextFile', () => {
       new Date('2026-07-14T10:00:00.000Z'),
     );
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toContain('## Expected artifacts\n- Pull request');
   });
 
@@ -157,7 +166,7 @@ describe('generateContextFile', () => {
       new Date('2026-07-14T10:00:00.000Z'),
     );
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(
       `${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)\n\n---\n\n## Definition of Done\n- Tests passing\n\n## Expected artifacts\n- Pull request`,
     );
@@ -173,7 +182,7 @@ describe('generateContextFile', () => {
       new Date('2026-07-14T10:00:00.000Z'),
     );
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written).toBe(`${cardInfoBlock}\n\n---\n\nTitle: Fix bug (#482)`);
   });
 
@@ -189,7 +198,7 @@ describe('generateContextFile', () => {
       new Date('2026-07-14T10:00:00.000Z'),
     );
 
-    const written = fs.readFileSync(path.join(workspaceRoot, relativePath), 'utf-8');
+    const written = readGenerated(relativePath);
     expect(written.startsWith('## Requester profile')).toBe(true);
     expect(written.endsWith('## Expected artifacts\n- Pull request')).toBe(true);
   });
