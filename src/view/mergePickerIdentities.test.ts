@@ -67,6 +67,25 @@ describe('mergePickerIdentities', () => {
     expect(merged).toHaveLength(1);
   });
 
+  it('takes the avatar from the team entry when the current user has none', () => {
+    const meWithoutPicture = identity({ id: 'me', displayName: 'Me Myself', uniqueName: 'me@example.com', imageUrl: null });
+    const meInTeam = identity({ id: 'me', displayName: 'Me Myself', uniqueName: 'me@example.com', imageUrl: 'https://team.example/me.png' });
+
+    const merged = mergePickerIdentities(meWithoutPicture, [meInTeam, jane], [], '');
+
+    expect(merged.map(i => i.uniqueName)).toEqual(['me@example.com', 'jane@example.com']);
+    expect(merged[0].imageUrl).toBe('https://team.example/me.png');
+  });
+
+  it('takes the avatar from a search result when nothing earlier had one', () => {
+    const plain = identity({ id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: null });
+    const withPicture = identity({ id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://search.example/jane.png' });
+
+    const merged = mergePickerIdentities(null, [plain], [withPicture], '');
+
+    expect(merged[0].imageUrl).toBe('https://search.example/jane.png');
+  });
+
   it('keeps the team entry when the same person also comes back from search', () => {
     const fromSearch = identity({ id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://avatar.example/jane.png' });
     const teamJane = identity({ id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://team.example/jane.png' });
