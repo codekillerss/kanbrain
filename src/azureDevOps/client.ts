@@ -366,6 +366,20 @@ export class AzureDevOpsClient {
     return data.value.map(t => ({ id: t.id, name: t.name }));
   }
 
+  async listTeamMembers(organization: string, project: string, teamId: string): Promise<IdentitySearchResult[]> {
+    const data = await this.request<{ value: { identity: RawIdentityRef & { uniqueName?: string } }[] }>(
+      `https://dev.azure.com/${organization}/_apis/projects/${project}/teams/${teamId}/members?api-version=7.1`,
+    );
+    return data.value
+      .map(m => ({
+        id: m.identity?.id ?? '',
+        displayName: m.identity?.displayName ?? 'Unknown',
+        uniqueName: m.identity?.uniqueName ?? '',
+        imageUrl: m.identity?.imageUrl ?? m.identity?._links?.avatar?.href ?? null,
+      }))
+      .filter(m => m.uniqueName);
+  }
+
   async listBoards(organization: string, project: string, team: string): Promise<AzureDevOpsBoard[]> {
     const data = await this.request<{ value: { id: string; name: string }[] }>(
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards?api-version=7.1`,

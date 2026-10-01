@@ -1016,6 +1016,54 @@ describe('AzureDevOpsClient.listProjectPullRequests', () => {
   });
 });
 
+describe('AzureDevOpsClient.listTeamMembers', () => {
+  it('maps each member to an identity, carrying the avatar url', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { identity: { id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://avatar.example/jane.png' } },
+          { identity: { id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com', _links: { avatar: { href: 'https://avatar.example/john.png' } } } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const members = await client.listTeamMembers('my-org', 'MyProject', 'team-1');
+
+    expect(members).toEqual([
+      { id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://avatar.example/jane.png' },
+      { id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com', imageUrl: 'https://avatar.example/john.png' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/projects/MyProject/teams/team-1/members?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('drops members without a unique name, which would unassign if offered', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { identity: { id: 'u1', displayName: 'No Address', uniqueName: '' } },
+          { identity: { id: 'u2', displayName: 'Has Address', uniqueName: 'ok@example.com' } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const members = await client.listTeamMembers('my-org', 'MyProject', 'team-1');
+
+    expect(members.map(m => m.id)).toEqual(['u2']);
+  });
+
+  it('lets the error propagate, so an unreachable team is not mistaken for an empty one', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(textResponse('no access', false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await expect(client.listTeamMembers('my-org', 'MyProject', 'team-1')).rejects.toThrow('no access');
+  });
+});
+
 describe('AzureDevOpsClient.getCurrentUserProfile', () => {
   it('maps the signed-in user to an identity the picker can offer', async () => {
     const fetchImpl = vi
