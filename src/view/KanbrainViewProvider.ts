@@ -1341,7 +1341,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      this.view.webview.postMessage({ type: 'identity-results', workItemId, html: renderIdentityOptions(results, workItemId) });
+      this.view.webview.postMessage({ type: 'identity-results', workItemId, html: renderIdentityOptions(results, workItemId, {}) });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
