@@ -52,6 +52,7 @@ export interface IdentitySearchResult {
   id: string;
   displayName: string;
   uniqueName: string;
+  imageUrl: string | null;
 }
 
 interface RawIdentityRef {
@@ -68,6 +69,8 @@ interface RawPickerIdentity {
   mail: string | null;
   signInAddress: string | null;
   active: boolean | null;
+  image?: string | null;
+  imageUrl?: string | null;
 }
 
 interface RawIdentityPickerResponse {
@@ -574,7 +577,7 @@ export class AzureDevOpsClient {
           identityTypes: ['user'],
           operationScopes: ['ims', 'source'],
           options: { MinResults: 5, MaxResults: 20 },
-          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active', 'Image'],
         }),
       },
     );
@@ -585,6 +588,7 @@ export class AzureDevOpsClient {
         id: i.entityId,
         displayName: i.displayName ?? 'Unknown',
         uniqueName: i.mail ?? i.signInAddress ?? '',
+        imageUrl: i.image ?? i.imageUrl ?? null,
       }))
       .filter(i => i.uniqueName);
   }

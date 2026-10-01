@@ -1251,7 +1251,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'jane');
 
-    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com' }]);
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: null }]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://vssps.dev.azure.com/my-org/_apis/IdentityPicker/Identities?api-version=7.1-preview.1',
       expect.objectContaining({
@@ -1261,10 +1261,30 @@ describe('AzureDevOpsClient.searchIdentities', () => {
           identityTypes: ['user'],
           operationScopes: ['ims', 'source'],
           options: { MinResults: 5, MaxResults: 20 },
-          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active', 'Image'],
         }),
       }),
     );
+  });
+
+  it('maps an image when the identity carries one, and null when it does not', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'With Picture', mail: 'a@example.com', signInAddress: null, active: true, image: 'https://avatar.example/a.png' },
+              { entityId: 'id-2', entityType: 'User', displayName: 'Without Picture', mail: 'b@example.com', signInAddress: null, active: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'p');
+
+    expect(results.map(r => r.imageUrl)).toEqual(['https://avatar.example/a.png', null]);
   });
 
   it('filters out inactive identities and non-user entity types', async () => {
@@ -1285,7 +1305,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'person');
 
-    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com' }]);
+    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com', imageUrl: null }]);
   });
 
   it('falls back to signInAddress when mail is missing, and drops results with neither', async () => {
@@ -1305,7 +1325,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'x');
 
-    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com' }]);
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com', imageUrl: null }]);
   });
 
   it('returns an empty array for a blank query without calling fetch', async () => {
