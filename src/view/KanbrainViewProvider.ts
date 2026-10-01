@@ -1885,9 +1885,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         input.select();
       });
     });
+    // A rename message makes the extension re-render, and the new document reopens whatever field
+    // the saved draft points at. The focusout handler clears the draft only on a later tick, after
+    // the message is already out, so a committed rename would come back in edit mode — clear the
+    // draft before sending it.
     document.querySelectorAll('.kb-tab-rename-input').forEach(input => {
       input.addEventListener('blur', () => {
         input.classList.add('kb-hidden');
+        saveUiState({ draft: null });
         vscode.postMessage({ type: 'rename-tab', tabId: input.dataset.tabId, label: input.value });
       });
       input.addEventListener('keydown', e => {
@@ -1913,6 +1918,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     document.querySelectorAll('.kb-group-rename-input').forEach(input => {
       input.addEventListener('blur', () => {
         input.classList.add('kb-hidden');
+        saveUiState({ draft: null });
         vscode.postMessage({ type: 'rename-group', groupId: input.dataset.groupId, label: input.value });
       });
       input.addEventListener('keydown', e => {
