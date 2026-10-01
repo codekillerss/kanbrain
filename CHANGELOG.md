@@ -2,6 +2,22 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [0.19.14] - 2026-10-01
+
+### Added
+
+- A "Load more" button at the end of the search dialog's results, with a "50 of 312"-style count. Each search lists every matching work item once and pages through that list 50 at a time, so loading more never repeats or skips a card, even when cards change in between.
+- Every file Kanbrain writes to `.kanbrain/generated/` now opens with a short header telling the agent it came from Kanbrain, pointing it at `.kanbrain/USAGE.md`, and naming `.kanbrain/config.json` and `.kanbrain/config.local.json` with what each one holds.
+
+### Changed
+
+- The search dialog's work item type filter now runs a new search for that type instead of filtering the 50 results already loaded, so a less common type no longer comes back nearly empty. The same goes for a saved query: its text, type and "Assigned to me" filters keep scanning the query's results until a page is full.
+
+### Fixed
+
+- Pressing Enter to confirm a tab or group name no longer saves it and then reopens it for editing.
+- A search typed quickly no longer shows the results of an earlier keystroke when that request finishes last.
+
 ## [0.19.13] - 2026-09-28
 
 ### Fixed
