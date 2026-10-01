@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchQuery, buildTypeCountQuery, filterWorkItemsByText, filterByAssignedTo } from './wiql';
+import { buildSearchQuery, buildTypeCountQuery, filterWorkItemsByText, filterByAssignedTo, filterByWorkItemType } from './wiql';
 import type { WorkItem } from '../types';
 
 describe('buildSearchQuery', () => {
@@ -36,6 +36,27 @@ describe('buildSearchQuery', () => {
     expect(buildSearchQuery('', true)).toContain('[System.AssignedTo] = @Me');
     expect(buildSearchQuery('482', true)).toContain('[System.AssignedTo] = @Me');
     expect(buildSearchQuery('login bug', true)).toContain('[System.AssignedTo] = @Me');
+  });
+
+  it('does not add a work item type clause by default', () => {
+    expect(buildSearchQuery('')).not.toContain('WorkItemType');
+    expect(buildSearchQuery('482')).not.toContain('WorkItemType');
+    expect(buildSearchQuery('login bug')).not.toContain('WorkItemType');
+  });
+
+  it('adds a [System.WorkItemType] clause when a type is given', () => {
+    expect(buildSearchQuery('', false, 'Epic')).toContain("[System.WorkItemType] = 'Epic'");
+    expect(buildSearchQuery('482', false, 'Epic')).toContain("[System.WorkItemType] = 'Epic'");
+    expect(buildSearchQuery('login bug', true, 'Epic')).toContain("[System.WorkItemType] = 'Epic'");
+  });
+
+  it('keeps the type clause before ORDER BY', () => {
+    const query = buildSearchQuery('login', false, 'Epic');
+    expect(query.indexOf('WorkItemType')).toBeLessThan(query.indexOf('ORDER BY'));
+  });
+
+  it('escapes single quotes in the work item type', () => {
+    expect(buildSearchQuery('', false, "Tester's Task")).toContain("[System.WorkItemType] = 'Tester''s Task'");
   });
 });
 
@@ -110,5 +131,12 @@ describe('filterByAssignedTo', () => {
   it('excludes unassigned items', () => {
     const items = [workItem({ id: 1, assignedTo: null })];
     expect(filterByAssignedTo(items, 'user-1')).toEqual([]);
+  });
+});
+
+describe('filterByWorkItemType', () => {
+  it('keeps only items of the given type', () => {
+    const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
+    expect(filterByWorkItemType(items, 'Epic')).toEqual([items[0]]);
   });
 });

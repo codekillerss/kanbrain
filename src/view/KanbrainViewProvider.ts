@@ -6,7 +6,7 @@ import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation }
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 import { sortChildren, parseChildSortCriteria } from './sortChildren';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
-import { filterByAssignedTo, filterWorkItemsByText } from '../azureDevOps/wiql';
+import { filterByAssignedTo, filterByWorkItemType, filterWorkItemsByText } from '../azureDevOps/wiql';
 import { presentBoardConfigCheck } from '../commands/checkBoardConfig';
 import { readConfig, writeConfig } from '../config/config';
 import { resolveActiveProfile } from '../config/resolveActiveProfile';
@@ -16,6 +16,7 @@ import { cloneRepository } from '../git/cloneRepository';
 import { generateContextFile } from '../skills/generateContextFile';
 import { sendReadCommandForTab } from '../terminal/tabTerminal';
 import type { KanbrainConfig, PullRequestSummary, SkillEntry, WorkflowStepConfig, WorkItem } from '../types';
+import { collectSearchPage } from './collectSearchPage';
 import { configForStateDiff } from './configForStateDiff';
 import { escapeHtml } from './escapeHtml';
 import { hasStateChanged, serializeState } from './hasStateChanged';
@@ -48,6 +49,23 @@ import {
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
+// The most ids a WIQL request may return; the search snapshot is paged through locally from there.
+const SEARCH_SNAPSHOT_LIMIT = 20000;
+
+// One search in the card picker: the ordered id list WIQL returned when it ran, paged through by
+// "Load more". Every page is a later slice of that same list, so no item repeats or gets skipped
+// even if work items change (and reorder) in between.
+interface SearchSession {
+  token: number;
+  ids: number[];
+  cursor: number;
+  items: WorkItem[];
+  seen: Set<number>;
+  // Filters a saved query's WIQL can't take, applied to each fetched item.
+  matches?: (item: WorkItem) => boolean;
+  workItemType?: string;
+  loading: boolean;
+}
 
 export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'kanbrain.view';
@@ -80,6 +98,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private lastReviewsFilterKeyFetched: string | undefined;
   private workItemHistoryIds: number[];
   private selectedSavedQueryId: string | undefined;
+  private searchToken = 0;
+  private searchSession: SearchSession | undefined;
 
   constructor(
     private readonly workspaceRoot: string | undefined,
@@ -127,12 +147,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'run-skill-by-id') {
         await this.runSkillById(Number(message.workItemId), String(message.skillId ?? ''));
       } else if (message.type === 'search-work-items') {
-        await this.searchWorkItems(String(message.query ?? ''), message.queryId ? String(message.queryId) : undefined);
+        await this.searchWorkItems(
+          String(message.query ?? ''),
+          message.queryId ? String(message.queryId) : undefined,
+          message.workItemType ? String(message.workItemType) : undefined,
+        );
+      } else if (message.type === 'load-more-search-results') {
+        await this.loadMoreSearchResults(Number(message.token));
       } else if (message.type === 'set-search-assigned-to-me') {
         await this.setSearchAssignedToMe(
           Boolean(message.value),
           String(message.query ?? ''),
           message.queryId ? String(message.queryId) : undefined,
+          message.workItemType ? String(message.workItemType) : undefined,
         );
       } else if (message.type === 'set-children-sort') {
         await this.setChildrenSort(message.criteria);
@@ -639,7 +666,10 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     void this.refresh();
   }
 
-  private async searchWorkItems(query: string, queryId?: string): Promise<void> {
+  // Starts a new search: runs the WIQL once for the full ordered id list (the snapshot every "Load
+  // more" pages through) and shows its first page. Each keystroke starts one, so a response that
+  // lands after a newer search started is dropped instead of overwriting it.
+  private async searchWorkItems(query: string, queryId?: string, workItemType?: string): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -648,34 +678,111 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const token = ++this.searchToken;
+    this.searchSession = undefined;
+    const type = workItemType && Object.keys(config.workflowSteps).includes(workItemType) ? workItemType : undefined;
     const assignedToMe = config.searchAssignedToMe === true;
 
-    let html: string;
     try {
-      let items: WorkItem[];
+      let ids: number[];
+      let matches: ((item: WorkItem) => boolean) | undefined;
       if (queryId) {
-        const ids = await this.client.runSavedQuery(config.organization, config.project, queryId);
-        const queryItems = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
-        items = filterWorkItemsByText(queryItems, query);
-        if (assignedToMe) {
-          const userId = await this.resolveCurrentUserId();
-          items = userId ? filterByAssignedTo(items, userId) : [];
+        // A saved query's WIQL lives in Azure DevOps, so the text, type and assignee filters are
+        // applied to the fetched items instead (collectSearchPage keeps scanning to fill a page).
+        ids = await this.client.runSavedQuery(config.organization, config.project, queryId, SEARCH_SNAPSHOT_LIMIT);
+        const userId = assignedToMe ? await this.resolveCurrentUserId() : undefined;
+        if (assignedToMe && !userId) {
+          ids = [];
         }
+        matches = item =>
+          filterWorkItemsByText([item], query).length > 0 &&
+          (!type || filterByWorkItemType([item], type).length > 0) &&
+          (!userId || filterByAssignedTo([item], userId).length > 0);
       } else {
-        const ids = await this.client.searchWorkItems(config.organization, config.project, query, assignedToMe);
-        items = ids.length ? await this.client.getWorkItems(config.organization, config.project, ids) : [];
+        ids = await this.client.searchWorkItems(config.organization, config.project, query, {
+          assignedToMe,
+          workItemType: type,
+          top: SEARCH_SNAPSHOT_LIMIT,
+        });
       }
-      const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(items) : {};
-      html = renderSearchResults(items, config, avatars);
+      if (token !== this.searchToken) {
+        return;
+      }
+      this.searchSession = { token, ids, cursor: 0, items: [], seen: new Set(), matches, workItemType: type, loading: false };
+      await this.loadSearchPage(this.searchSession);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      html = `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`;
+      if (token === this.searchToken) {
+        this.postSearchError(error);
+      }
     }
-
-    this.view.webview.postMessage({ type: 'search-results', html });
   }
 
-  private async setSearchAssignedToMe(value: boolean, query: string, queryId?: string): Promise<void> {
+  private async loadMoreSearchResults(token: number): Promise<void> {
+    const session = this.searchSession;
+    if (!session || session.token !== token || session.loading) {
+      return;
+    }
+    try {
+      await this.loadSearchPage(session);
+    } catch (error) {
+      if (session === this.searchSession) {
+        this.postSearchError(error);
+      }
+    }
+  }
+
+  private async loadSearchPage(session: SearchSession): Promise<void> {
+    if (!this.view || !this.workspaceRoot || !this.client) {
+      return;
+    }
+    const config = readConfig(this.workspaceRoot);
+    if (!config) {
+      return;
+    }
+    const client = this.client;
+
+    session.loading = true;
+    try {
+      const page = await collectSearchPage(
+        session.ids,
+        session.cursor,
+        ids => client.getWorkItems(config.organization, config.project, ids, { omitMissing: true }),
+        session.seen,
+        { matches: session.matches },
+      );
+      if (session !== this.searchSession) {
+        return;
+      }
+      // Later pages keep the webview's scroll position and collapsed groups; a first page starts fresh.
+      const append = session.cursor > 0;
+      session.cursor = page.cursor;
+      session.items = [...session.items, ...page.items];
+      const avatars = config.showAssignedTo !== false ? await this.resolveAvatars(session.items) : {};
+      if (session !== this.searchSession) {
+        return;
+      }
+      const html = renderSearchResults(session.items, config, avatars, {
+        activeType: session.workItemType,
+        hasMore: session.cursor < session.ids.length,
+        // With a post-fetch filter the snapshot size isn't the number of matching items.
+        total: session.matches ? undefined : session.ids.length,
+        token: session.token,
+      });
+      this.view.webview.postMessage({ type: 'search-results', html, append });
+    } finally {
+      session.loading = false;
+    }
+  }
+
+  private postSearchError(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.view?.webview.postMessage({
+      type: 'search-results',
+      html: `<div class="kb-empty">Erro ao buscar work items: ${escapeHtml(message)}</div>`,
+    });
+  }
+
+  private async setSearchAssignedToMe(value: boolean, query: string, queryId?: string, workItemType?: string): Promise<void> {
     if (!this.workspaceRoot) {
       return;
     }
@@ -685,7 +792,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     }
     config.searchAssignedToMe = value;
     writeConfig(this.workspaceRoot, config);
-    await this.searchWorkItems(query, queryId);
+    await this.searchWorkItems(query, queryId, workItemType);
   }
 
   // Saves the new criteria and swaps just the children list in place: the sort menu is still open
@@ -1547,13 +1654,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
-    function applySearchTypeFilter() {
+    // The type filter is applied by the extension's query, and the results say which type they were
+    // queried with (it falls back to "all" for a type no longer configured), so adopt that.
+    function syncSearchTypeFromResults() {
+      const filter = document.querySelector('#kb-search-results .kb-search-type-filter');
+      if (filter && filter.dataset.activeType) activeSearchType = filter.dataset.activeType;
+    }
+
+    // Shows the picked type on the trigger right away, while its search is still running.
+    function showSearchTypeOnTrigger() {
       const label = document.querySelector('.kb-search-type-filter-trigger-label');
       document.querySelectorAll('.kb-search-type-filter-option').forEach((option) => {
         if (label && option.dataset.type === activeSearchType) label.innerHTML = option.innerHTML;
-      });
-      document.querySelectorAll('.kb-search-type-panel').forEach((panel) => {
-        panel.classList.toggle('kb-hidden', panel.dataset.typePanel !== activeSearchType);
       });
     }
 
@@ -2360,8 +2472,15 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const btn = target.closest('[data-action="select-search-type"]');
         activeSearchType = btn.dataset.type;
         closeAllSearchTypeFilters();
-        applySearchTypeFilter();
+        showSearchTypeOnTrigger();
+        triggerSearch();
         snapshotSearch();
+      } else if (target.closest && target.closest('[data-action="load-more-search-results"]')) {
+        const btn = target.closest('[data-action="load-more-search-results"]');
+        if (!btn.disabled) {
+          setLoading(btn);
+          vscode.postMessage({ type: 'load-more-search-results', token: btn.dataset.token });
+        }
       }
 
       if (
@@ -2470,8 +2589,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       }
     }
 
+    function activeWorkItemType() {
+      return activeSearchType && activeSearchType !== 'all' ? activeSearchType : undefined;
+    }
+
     function triggerSearch() {
-      vscode.postMessage({ type: 'search-work-items', query: searchInput ? searchInput.value : '', queryId: activeQueryId || undefined });
+      vscode.postMessage({
+        type: 'search-work-items',
+        query: searchInput ? searchInput.value : '',
+        queryId: activeQueryId || undefined,
+        workItemType: activeWorkItemType(),
+      });
     }
 
     if (searchInput) {
@@ -2489,6 +2617,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
           value: assignedToMeCheckbox.checked,
           query: searchInput ? searchInput.value : '',
           queryId: activeQueryId || undefined,
+          workItemType: activeWorkItemType(),
         });
       });
     }
@@ -2546,12 +2675,29 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (event.data.type === 'search-results') {
         const results = document.getElementById('kb-search-results');
         if (results) {
+          // A "Load more" page re-renders the whole list with the new items merged into their
+          // status groups, so keep where the user was scrolled and which groups they collapsed.
+          const previousScroller = results.querySelector('.kb-search-results-scroll');
+          const previousTop = event.data.append && previousScroller ? previousScroller.scrollTop : 0;
+          const collapsedStatuses = event.data.append
+            ? Array.from(results.querySelectorAll('.kb-result-group'))
+                .filter((group) => group.querySelector('.kb-group-items.kb-hidden'))
+                .map((group) => group.dataset.status)
+            : [];
           results.innerHTML = event.data.html;
-          applySearchTypeFilter();
+          results.querySelectorAll('.kb-result-group').forEach((group) => {
+            if (collapsedStatuses.includes(group.dataset.status)) {
+              group.querySelector('.kb-group-items')?.classList.add('kb-hidden');
+            }
+          });
+          syncSearchTypeFromResults();
           // The results scroll inside .kb-search-results-scroll (the type filter above it stays put),
           // and new results start that area back at the top.
           const scroller = results.querySelector('.kb-search-results-scroll');
-          if (scroller) saveScroll(scrollKey(scroller), scroller.scrollTop);
+          if (scroller) {
+            scroller.scrollTop = previousTop;
+            saveScroll(scrollKey(scroller), scroller.scrollTop);
+          }
           snapshotSearch();
         }
       } else if (event.data.type === 'work-item-history') {
@@ -2623,7 +2769,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       const cachedResults = document.getElementById('kb-search-results');
       if (cachedResults && restoredSearch.resultsHtml) {
         cachedResults.innerHTML = restoredSearch.resultsHtml;
-        applySearchTypeFilter();
+        // A Load more caught mid-request by the re-render would otherwise stay disabled.
+        cachedResults.querySelectorAll('.kb-loading').forEach((btn) => {
+          btn.classList.remove('kb-loading');
+          btn.disabled = false;
+        });
       }
       const cachedHistory = document.getElementById('kb-history-results');
       if (cachedHistory && restoredSearch.historyHtml) cachedHistory.innerHTML = restoredSearch.historyHtml;
@@ -2873,7 +3023,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-search-type-filter-menu.kb-hidden { display: none; }
       .kb-search-type-filter-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-search-type-filter-option:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-search-type-filter-option-empty { opacity: 0.5; }
+      .kb-search-load-more { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 0; }
+      .kb-search-load-more-count { opacity: 0.7; font-size: 12px; margin-right: auto; }
+      .kb-search-load-more .kb-secondary-btn { padding: 4px 12px; }
       .kb-section-card { border: 1px solid var(--vscode-panel-border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; background: var(--vscode-editor-background); }
       .kb-parent-section, .kb-section-card-current { flex-shrink: 0; }
       .kb-section-card-children { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
