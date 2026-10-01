@@ -3,24 +3,29 @@ import type { WorkItem } from '../types';
 const BASE_QUERY = 'SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project';
 const ORDER_BY = 'ORDER BY [System.ChangedDate] DESC';
 
-export function buildSearchQuery(searchText: string, assignedToMe = false): string {
+function escapeWiqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+export function buildSearchQuery(searchText: string, assignedToMe = false, workItemType?: string): string {
   const trimmed = searchText.trim();
   const assignedToClause = assignedToMe ? ' AND [System.AssignedTo] = @Me' : '';
+  const typeClause = workItemType ? ` AND [System.WorkItemType] = '${escapeWiqlString(workItemType)}'` : '';
+  const filters = `${assignedToClause}${typeClause}`;
 
   if (!trimmed) {
-    return `${BASE_QUERY}${assignedToClause} ${ORDER_BY}`;
+    return `${BASE_QUERY}${filters} ${ORDER_BY}`;
   }
 
   if (/^\d+$/.test(trimmed)) {
-    return `${BASE_QUERY} AND [System.Id] = ${trimmed}${assignedToClause}`;
+    return `${BASE_QUERY} AND [System.Id] = ${trimmed}${filters}`;
   }
 
-  const escaped = trimmed.replace(/'/g, "''");
-  return `${BASE_QUERY} AND [System.Title] CONTAINS '${escaped}'${assignedToClause} ${ORDER_BY}`;
+  return `${BASE_QUERY} AND [System.Title] CONTAINS '${escapeWiqlString(trimmed)}'${filters} ${ORDER_BY}`;
 }
 
 export function buildTypeCountQuery(types: string[]): string {
-  const escapedTypes = types.map(t => `'${t.replace(/'/g, "''")}'`).join(', ');
+  const escapedTypes = types.map(t => `'${escapeWiqlString(t)}'`).join(', ');
   return `${BASE_QUERY} AND [System.WorkItemType] IN (${escapedTypes})`;
 }
 
@@ -39,4 +44,8 @@ export function filterWorkItemsByText(items: WorkItem[], searchText: string): Wo
 
 export function filterByAssignedTo(items: WorkItem[], userId: string): WorkItem[] {
   return items.filter(item => item.assignedTo?.id === userId);
+}
+
+export function filterByWorkItemType(items: WorkItem[], workItemType: string): WorkItem[] {
+  return items.filter(item => item.type === workItemType);
 }

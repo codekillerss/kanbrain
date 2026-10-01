@@ -138,10 +138,15 @@ export class AzureDevOpsClient {
     return data.value.map(p => ({ id: p.id, name: p.name }));
   }
 
-  async searchWorkItems(organization: string, project: string, searchText: string, assignedToMe = false): Promise<number[]> {
-    const query = buildSearchQuery(searchText, assignedToMe);
+  async searchWorkItems(
+    organization: string,
+    project: string,
+    searchText: string,
+    options: { assignedToMe?: boolean; workItemType?: string; top?: number } = {},
+  ): Promise<number[]> {
+    const query = buildSearchQuery(searchText, options.assignedToMe ?? false, options.workItemType);
     const data = await this.request<{ workItems: { id: number }[] }>(
-      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1&$top=50`,
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql?api-version=7.1&$top=${options.top ?? 50}`,
       { method: 'POST', body: JSON.stringify({ query }) },
     );
     return data.workItems.map(w => w.id);
@@ -186,21 +191,31 @@ export class AzureDevOpsClient {
     return result;
   }
 
-  async runSavedQuery(organization: string, project: string, queryId: string): Promise<number[]> {
+  async runSavedQuery(organization: string, project: string, queryId: string, top = 50): Promise<number[]> {
     const data = await this.request<{ workItems: { id: number }[] }>(
-      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql/${queryId}?api-version=7.1&$top=50`,
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/wiql/${queryId}?api-version=7.1&$top=${top}`,
     );
     return (data.workItems ?? []).map(w => w.id);
   }
 
-  async getWorkItems(organization: string, project: string, ids: number[]): Promise<WorkItem[]> {
+  // omitMissing: a work item deleted (or made inaccessible) since its id was listed comes back as
+  // null instead of failing the whole batch with a 404.
+  async getWorkItems(
+    organization: string,
+    project: string,
+    ids: number[],
+    options: { omitMissing?: boolean } = {},
+  ): Promise<WorkItem[]> {
     if (ids.length === 0) {
       return [];
     }
-    const data = await this.request<{ value: Parameters<typeof mapWorkItem>[0][] }>(
-      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems?ids=${ids.join(',')}&$expand=relations&api-version=7.1`,
+    const errorPolicy = options.omitMissing ? '&errorPolicy=omit' : '';
+    const data = await this.request<{ value: (Parameters<typeof mapWorkItem>[0] | null)[] }>(
+      `https://dev.azure.com/${organization}/${project}/_apis/wit/workitems?ids=${ids.join(',')}&$expand=relations${errorPolicy}&api-version=7.1`,
     );
-    return data.value.map(raw => mapWorkItem(raw, organization, project));
+    return data.value
+      .filter((raw): raw is Parameters<typeof mapWorkItem>[0] => raw !== null)
+      .map(raw => mapWorkItem(raw, organization, project));
   }
 
   async getChildren(organization: string, project: string, workItem: WorkItem): Promise<WorkItem[]> {

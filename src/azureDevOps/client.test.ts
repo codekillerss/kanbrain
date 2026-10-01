@@ -113,10 +113,32 @@ describe('AzureDevOpsClient', () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [] }));
     const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
 
-    await client.searchWorkItems('my-org', 'MyProject', 'login', true);
+    await client.searchWorkItems('my-org', 'MyProject', 'login', { assignedToMe: true });
 
     const [, options] = fetchImpl.mock.calls[0];
     expect(JSON.parse(options.body).query).toContain('[System.AssignedTo] = @Me');
+  });
+
+  it('includes a work item type clause in the WIQL query when requested', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.searchWorkItems('my-org', 'MyProject', 'login', { workItemType: 'Epic' });
+
+    const [, options] = fetchImpl.mock.calls[0];
+    expect(JSON.parse(options.body).query).toContain("[System.WorkItemType] = 'Epic'");
+  });
+
+  it('caps the WIQL search at the requested $top', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.searchWorkItems('my-org', 'MyProject', 'login', { top: 20000 });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql?api-version=7.1&$top=20000',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
   it('counts work items by type without fetching full details', async () => {
@@ -194,6 +216,44 @@ describe('AzureDevOpsClient', () => {
       'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql/query-1?api-version=7.1&$top=50',
       expect.anything(),
     );
+  });
+
+  it('runs a saved query capped at the requested $top', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ workItems: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.runSavedQuery('my-org', 'MyProject', 'query-1', 20000);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/MyProject/_apis/wit/wiql/query-1?api-version=7.1&$top=20000',
+      expect.anything(),
+    );
+  });
+
+  it('skips work items that no longer exist when omitMissing is set', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { id: 1, fields: { 'System.Title': 'A', 'System.State': 'New', 'System.WorkItemType': 'Task' }, relations: [] },
+          null,
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const items = await client.getWorkItems('my-org', 'MyProject', [1, 2], { omitMissing: true });
+
+    expect(items.map(i => i.id)).toEqual([1]);
+    expect(fetchImpl.mock.calls[0][0]).toContain('errorPolicy=omit');
+  });
+
+  it('does not set an errorPolicy on getWorkItems by default', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ value: [] }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await client.getWorkItems('my-org', 'MyProject', [1]);
+
+    expect(fetchImpl.mock.calls[0][0]).not.toContain('errorPolicy');
   });
 
   it('returns an empty array from getWorkItems without calling fetch when ids is empty', async () => {

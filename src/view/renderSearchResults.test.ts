@@ -46,10 +46,10 @@ describe('renderSearchResults scroll area', () => {
     expect(html.slice(scrollIndex)).not.toContain('kb-search-type-filter-trigger');
   });
 
-  it('puts the type panels inside the scrolling area', () => {
+  it('puts the result groups inside the scrolling area', () => {
     const html = renderSearchResults([workItem({ id: 1 })], withTypes);
 
-    expect(html.indexOf('kb-search-type-panel')).toBeGreaterThan(html.indexOf(SCROLL_OPEN));
+    expect(html.indexOf('kb-result-group')).toBeGreaterThan(html.indexOf(SCROLL_OPEN));
   });
 
   it('wraps the status groups in the scrolling area when there are no configured types', () => {
@@ -60,12 +60,21 @@ describe('renderSearchResults scroll area', () => {
   });
 
   it('wraps the empty message in the scrolling area too', () => {
-    const html = renderSearchResults([], withTypes);
+    const html = renderSearchResults([], config());
 
     expect(html.trimStart().startsWith(SCROLL_OPEN)).toBe(true);
     expect(html).toContain('No work items found.');
   });
+
+  it('keeps the type filter when there are no results, so another type can still be picked', () => {
+    const html = renderSearchResults([], withTypes, {}, { activeType: 'Bug' });
+
+    expect(html).toContain('kb-search-type-filter-trigger');
+    expect(html.indexOf('No work items found.')).toBeGreaterThan(html.indexOf(SCROLL_OPEN));
+  });
 });
+
+const SCROLL_OPEN_MARK = 'kb-search-results-scroll';
 
 describe('renderSearchResults', () => {
   it('shows an empty message when there are no results', () => {
@@ -160,7 +169,7 @@ describe('renderSearchResults', () => {
     const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }));
 
-    const filter = html.slice(html.indexOf('kb-search-type-filter'), html.indexOf('data-type-panel'));
+    const filter = html.slice(html.indexOf('kb-search-type-filter'), html.indexOf(SCROLL_OPEN_MARK));
     expect(filter).toContain('All');
     expect(filter).not.toMatch(/\(\d+\)/);
   });
@@ -181,27 +190,77 @@ describe('renderSearchResults', () => {
     expect(html.slice(allOptionStart, allOptionEnd)).not.toContain('<svg>');
   });
 
-  it('marks a filter option as empty only when the listed results have no items of that type', () => {
-    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }));
-
-    const optionTag = (type: string) => {
-      const start = html.lastIndexOf('<button', html.indexOf(`data-type="${type}"`));
-      return html.slice(start, html.indexOf('>', start));
-    };
-    expect(optionTag('Task')).toContain('kb-search-type-filter-option-empty');
-    expect(optionTag('Epic')).not.toContain('kb-search-type-filter-option-empty');
-  });
-
-  it("scopes each type panel to only that type's items", () => {
-    const items = [workItem({ id: 1, type: 'Epic', title: 'An epic' }), workItem({ id: 2, type: 'Task', title: 'A task' })];
+  it('renders every result in a single list, since the type is filtered by the query itself', () => {
+    const items = [workItem({ id: 1, type: 'Epic' }), workItem({ id: 2, type: 'Task' })];
     const html = renderSearchResults(items, config({ workflowSteps: { Epic: {}, Task: {} } }));
 
-    const epicPanelStart = html.indexOf('data-type-panel="Epic"');
-    const taskPanelStart = html.indexOf('data-type-panel="Task"');
-    const epicPanel = html.slice(epicPanelStart, taskPanelStart);
+    expect(html).not.toContain('kb-search-type-panel');
+    expect(html.match(/data-action="pick-work-item"/g)).toHaveLength(2);
+  });
 
-    expect(epicPanel).toContain('An epic');
-    expect(epicPanel).not.toContain('A task');
+  it('shows the active type on the trigger and exposes it to the webview', () => {
+    const html = renderSearchResults(
+      [workItem({ type: 'Epic' })],
+      config({ workflowSteps: { Epic: {}, Task: {} }, typeIcons: { Epic: '<svg><path d="M0 0"/></svg>' } }),
+      {},
+      { activeType: 'Epic' },
+    );
+
+    const label = html.slice(html.indexOf('kb-search-type-filter-trigger-label'), html.indexOf('kb-search-type-filter-icon'));
+    expect(label).toContain('Epic');
+    expect(label).toContain('<svg><path d="M0 0"/></svg>');
+    expect(html).toContain('data-active-type="Epic"');
+  });
+
+  it('falls back to "all" when the active type is not a configured type', () => {
+    const html = renderSearchResults([workItem()], config({ workflowSteps: { Epic: {} } }), {}, { activeType: 'Gone' });
+
+    expect(html).toContain('data-active-type="all"');
+  });
+
+  it('marks no filter option as empty, since only one type is ever loaded', () => {
+    const html = renderSearchResults([workItem({ type: 'Epic' })], config({ workflowSteps: { Epic: {}, Task: {} } }));
+
+    expect(html).not.toContain('kb-search-type-filter-option-empty');
+  });
+
+  it('offers a Load more button carrying the search token when more results remain', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], config(), {}, { hasMore: true, total: 120, token: 7 });
+
+    expect(html).toContain('data-action="load-more-search-results"');
+    expect(html).toContain('data-token="7"');
+    expect(html).toContain('1 of 120');
+  });
+
+  it('puts the Load more button inside the scrolling area, after the results', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], config(), {}, { hasMore: true, total: 2, token: 1 });
+
+    expect(html.indexOf('load-more-search-results')).toBeGreaterThan(html.indexOf('kb-result-group'));
+  });
+
+  it('omits the total when it is unknown (results filtered after fetching)', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], config(), {}, { hasMore: true, token: 1 });
+
+    expect(html).toContain('load-more-search-results');
+    expect(html).not.toContain(' of ');
+  });
+
+  it('shows no Load more button when everything is loaded', () => {
+    const html = renderSearchResults([workItem({ id: 1 })], config(), {}, { hasMore: false, total: 1, token: 1 });
+
+    expect(html).not.toContain('load-more-search-results');
+  });
+
+  it('offers Load more even when the scanned batch had no matches yet', () => {
+    const html = renderSearchResults([], config(), {}, { hasMore: true, token: 1 });
+
+    expect(html).toContain('load-more-search-results');
+  });
+
+  it('tags each status group with its status so the webview can keep it collapsed across pages', () => {
+    const html = renderSearchResults([workItem({ status: 'In "Review"' })], config());
+
+    expect(html).toContain('data-status="In &quot;Review&quot;"');
   });
 
   it('shows "Unassigned" on a result item when the item has no assignee', () => {
