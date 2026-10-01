@@ -72,6 +72,18 @@ inicial em vez de foto, que é degradação aceitável e não falha.
 A resposta sai de graça na verificação manual: rosto significa que a API preenche, inicial significa
 que não. Registrar aqui quando for observado, em vez de supor agora.
 
+**Observado em 2026-10-01:** os **membros do time** vêm com avatar utilizável — o `imageUrl` do
+endpoint de membros resolve em data URI pelo `getAuthenticatedImageDataUri` e aparece na opção. Sobre
+os **resultados da busca** na organização, continua sem resposta: o tenant usado no teste tem um único
+usuário, então não houve resultado fora do time para observar. Fica assim de propósito — se a API não
+preencher, a opção cai na inicial, que é degradação aceitável e não falha.
+
+**Armadilha encontrada no mesmo teste:** o perfil do usuário autenticado não traz avatar, e como ele
+entra na lista antes dos membros do time, a deduplicação descartava justamente o registro que tinha a
+foto. Quem está logado aparecia sempre com a inicial, mesmo tendo imagem. A deduplicação passou a
+adotar um avatar que o registro guardado não tinha, mantendo a posição — regra geral, que serve
+também se a foto vier só da busca.
+
 ## Avatares: o caminho já existe
 
 `resolveAvatars` (no provider) resolve URL autenticada em data URI e guarda em `avatarCache`. Hoje ele
