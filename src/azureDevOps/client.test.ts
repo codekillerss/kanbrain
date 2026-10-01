@@ -1016,6 +1016,33 @@ describe('AzureDevOpsClient.listProjectPullRequests', () => {
   });
 });
 
+describe('AzureDevOpsClient.getCurrentUserProfile', () => {
+  it('maps the signed-in user to an identity the picker can offer', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Jane Doe', emailAddress: 'jane@example.com' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const profile = await client.getCurrentUserProfile();
+
+    expect(profile).toEqual({ id: 'user-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: null });
+  });
+
+  it('returns null when the profile has no mail address, since an empty uniqueName would unassign', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Jane Doe' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    expect(await client.getCurrentUserProfile()).toBeNull();
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'no access' }, false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    expect(await client.getCurrentUserProfile()).toBeNull();
+  });
+});
+
 describe('AzureDevOpsClient.getCurrentUserId', () => {
   it('fetches and returns the current user id from the profile endpoint', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'user-1' }));

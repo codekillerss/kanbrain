@@ -486,13 +486,33 @@ export class AzureDevOpsClient {
     }
   }
 
-  async getCurrentUserId(): Promise<string | null> {
+  private async fetchProfile(): Promise<{ id: string; displayName?: string; emailAddress?: string } | null> {
     try {
-      const profile = await this.request<{ id: string }>('https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1');
-      return profile.id;
+      return await this.request<{ id: string; displayName?: string; emailAddress?: string }>(
+        'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1',
+      );
     } catch {
       return null;
     }
+  }
+
+  async getCurrentUserProfile(): Promise<IdentitySearchResult | null> {
+    const profile = await this.fetchProfile();
+    // Without a mail address there is nothing to write to System.AssignedTo, and an empty
+    // uniqueName is how the picker clears the field — offering it would unassign instead.
+    if (!profile?.emailAddress) {
+      return null;
+    }
+    return {
+      id: profile.id,
+      displayName: profile.displayName ?? profile.emailAddress,
+      uniqueName: profile.emailAddress,
+      imageUrl: null,
+    };
+  }
+
+  async getCurrentUserId(): Promise<string | null> {
+    return (await this.fetchProfile())?.id ?? null;
   }
 
   async listProjectPullRequests(
