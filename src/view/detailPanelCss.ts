@@ -32,14 +32,18 @@ export function detailPanelCss(): string {
     .kb-detail-html-section { margin-bottom: 20px; }
     .kb-detail-section-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; font-weight: 600; margin-bottom: 8px; }
     .kb-detail-html-body { line-height: 1.5; }
-    .kb-detail-html-body img { max-width: 100%; }
-    .kb-comment-body img { max-width: 100%; }
+    /* Descriptions and comments are Azure DevOps HTML (unbroken URLs, <pre>, tables, inline fixed
+       widths). Break long words and scroll whatever still can't fit inside its own box, so nothing
+       spills over the side column. */
+    .kb-detail-html-body, .kb-comment-body { overflow-wrap: anywhere; overflow-x: auto; }
+    .kb-detail-html-body pre, .kb-comment-body pre { white-space: pre-wrap; }
+    .kb-detail-html-body img, .kb-comment-body img { max-width: 100%; height: auto; }
     .kb-image-unavailable { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px dashed var(--vscode-panel-border); border-radius: 4px; font-size: 12px; opacity: 0.7; }
     .kb-detail-group { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; margin-bottom: 12px; }
     .kb-detail-group-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; font-weight: 600; margin-bottom: 8px; }
     .kb-detail-field { margin-bottom: 8px; }
     .kb-detail-field-label { font-size: 11px; opacity: 0.7; }
-    .kb-detail-field-value { font-size: 13px; }
+    .kb-detail-field-value { font-size: 13px; overflow-wrap: anywhere; }
     .kb-related-subgroup-label { font-size: 11px; font-weight: 600; opacity: 0.7; margin: 8px 0 4px; }
     .kb-related-subgroup-label:first-child { margin-top: 0; }
     .kb-related-item { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 4px; color: inherit; text-decoration: none; cursor: pointer; }
