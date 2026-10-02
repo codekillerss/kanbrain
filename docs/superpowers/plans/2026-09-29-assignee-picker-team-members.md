@@ -138,6 +138,116 @@ Add the image property to the `properties` array `searchIdentities` already send
 
 ---
 
+---
+
+## Round two — answering the second review
+
+The second review on #20 raised one blocking requirement and five further defects. All six were
+verified against the code and all six hold; none is contested.
+
+> **On the blocking one, for the record:** discarding stale responses was already written into Task 6,
+> Step 4 of this plan — *"A stale response for an older query is discarded, the way the active work
+> item guard already discards stale fetches"* — and was simply not implemented. The step existed and
+> was skipped, and the exposure was then widened by sending two messages per keystroke plus one on
+> open. A plan step is not done until the code does it.
+
+---
+
+### Task 8: Discard identity responses that are no longer current (blocking)
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [ ] **Step 1: Let the webview own the sequence** — each `search-identities` message carries a
+  request id generated where the intent originates, incrementing per picker. The webview remembers
+  the newest id it has issued for that picker.
+- [ ] **Step 2: Echo it on every reply** — all three `identity-results` posts carry the id they are
+  answering, including the local-filter reply and the error replies.
+- [ ] **Step 3: Drop the stale ones** — the webview ignores any reply whose id is not the newest it
+  issued for that picker. This is what makes the two reported races impossible: the open reply
+  landing after a typed filter, and `jan` landing after `jane`.
+- [ ] **Step 4: Verify** — `npm run compile` and `npx vitest run` green, then the two races by hand.
+
+---
+
+### Task 9: Stop caching a failed current-user lookup
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [ ] **Step 1: Cache only a result worth keeping** — a failed profile fetch must not pin "assign to
+  me" out of the list until the window reloads. Only a resolved identity is remembered; anything
+  else is retried on the next open.
+- [ ] **Step 2: Verify** — compile and tests green.
+
+---
+
+### Task 10: Take the signed-in user's identity from their team record
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+The review asks for the login identifier rather than `emailAddress`, which is editable and need not
+match the UPN that `System.AssignedTo` and the team members use. Rather than guessing which profile
+field carries it, prefer the record the team already returns.
+
+- [ ] **Step 1: Match the signed-in user inside the team** — by the id `getCurrentUserId` already
+  resolves. When found, that record is used: it carries the same `uniqueName` the board will accept
+  and the avatar the profile lacks, so the duplicate-with-no-face case disappears at the source.
+- [ ] **Step 2: Fall back to the profile** only when the user is not in the selected team, which is
+  the one case the team cannot answer.
+- [ ] **Step 3: Verify** — compile and tests green.
+
+---
+
+### Task 11: Report a failed team load beside the list, not instead of it
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [ ] **Step 1: Keep what loaded** — a 403 on the teams API currently replaces the whole menu with an
+  error, hiding the "assign to me" entry that resolved perfectly well. The notice is rendered
+  alongside the options, in the same reply, so nothing that worked is taken away.
+- [ ] **Step 2: Verify** — compile and tests green.
+
+---
+
+### Task 12: Key the team cache by project, and let it expire
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [ ] **Step 1: Key it fully** — organization, project and team name, so a same-named team in another
+  project cannot serve the previous project's members.
+- [ ] **Step 2: Let it go stale** — entries carry the time they were fetched and are refetched after
+  a few minutes, so somebody added to the team during a session eventually appears.
+- [ ] **Step 3: Verify** — compile and tests green.
+
+---
+
+### Task 13: Cancel a pending search when the picker reopens
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+- [ ] **Step 1: Clear the timer on open** — reopening resets the input, so the debounce left running
+  from the previous session must not fire a search for a query the user can no longer see. Task 8
+  would already discard its reply; cancelling it is still correct, and cheaper.
+- [ ] **Step 2: Verify** — compile and tests green.
+
+---
+
+### Task 14: Changelog
+
+**Files:**
+- Modify: `CHANGELOG.md`
+
+- [ ] **Step 1:** Only if any of the above changes what a user sees. Fixes to races and caching that
+  never shipped do not earn an entry of their own — the feature is still unreleased, and its existing
+  entry already describes the behaviour these tasks make true.
+
+---
+
 ## Manual verification (nothing here is covered by tests)
 
 In an Extension Development Host (F5) against a real Azure DevOps project:
@@ -150,6 +260,16 @@ In an Extension Development Host (F5) against a real Azure DevOps project:
 - [ ] Nobody appears twice when they are both in the team and in the search results.
 - [ ] Changing the team on the Home screen changes which members the picker offers.
 - [ ] Picking any option writes to the board, confirmed in the browser; "Unassigned" clears it.
+
+Added for round two:
+
+- [ ] Opening the picker and typing immediately leaves the list filtered by what was typed — the
+      opening reply does not land afterwards and restore everyone.
+- [ ] Typing `jan` then `jane` leaves `jane`'s results on screen, not `jan`'s.
+- [ ] Typing, closing the menu within the debounce window, and reopening shows the full list against
+      an empty input, not the previous query's results.
+- [ ] You appear once, with your picture, and assigning yourself writes an address the board accepts.
+- [ ] A team that cannot be loaded shows its error without hiding the "assign to me" entry.
 
 ## Commits
 
