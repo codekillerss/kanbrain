@@ -88,7 +88,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
   private teamMemberCache = new Map<string, IdentitySearchResult[]>();
-  private currentUserIdentityCache: IdentitySearchResult | null | undefined;
+  private currentUserIdentityCache: IdentitySearchResult | null = null;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'workflow' | 'profiles' | null = 'skills';
@@ -1371,8 +1371,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return members;
   }
 
-  private async currentUserIdentity(): Promise<IdentitySearchResult | null> {
-    if (this.currentUserIdentityCache === undefined) {
+  private async currentUserIdentity(teamMembers: IdentitySearchResult[]): Promise<IdentitySearchResult | null> {
+    // The team record is the better source: it carries the identifier the board itself uses for
+    // this person, and a picture, where the profile carries an editable contact address and none.
+    const id = await this.resolveCurrentUserId();
+    const fromTeam = id ? teamMembers.find(m => m.id === id) : undefined;
+    if (fromTeam) {
+      return fromTeam;
+    }
+    // Only reachable when the signed-in user is not in the selected team, which is the one case
+    // the team cannot answer. A failed lookup is not remembered, so it is retried on the next open
+    // rather than hiding "assign to me" until the window reloads.
+    if (!this.currentUserIdentityCache) {
       this.currentUserIdentityCache = this.client ? await this.client.getCurrentUserProfile() : null;
     }
     return this.currentUserIdentityCache;
@@ -1407,7 +1417,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       teamError = error instanceof Error ? error.message : String(error);
     }
-    const currentUser = await this.currentUserIdentity();
+    const currentUser = await this.currentUserIdentity(teamMembers);
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
     if (local.length > 0 || !query.trim()) {
       await this.postIdentityOptions(workItemId, requestId, local);
