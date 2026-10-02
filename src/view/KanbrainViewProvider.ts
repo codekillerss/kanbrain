@@ -1388,13 +1388,21 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return this.currentUserIdentityCache;
   }
 
-  private async postIdentityOptions(workItemId: number, requestId: number, identities: IdentitySearchResult[]): Promise<void> {
+  private async postIdentityOptions(
+    workItemId: number,
+    requestId: number,
+    identities: IdentitySearchResult[],
+    notice?: string | null,
+  ): Promise<void> {
     const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
+    // A notice never replaces the options: a team that failed to load must not take away the
+    // "assign to me" entry that resolved perfectly well beside it.
+    const noticeHtml = notice ? `<div class="kb-empty">${escapeHtml(notice)}</div>` : '';
     this.view?.webview.postMessage({
       type: 'identity-results',
       workItemId,
       requestId,
-      html: renderIdentityOptions(identities, workItemId, avatars),
+      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars)}`,
     });
   }
 
@@ -1418,26 +1426,19 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       teamError = error instanceof Error ? error.message : String(error);
     }
     const currentUser = await this.currentUserIdentity(teamMembers);
+    const teamNotice = teamError ? `Could not load the team: ${teamError}` : null;
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
-    if (local.length > 0 || !query.trim()) {
-      await this.postIdentityOptions(workItemId, requestId, local);
+    if (local.length > 0 || teamNotice || !query.trim()) {
+      await this.postIdentityOptions(workItemId, requestId, local, teamNotice);
     }
 
     if (!query.trim()) {
-      if (teamError) {
-        this.view.webview.postMessage({
-          type: 'identity-results',
-          workItemId,
-          requestId,
-          html: `<div class="kb-empty">Could not load the team: ${escapeHtml(teamError)}</div>`,
-        });
-      }
       return;
     }
 
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query));
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), teamNotice);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
