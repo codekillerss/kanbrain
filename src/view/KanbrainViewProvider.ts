@@ -283,7 +283,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-status') {
         await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'search-identities') {
-        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''));
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0));
       } else if (message.type === 'select-assignee') {
         await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
@@ -1378,16 +1378,17 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     return this.currentUserIdentityCache;
   }
 
-  private async postIdentityOptions(workItemId: number, identities: IdentitySearchResult[]): Promise<void> {
+  private async postIdentityOptions(workItemId: number, requestId: number, identities: IdentitySearchResult[]): Promise<void> {
     const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
     this.view?.webview.postMessage({
       type: 'identity-results',
       workItemId,
+      requestId,
       html: renderIdentityOptions(identities, workItemId, avatars),
     });
   }
 
-  private async searchIdentities(workItemId: number, query: string): Promise<void> {
+  private async searchIdentities(workItemId: number, query: string, requestId: number): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -1409,7 +1410,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const currentUser = await this.currentUserIdentity();
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
     if (local.length > 0 || !query.trim()) {
-      await this.postIdentityOptions(workItemId, local);
+      await this.postIdentityOptions(workItemId, requestId, local);
     }
 
     if (!query.trim()) {
@@ -1417,6 +1418,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         this.view.webview.postMessage({
           type: 'identity-results',
           workItemId,
+          requestId,
           html: `<div class="kb-empty">Could not load the team: ${escapeHtml(teamError)}</div>`,
         });
       }
@@ -1425,12 +1427,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      await this.postIdentityOptions(workItemId, mergePickerIdentities(currentUser, teamMembers, results, query));
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
         type: 'identity-results',
         workItemId,
+        requestId,
         html: `<div class="kb-empty">Error: ${escapeHtml(message)}</div>`,
       });
     }
@@ -1836,13 +1839,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     let identitySearchTimer = null;
+    // Each picker tracks the newest request it issued, so a reply that arrives out of order —
+    // the opening list landing after a typed filter, or 'jan' after 'jane' — is dropped instead
+    // of overwriting what the user is currently looking at.
+    const latestIdentityRequest = {};
+
+    function nextIdentityRequestId(workItemId) {
+      const next = (latestIdentityRequest[workItemId] || 0) + 1;
+      latestIdentityRequest[workItemId] = next;
+      return next;
+    }
     document.querySelectorAll('.kb-assignee-search-input').forEach((input) => {
       input.addEventListener('input', () => {
         const workItemId = input.dataset.id;
         const query = input.value;
         clearTimeout(identitySearchTimer);
         identitySearchTimer = setTimeout(() => {
-          vscode.postMessage({ type: 'search-identities', workItemId, query });
+          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId) });
         }, 300);
       });
     });
@@ -2541,7 +2554,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
               input.value = '';
               input.focus({ preventScroll: true });
             }
-            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '' });
+            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id) });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
@@ -2813,6 +2826,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         triggerSearch();
         snapshotSearch();
       } else if (event.data.type === 'identity-results') {
+        if (event.data.requestId !== latestIdentityRequest[event.data.workItemId]) return;
         const results = document.querySelector('.kb-assignee-picker[data-id="' + event.data.workItemId + '"] .kb-assignee-picker-results');
         if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
