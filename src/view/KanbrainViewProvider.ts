@@ -2570,6 +2570,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
               input.value = '';
               input.focus({ preventScroll: true });
             }
+            // Reopening clears the input, so a debounce still pending from the previous session
+            // must not go on to search for a query the user can no longer see.
+            clearTimeout(identitySearchTimer);
             vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id) });
           }
         }
