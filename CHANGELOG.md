@@ -2,6 +2,12 @@
 
 All notable changes to Kanbrain are documented here. Versions prior to 0.3.0 were not documented.
 
+## [Unreleased]
+
+### Added
+
+- A work item's assignee can now be changed from the Flow cards — the main card, the parent card and the subtasks, the same set that already allows changing the status. The card reads exactly as it does today until you click the name: then a picker opens, offering people straight away rather than waiting for you to type. You are first on the list, so assigning something to yourself is one click, followed by the members of the team selected on the Home screen, each with their profile picture. Typing narrows that list instantly, without a round trip, and anyone else in the organization is still reachable — those matches are added below the team's, without repeating anyone already shown. "Unassigned" clears the field. Nothing on the card changes appearance while you are only reading it, so the extra capability costs no visual noise.
+
 ## [0.19.15] - 2026-10-01
 
 ### Fixed

@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
-import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation } from '../azureDevOps/client';
+import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation, type IdentitySearchResult } from '../azureDevOps/client';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 import { sortChildren, parseChildSortCriteria } from './sortChildren';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
@@ -24,6 +24,7 @@ import { sidebarCsp } from './sidebarCsp';
 import { skipWhileRunning } from './skipWhileRunning';
 import { render, renderChildrenList } from './render';
 import { renderIdentityOptions } from './renderIdentityOptions';
+import { mergePickerIdentities } from './mergePickerIdentities';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
@@ -49,6 +50,7 @@ import {
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
+const TEAM_MEMBER_CACHE_TTL_MS = 5 * 60 * 1000;
 // The most ids a WIQL request may return; the search snapshot is paged through locally from there.
 const SEARCH_SNAPSHOT_LIMIT = 20000;
 
@@ -86,6 +88,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
+  private teamMemberCache = new Map<string, { members: IdentitySearchResult[]; fetchedAt: number }>();
+  private currentUserIdentityCache: IdentitySearchResult | null = null;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'workflow' | 'profiles' | null = 'skills';
@@ -280,7 +284,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-status') {
         await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'search-identities') {
-        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''));
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0));
       } else if (message.type === 'select-assignee') {
         await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
@@ -1331,7 +1335,83 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.invalidateCardCacheFor(id);
   }
 
-  private async searchIdentities(workItemId: number, query: string): Promise<void> {
+  private async resolveAvatarUrls(urls: (string | null)[]): Promise<Record<string, string>> {
+    const unique = [...new Set(urls.filter((u): u is string => !!u))];
+    const uncached = unique.filter(u => !this.avatarCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.avatarCache.set(url, this.client ? await this.client.getAuthenticatedImageDataUri(url) : null);
+      }),
+    );
+    const resolved: Record<string, string> = {};
+    for (const url of unique) {
+      const dataUri = this.avatarCache.get(url);
+      if (dataUri) {
+        resolved[url] = dataUri;
+      }
+    }
+    return resolved;
+  }
+
+  private async loadTeamMembers(config: KanbrainConfig): Promise<IdentitySearchResult[]> {
+    const teamName = this.selectedTeam ?? config.defaultTeam;
+    if (!this.client || !teamName) {
+      return [];
+    }
+    // Keyed by project as well as team: two projects can both have a "Backend", and the picker
+    // must not offer the other one's people. Entries go stale so somebody added to the team
+    // during a long session eventually shows up.
+    const key = `${config.organization}/${config.project}/${teamName}`;
+    const cached = this.teamMemberCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < TEAM_MEMBER_CACHE_TTL_MS) {
+      return cached.members;
+    }
+    const teams = await this.client.listTeams(config.organization, config.project);
+    const team = teams.find(t => t.name === teamName);
+    if (!team) {
+      return [];
+    }
+    const members = await this.client.listTeamMembers(config.organization, config.project, team.id);
+    this.teamMemberCache.set(key, { members, fetchedAt: Date.now() });
+    return members;
+  }
+
+  private async currentUserIdentity(teamMembers: IdentitySearchResult[]): Promise<IdentitySearchResult | null> {
+    // The team record is the better source: it carries the identifier the board itself uses for
+    // this person, and a picture, where the profile carries an editable contact address and none.
+    const id = await this.resolveCurrentUserId();
+    const fromTeam = id ? teamMembers.find(m => m.id === id) : undefined;
+    if (fromTeam) {
+      return fromTeam;
+    }
+    // Only reachable when the signed-in user is not in the selected team, which is the one case
+    // the team cannot answer. A failed lookup is not remembered, so it is retried on the next open
+    // rather than hiding "assign to me" until the window reloads.
+    if (!this.currentUserIdentityCache) {
+      this.currentUserIdentityCache = this.client ? await this.client.getCurrentUserProfile() : null;
+    }
+    return this.currentUserIdentityCache;
+  }
+
+  private async postIdentityOptions(
+    workItemId: number,
+    requestId: number,
+    identities: IdentitySearchResult[],
+    notice?: string | null,
+  ): Promise<void> {
+    const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
+    // A notice never replaces the options: a team that failed to load must not take away the
+    // "assign to me" entry that resolved perfectly well beside it.
+    const noticeHtml = notice ? `<div class="kb-empty">${escapeHtml(notice)}</div>` : '';
+    this.view?.webview.postMessage({
+      type: 'identity-results',
+      workItemId,
+      requestId,
+      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars)}`,
+    });
+  }
+
+  private async searchIdentities(workItemId: number, query: string, requestId: number): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -1339,14 +1419,37 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
+
+    // The team and the signed-in user answer immediately, so the common case — assigning to
+    // someone you work with — never waits on the network. The organization-wide search lands
+    // afterwards and is merged in below them.
+    let teamMembers: IdentitySearchResult[] = [];
+    let teamError: string | null = null;
+    try {
+      teamMembers = await this.loadTeamMembers(config);
+    } catch (error) {
+      teamError = error instanceof Error ? error.message : String(error);
+    }
+    const currentUser = await this.currentUserIdentity(teamMembers);
+    const teamNotice = teamError ? `Could not load the team: ${teamError}` : null;
+    const local = mergePickerIdentities(currentUser, teamMembers, [], query);
+    if (local.length > 0 || teamNotice || !query.trim()) {
+      await this.postIdentityOptions(workItemId, requestId, local, teamNotice);
+    }
+
+    if (!query.trim()) {
+      return;
+    }
+
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      this.view.webview.postMessage({ type: 'identity-results', workItemId, html: renderIdentityOptions(results, workItemId) });
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), teamNotice);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.view.webview.postMessage({
         type: 'identity-results',
         workItemId,
+        requestId,
         html: `<div class="kb-empty">Error: ${escapeHtml(message)}</div>`,
       });
     }
@@ -1752,13 +1855,23 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     let identitySearchTimer = null;
+    // Each picker tracks the newest request it issued, so a reply that arrives out of order —
+    // the opening list landing after a typed filter, or 'jan' after 'jane' — is dropped instead
+    // of overwriting what the user is currently looking at.
+    const latestIdentityRequest = {};
+
+    function nextIdentityRequestId(workItemId) {
+      const next = (latestIdentityRequest[workItemId] || 0) + 1;
+      latestIdentityRequest[workItemId] = next;
+      return next;
+    }
     document.querySelectorAll('.kb-assignee-search-input').forEach((input) => {
       input.addEventListener('input', () => {
         const workItemId = input.dataset.id;
         const query = input.value;
         clearTimeout(identitySearchTimer);
         identitySearchTimer = setTimeout(() => {
-          vscode.postMessage({ type: 'search-identities', workItemId, query });
+          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId) });
         }, 300);
       });
     });
@@ -2453,7 +2566,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             menu.style.minWidth = rect.width + 'px';
             menu.classList.remove('kb-hidden');
             const input = menu.querySelector('.kb-assignee-search-input');
-            if (input) input.focus({ preventScroll: true });
+            if (input) {
+              input.value = '';
+              input.focus({ preventScroll: true });
+            }
+            // Reopening clears the input, so a debounce still pending from the previous session
+            // must not go on to search for a query the user can no longer see.
+            clearTimeout(identitySearchTimer);
+            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id) });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
@@ -2725,6 +2845,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         triggerSearch();
         snapshotSearch();
       } else if (event.data.type === 'identity-results') {
+        if (event.data.requestId !== latestIdentityRequest[event.data.workItemId]) return;
         const results = document.querySelector('.kb-assignee-picker[data-id="' + event.data.workItemId + '"] .kb-assignee-picker-results');
         if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
