@@ -50,6 +50,7 @@ import {
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
+const TEAM_MEMBER_CACHE_TTL_MS = 5 * 60 * 1000;
 // The most ids a WIQL request may return; the search snapshot is paged through locally from there.
 const SEARCH_SNAPSHOT_LIMIT = 20000;
 
@@ -87,7 +88,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
-  private teamMemberCache = new Map<string, IdentitySearchResult[]>();
+  private teamMemberCache = new Map<string, { members: IdentitySearchResult[]; fetchedAt: number }>();
   private currentUserIdentityCache: IdentitySearchResult | null = null;
   private parentCollapsed = false;
   private childrenCollapsed = false;
@@ -1357,9 +1358,13 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!this.client || !teamName) {
       return [];
     }
-    const cached = this.teamMemberCache.get(teamName);
-    if (cached) {
-      return cached;
+    // Keyed by project as well as team: two projects can both have a "Backend", and the picker
+    // must not offer the other one's people. Entries go stale so somebody added to the team
+    // during a long session eventually shows up.
+    const key = `${config.organization}/${config.project}/${teamName}`;
+    const cached = this.teamMemberCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < TEAM_MEMBER_CACHE_TTL_MS) {
+      return cached.members;
     }
     const teams = await this.client.listTeams(config.organization, config.project);
     const team = teams.find(t => t.name === teamName);
@@ -1367,7 +1372,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       return [];
     }
     const members = await this.client.listTeamMembers(config.organization, config.project, team.id);
-    this.teamMemberCache.set(teamName, members);
+    this.teamMemberCache.set(key, { members, fetchedAt: Date.now() });
     return members;
   }
 
