@@ -126,11 +126,11 @@ function renderAssigneePicker(workItem: WorkItem, avatars: Record<string, string
     ? `${renderAvatarOrInitial(workItem.assignedTo.displayName, workItem.assignedTo.imageUrl, avatars)}${escapeHtml(workItem.assignedTo.displayName)}`
     : `<span class="kb-avatar-initial">?</span>Unassigned`;
   return `
-    <div class="kb-assignee-picker" data-id="${workItem.id}">
+    <div class="kb-assignee-picker" data-id="${workItem.id}" data-current-id="${escapeHtml(workItem.assignedTo?.id ?? '')}">
       <button type="button" class="kb-assignee-row kb-assignee-picker-trigger" data-action="toggle-assignee-picker">${current}</button>
       <div class="kb-assignee-picker-menu kb-hidden">
         <input type="text" class="kb-input kb-assignee-search-input" data-id="${workItem.id}" placeholder="Search people...">
-        <button type="button" class="kb-assignee-picker-option" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned</button>
+        <button type="button" class="kb-assignee-picker-option${workItem.assignedTo ? '' : ' kb-assignee-picker-option-active'}" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned${workItem.assignedTo ? '' : '<span class="kb-assignee-picker-option-check">✓</span>'}</button>
         <div class="kb-assignee-picker-results"></div>
       </div>
     </div>

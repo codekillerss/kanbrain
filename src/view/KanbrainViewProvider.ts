@@ -286,7 +286,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-status') {
         await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'search-identities') {
-        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0));
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0), String(message.currentId ?? ''));
       } else if (message.type === 'select-assignee') {
         await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
@@ -1413,6 +1413,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     requestId: number,
     identities: IdentitySearchResult[],
     notices: (string | null)[] = [],
+    currentId = '',
   ): Promise<void> {
     const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
     // A notice never replaces the options: something that failed must not take away what loaded
@@ -1426,11 +1427,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       type: 'identity-results',
       workItemId,
       requestId,
-      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars)}`,
+      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars, currentId || null)}`,
     });
   }
 
-  private async searchIdentities(workItemId: number, query: string, requestId: number): Promise<void> {
+  private async searchIdentities(workItemId: number, query: string, requestId: number, currentId: string): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -1454,7 +1455,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
     const searching = query.trim().length > 0;
     if (local.length > 0 || teamNotice || !searching) {
-      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice]);
+      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice], currentId);
     } else {
       // Nobody local matches and a search is on its way. Saying so beats leaving the previous
       // request's list on screen under a query it does not answer.
@@ -1472,13 +1473,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice]);
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice], currentId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      await this.postIdentityOptions(workItemId, requestId, local, [
-        teamNotice,
-        `Could not search the organization: ${message}`,
-      ]);
+      await this.postIdentityOptions(
+        workItemId,
+        requestId,
+        local,
+        [teamNotice, `Could not search the organization: ${message}`],
+        currentId,
+      );
     }
   }
 
@@ -1898,7 +1902,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         const query = input.value;
         clearTimeout(identitySearchTimer);
         identitySearchTimer = setTimeout(() => {
-          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId) });
+          const picker = input.closest('.kb-assignee-picker');
+          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId), currentId: picker ? picker.dataset.currentId : '' });
         }, 300);
       });
     });
@@ -2600,7 +2605,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             // Reopening clears the input, so a debounce still pending from the previous session
             // must not go on to search for a query the user can no longer see.
             clearTimeout(identitySearchTimer);
-            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id) });
+            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id), currentId: picker.dataset.currentId });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
@@ -3230,8 +3235,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-status-picker-menu.kb-hidden, .kb-assignee-picker-menu.kb-hidden { display: none; }
       .kb-status-picker-option, .kb-assignee-picker-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-status-picker-option:hover, .kb-assignee-picker-option:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-status-picker-option-active { font-weight: 600; background: var(--vscode-list-inactiveSelectionBackground); }
-      .kb-status-picker-option-check { margin-left: auto; flex-shrink: 0; }
+      .kb-status-picker-option-active, .kb-assignee-picker-option-active { font-weight: 600; background: var(--vscode-list-inactiveSelectionBackground); }
+      .kb-status-picker-option-check, .kb-assignee-picker-option-check { margin-left: auto; flex-shrink: 0; }
       .kb-assignee-picker-menu .kb-assignee-search-input { margin-bottom: 2px; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }

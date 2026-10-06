@@ -437,6 +437,24 @@ describe('renderWorkItemCard', () => {
     expect(html).toContain('class="kb-assignee-row kb-assignee-picker-trigger"');
   });
 
+  it('marks its own "Unassigned" entry when the work item has no assignee', () => {
+    const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
+
+    const option = html.split('<button').find(b => b.includes('data-action="select-assignee"'));
+    expect(option).toContain('kb-assignee-picker-option-active');
+    expect(option).toContain('✓');
+  });
+
+  it('does not mark "Unassigned" when somebody is assigned', () => {
+    const html = renderWorkItemCard(
+      workItem({ assignedTo: { displayName: 'Jane Doe', imageUrl: null } }),
+      config, 'kb-main-card', true, {}, false, null, false, undefined, false, true,
+    );
+
+    const option = html.split('<button').find(b => b.includes('data-action="select-assignee"'));
+    expect(option).not.toContain('kb-assignee-picker-option-active');
+  });
+
   it('shows "Unassigned" as the trigger label when there is no assignee and editable is true', () => {
     const html = renderWorkItemCard(workItem({ assignedTo: null }), config, 'kb-main-card', true, {}, false, null, false, undefined, false, true);
 

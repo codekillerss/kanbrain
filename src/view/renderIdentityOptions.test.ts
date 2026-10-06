@@ -28,6 +28,32 @@ describe('renderIdentityOptions', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
+  it('marks the option whose identity is the one currently assigned', () => {
+    const results = [identity({ id: 'u1', displayName: 'Jane Doe' }), identity({ id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com' })];
+
+    const html = renderIdentityOptions(results, 482, {}, 'u2');
+
+    const buttons = html.split('<button').filter(Boolean);
+    const jane = buttons.find(b => b.includes('Jane Doe'))!;
+    const john = buttons.find(b => b.includes('John Roe'))!;
+
+    expect(john).toContain('kb-assignee-picker-option-active');
+    expect(john).toContain('\u2713');
+    expect(jane).not.toContain('kb-assignee-picker-option-active');
+  });
+
+  it('marks nothing when the assigned identity is not among the options', () => {
+    const html = renderIdentityOptions([identity()], 482, {}, 'someone-else');
+
+    expect(html).not.toContain('kb-assignee-picker-option-active');
+  });
+
+  it('marks nothing when there is no current assignee', () => {
+    const html = renderIdentityOptions([identity()], 482, {}, null);
+
+    expect(html).not.toContain('kb-assignee-picker-option-active');
+  });
+
   it('shows the avatar before the name when the image has been resolved', () => {
     const results = [identity({ imageUrl: 'https://avatar.example/jane.png' })];
     const avatars = { 'https://avatar.example/jane.png': 'data:image/png;base64,AAA' };
