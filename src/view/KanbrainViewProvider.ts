@@ -824,10 +824,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async resolveCurrentUserId(): Promise<string | null> {
-    if (this.currentUserId === undefined) {
-      this.currentUserId = this.client ? await this.client.getCurrentUserId() : null;
+    if (this.currentUserId !== undefined) {
+      return this.currentUserId;
     }
-    return this.currentUserId ?? null;
+    const id = this.client ? await this.client.getCurrentUserId() : null;
+    // Only a real id is remembered. Storing the null a failed request returns would pin it for the
+    // life of the window, and without an id the signed-in user is never matched inside the team —
+    // which is exactly the fallback this branch added the team lookup to avoid. Leaving the field
+    // undefined also preserves what the Reviews filters read it as: not resolved yet, try later.
+    if (id) {
+      this.currentUserId = id;
+    }
+    return id;
   }
 
   private async resolveAvatars(items: WorkItem[]): Promise<Record<string, string>> {
@@ -1544,7 +1552,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     if (config && this.client && this.currentScreen === 'reviews') {
       if (this.reviewsOwnerFilter !== 'all' && this.currentUserId === undefined) {
-        this.currentUserId = await this.client.getCurrentUserId();
+        await this.resolveCurrentUserId();
       }
       const now = Date.now();
       const filterKey = `${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
