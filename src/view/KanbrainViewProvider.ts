@@ -1405,12 +1405,16 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     workItemId: number,
     requestId: number,
     identities: IdentitySearchResult[],
-    notice?: string | null,
+    notices: (string | null)[] = [],
   ): Promise<void> {
     const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
-    // A notice never replaces the options: a team that failed to load must not take away the
-    // "assign to me" entry that resolved perfectly well beside it.
-    const noticeHtml = notice ? `<div class="kb-empty">${escapeHtml(notice)}</div>` : '';
+    // A notice never replaces the options: something that failed must not take away what loaded
+    // fine beside it. The team and the organization search can fail independently, so a reply
+    // carries as many notices as it has bad news.
+    const noticeHtml = notices
+      .filter((n): n is string => !!n)
+      .map(n => `<div class="kb-empty">${escapeHtml(n)}</div>`)
+      .join('');
     this.view?.webview.postMessage({
       type: 'identity-results',
       workItemId,
@@ -1441,25 +1445,33 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const currentUser = await this.currentUserIdentity(teamMembers);
     const teamNotice = teamError ? `Could not load the team: ${teamError}` : null;
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
-    if (local.length > 0 || teamNotice || !query.trim()) {
-      await this.postIdentityOptions(workItemId, requestId, local, teamNotice);
+    const searching = query.trim().length > 0;
+    if (local.length > 0 || teamNotice || !searching) {
+      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice]);
+    } else {
+      // Nobody local matches and a search is on its way. Saying so beats leaving the previous
+      // request's list on screen under a query it does not answer.
+      this.view.webview.postMessage({
+        type: 'identity-results',
+        workItemId,
+        requestId,
+        html: '<div class="kb-empty">Searching…</div>',
+      });
     }
 
-    if (!query.trim()) {
+    if (!searching) {
       return;
     }
 
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), teamNotice);
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.view.webview.postMessage({
-        type: 'identity-results',
-        workItemId,
-        requestId,
-        html: `<div class="kb-empty">Error: ${escapeHtml(message)}</div>`,
-      });
+      await this.postIdentityOptions(workItemId, requestId, local, [
+        teamNotice,
+        `Could not search the organization: ${message}`,
+      ]);
     }
   }
 
