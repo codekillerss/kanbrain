@@ -248,6 +248,111 @@ field carries it, prefer the record the team already returns.
 
 ---
 
+---
+
+## Round three — answering the third review
+
+The blocking requirement from round two was accepted, along with items 3, 4 and 5. Two defects
+remain, both the same shape as ones already fixed elsewhere: a failure cached forever, and an error
+reply that replaces a list instead of annotating it. Two non-blocking observations and one approved
+enhancement come with them.
+
+---
+
+### Task 15: Stop caching a failed current-user id (blocking)
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+Round two fixed this for the profile and left the same bug one call earlier. `resolveCurrentUserId`
+stores the `null` that `getCurrentUserId` returns on failure, so one bad request pins it for the life
+of the window — and with no id, the signed-in user is never found among the team members, which sends
+every later open down the profile fallback the previous round existed to avoid.
+
+- [ ] **Step 1: Remember only a real id** — a failed lookup leaves the field untouched, so the next
+  caller tries again.
+- [ ] **Step 2: Keep `undefined` meaning "not resolved yet"** — the Reviews filters read the field
+  directly with that convention, so the field must never hold `null` from a failure.
+- [ ] **Step 3: Route the Reviews call through the same helper** — it currently assigns the result
+  itself, which would re-introduce the cached `null` by a different door, and it gains the retry.
+- [ ] **Step 4: Verify** — compile and tests green.
+
+---
+
+### Task 16: Report a failed organization search beside the list, not instead of it (blocking)
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+The same fix Task 11 applied to the team error, at the other error path: a failed search posts only
+its message, under the same request id, so it replaces the local list that was just delivered —
+taking away the team members and "assign to me" that were already on screen.
+
+- [ ] **Step 1: Let a reply carry more than one notice** — the team and the search can both fail, and
+  neither should silence the other or the options.
+- [ ] **Step 2: Post the local list with the search error attached**, rather than the error alone.
+- [ ] **Step 3: Verify** — compile and tests green.
+
+---
+
+### Task 17: Space out profile retries
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+Not blocking, and a consequence of Task 9: with the failure no longer cached, a user who is not in
+the team and whose profile keeps failing now re-requests it on every search — once per keystroke past
+the debounce.
+
+- [ ] **Step 1: Hold a minimum interval between attempts**, so a persistent failure costs one request
+  a minute rather than one per keystroke, while a transient one still recovers quickly.
+- [ ] **Step 2: Verify** — compile and tests green.
+
+---
+
+### Task 18: Say something while the organization search is in flight
+
+**Files:**
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+When the query matches nobody local, the local step posts nothing at all, so the previous request's
+list stays on screen under a query it does not answer until the search returns.
+
+- [ ] **Step 1: Post a searching state** for exactly that case — a query typed, nothing local
+  matching, a search on its way.
+- [ ] **Step 2: Verify** — compile and tests green.
+
+---
+
+### Task 19: Mark the option that is already selected
+
+**Files:**
+- Modify: `src/view/renderIdentityOptions.ts`
+- Modify: `src/view/renderIdentityOptions.test.ts`
+- Modify: `src/view/renderWorkItemCard.ts`
+- Modify: `src/view/renderWorkItemCard.test.ts`
+- Modify: `src/view/KanbrainViewProvider.ts`
+
+Approved for this PR. The status picker marks its current entry with an active class and a check, and
+the assignee picker marks nothing — so on an unassigned item, "Unassigned" sits in the list looking
+like any other choice.
+
+**Interfaces:**
+- `renderIdentityOptions(results, workItemId, avatars, currentId?: string | null)`
+
+- [ ] **Step 1: Write the failing tests first** — the option whose identity id matches is marked and
+  carries the check; no option is marked when nothing matches; and on a work item with no assignee,
+  the picker's own "Unassigned" entry is the marked one.
+- [ ] **Step 2: Run and confirm failure.**
+- [ ] **Step 3: Match on the identity id, not the address** — `AssignedTo` carries `id` and no
+  `uniqueName`, so the id is the only thing both sides share.
+- [ ] **Step 4: Carry the current id to the webview and back** — the picker already knows who is
+  assigned; it travels with the search request so each reply can mark correctly.
+- [ ] **Step 5: Reuse the existing styling** rather than adding a parallel set of rules.
+- [ ] **Step 6: Verify** — compile and tests green.
+
+---
+
 ## Manual verification (nothing here is covered by tests)
 
 In an Extension Development Host (F5) against a real Azure DevOps project:
