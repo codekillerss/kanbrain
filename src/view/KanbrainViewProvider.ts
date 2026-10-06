@@ -51,6 +51,7 @@ import {
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
 const TEAM_MEMBER_CACHE_TTL_MS = 5 * 60 * 1000;
+const CURRENT_USER_PROFILE_RETRY_MS = 60 * 1000;
 // The most ids a WIQL request may return; the search snapshot is paged through locally from there.
 const SEARCH_SNAPSHOT_LIMIT = 20000;
 
@@ -90,6 +91,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private avatarCache = new Map<string, string | null>();
   private teamMemberCache = new Map<string, { members: IdentitySearchResult[]; fetchedAt: number }>();
   private currentUserIdentityCache: IdentitySearchResult | null = null;
+  private currentUserProfileAttemptAt = 0;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'workflow' | 'profiles' | null = 'skills';
@@ -1395,7 +1397,12 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     // Only reachable when the signed-in user is not in the selected team, which is the one case
     // the team cannot answer. A failed lookup is not remembered, so it is retried on the next open
     // rather than hiding "assign to me" until the window reloads.
-    if (!this.currentUserIdentityCache) {
+    // Not caching the failure means a user who is not in the team and whose profile keeps failing
+    // would re-request it once per keystroke past the debounce. Spacing the attempts keeps a
+    // persistent failure cheap while a transient one still recovers within the minute.
+    const now = Date.now();
+    if (!this.currentUserIdentityCache && now - this.currentUserProfileAttemptAt >= CURRENT_USER_PROFILE_RETRY_MS) {
+      this.currentUserProfileAttemptAt = now;
       this.currentUserIdentityCache = this.client ? await this.client.getCurrentUserProfile() : null;
     }
     return this.currentUserIdentityCache;
