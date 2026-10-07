@@ -286,7 +286,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-status') {
         await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'search-identities') {
-        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0), String(message.currentId ?? ''));
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0), { id: String(message.currentId ?? ''), uniqueName: String(message.currentUniqueName ?? '') });
       } else if (message.type === 'select-assignee') {
         await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
@@ -1413,7 +1413,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     requestId: number,
     identities: IdentitySearchResult[],
     notices: (string | null)[] = [],
-    currentId = '',
+    current: { id: string; uniqueName: string } = { id: '', uniqueName: '' },
   ): Promise<void> {
     const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
     // A notice never replaces the options: something that failed must not take away what loaded
@@ -1427,11 +1427,11 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       type: 'identity-results',
       workItemId,
       requestId,
-      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars, currentId || null)}`,
+      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars, current)}`,
     });
   }
 
-  private async searchIdentities(workItemId: number, query: string, requestId: number, currentId: string): Promise<void> {
+  private async searchIdentities(workItemId: number, query: string, requestId: number, current: { id: string; uniqueName: string }): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -1455,7 +1455,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     const local = mergePickerIdentities(currentUser, teamMembers, [], query);
     const searching = query.trim().length > 0;
     if (local.length > 0 || teamNotice || !searching) {
-      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice], currentId);
+      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice], current);
     } else {
       // Nobody local matches and a search is on its way. Saying so beats leaving the previous
       // request's list on screen under a query it does not answer.
@@ -1473,7 +1473,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     try {
       const results = await this.client.searchIdentities(config.organization, query);
-      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice], currentId);
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice], current);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.postIdentityOptions(
@@ -1481,7 +1481,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         requestId,
         local,
         [teamNotice, `Could not search the organization: ${message}`],
-        currentId,
+        current,
       );
     }
   }
@@ -1903,7 +1903,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         clearTimeout(identitySearchTimer);
         identitySearchTimer = setTimeout(() => {
           const picker = input.closest('.kb-assignee-picker');
-          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId), currentId: picker ? picker.dataset.currentId : '' });
+          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId), currentId: picker ? picker.dataset.currentId : '', currentUniqueName: picker ? picker.dataset.currentUniqueName : '' });
         }, 300);
       });
     });
@@ -2605,7 +2605,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             // Reopening clears the input, so a debounce still pending from the previous session
             // must not go on to search for a query the user can no longer see.
             clearTimeout(identitySearchTimer);
-            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id), currentId: picker.dataset.currentId });
+            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id), currentId: picker.dataset.currentId, currentUniqueName: picker.dataset.currentUniqueName });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {

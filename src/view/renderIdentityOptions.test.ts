@@ -28,10 +28,10 @@ describe('renderIdentityOptions', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
-  it('marks the option whose identity is the one currently assigned', () => {
+  it('marks the option whose address is the one currently assigned', () => {
     const results = [identity({ id: 'u1', displayName: 'Jane Doe' }), identity({ id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com' })];
 
-    const html = renderIdentityOptions(results, 482, {}, 'u2');
+    const html = renderIdentityOptions(results, 482, {}, { uniqueName: 'john@example.com' });
 
     const buttons = html.split('<button').filter(Boolean);
     const jane = buttons.find(b => b.includes('Jane Doe'))!;
@@ -42,8 +42,20 @@ describe('renderIdentityOptions', () => {
     expect(jane).not.toContain('kb-assignee-picker-option-active');
   });
 
+  it('matches the address regardless of case', () => {
+    const html = renderIdentityOptions([identity({ uniqueName: 'jane@example.com' })], 482, {}, { uniqueName: 'JANE@EXAMPLE.COM' });
+
+    expect(html).toContain('kb-assignee-picker-option-active');
+  });
+
+  it('falls back to the identity id when the assignee carries no address', () => {
+    const html = renderIdentityOptions([identity({ id: 'u1' })], 482, {}, { id: 'u1' });
+
+    expect(html).toContain('kb-assignee-picker-option-active');
+  });
+
   it('marks nothing when the assigned identity is not among the options', () => {
-    const html = renderIdentityOptions([identity()], 482, {}, 'someone-else');
+    const html = renderIdentityOptions([identity()], 482, {}, { uniqueName: 'someone@else.com' });
 
     expect(html).not.toContain('kb-assignee-picker-option-active');
   });

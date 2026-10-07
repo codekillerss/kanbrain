@@ -57,6 +57,7 @@ export interface IdentitySearchResult {
 
 interface RawIdentityRef {
   id?: string;
+  uniqueName?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
@@ -80,7 +81,7 @@ interface RawIdentityPickerResponse {
 function mapIdentityRef(raw: unknown): AssignedTo {
   const identity = raw as RawIdentityRef | undefined;
   const imageUrl = identity?.imageUrl ?? identity?._links?.avatar?.href ?? null;
-  return { id: identity?.id, displayName: identity?.displayName ?? 'Unknown', imageUrl };
+  return { id: identity?.id, uniqueName: identity?.uniqueName, displayName: identity?.displayName ?? 'Unknown', imageUrl };
 }
 
 const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);
@@ -367,7 +368,7 @@ export class AzureDevOpsClient {
   }
 
   async listTeamMembers(organization: string, project: string, teamId: string): Promise<IdentitySearchResult[]> {
-    const data = await this.request<{ value: { identity: RawIdentityRef & { uniqueName?: string } }[] }>(
+    const data = await this.request<{ value: { identity: RawIdentityRef }[] }>(
       `https://dev.azure.com/${organization}/_apis/projects/${project}/teams/${teamId}/members?api-version=7.1`,
     );
     return data.value

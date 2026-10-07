@@ -126,7 +126,7 @@ function renderAssigneePicker(workItem: WorkItem, avatars: Record<string, string
     ? `${renderAvatarOrInitial(workItem.assignedTo.displayName, workItem.assignedTo.imageUrl, avatars)}${escapeHtml(workItem.assignedTo.displayName)}`
     : `<span class="kb-avatar-initial">?</span>Unassigned`;
   return `
-    <div class="kb-assignee-picker" data-id="${workItem.id}" data-current-id="${escapeHtml(workItem.assignedTo?.id ?? '')}">
+    <div class="kb-assignee-picker" data-id="${workItem.id}" data-current-id="${escapeHtml(workItem.assignedTo?.id ?? '')}" data-current-unique-name="${escapeHtml(workItem.assignedTo?.uniqueName ?? '')}">
       <button type="button" class="kb-assignee-row kb-assignee-picker-trigger" data-action="toggle-assignee-picker">${current}</button>
       <div class="kb-assignee-picker-menu kb-hidden">
         <input type="text" class="kb-input kb-assignee-search-input" data-id="${workItem.id}" placeholder="Search people...">
