@@ -1,5 +1,6 @@
 export interface AssignedTo {
   id?: string;
+  uniqueName?: string;
   displayName: string;
   imageUrl: string | null;
 }

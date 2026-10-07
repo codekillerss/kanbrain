@@ -82,6 +82,20 @@ describe('mapWorkItem', () => {
     expect(item.assignedTo).toEqual({ displayName: 'Jane Doe', imageUrl: 'https://dev.azure.com/avatar/jane' });
   });
 
+  it('carries the assignee id and unique name, which is what the picker matches on', () => {
+    const item = mapWorkItem(
+      raw({
+        fields: {
+          ...raw().fields,
+          'System.AssignedTo': { id: 'guid-1', uniqueName: 'jane@example.com', displayName: 'Jane Doe', imageUrl: 'https://a/j' },
+        },
+      }),
+      'my-org',
+      'MyProject',
+    );
+    expect(item.assignedTo).toEqual({ id: 'guid-1', uniqueName: 'jane@example.com', displayName: 'Jane Doe', imageUrl: 'https://a/j' });
+  });
+
   it('falls back to _links.avatar.href when imageUrl is not present', () => {
     const item = mapWorkItem(
       raw({

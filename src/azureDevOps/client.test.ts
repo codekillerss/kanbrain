@@ -1016,6 +1016,81 @@ describe('AzureDevOpsClient.listProjectPullRequests', () => {
   });
 });
 
+describe('AzureDevOpsClient.listTeamMembers', () => {
+  it('maps each member to an identity, carrying the avatar url', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { identity: { id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://avatar.example/jane.png' } },
+          { identity: { id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com', _links: { avatar: { href: 'https://avatar.example/john.png' } } } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const members = await client.listTeamMembers('my-org', 'MyProject', 'team-1');
+
+    expect(members).toEqual([
+      { id: 'u1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: 'https://avatar.example/jane.png' },
+      { id: 'u2', displayName: 'John Roe', uniqueName: 'john@example.com', imageUrl: 'https://avatar.example/john.png' },
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://dev.azure.com/my-org/_apis/projects/MyProject/teams/team-1/members?api-version=7.1',
+      expect.anything(),
+    );
+  });
+
+  it('drops members without a unique name, which would unassign if offered', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        value: [
+          { identity: { id: 'u1', displayName: 'No Address', uniqueName: '' } },
+          { identity: { id: 'u2', displayName: 'Has Address', uniqueName: 'ok@example.com' } },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const members = await client.listTeamMembers('my-org', 'MyProject', 'team-1');
+
+    expect(members.map(m => m.id)).toEqual(['u2']);
+  });
+
+  it('lets the error propagate, so an unreachable team is not mistaken for an empty one', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(textResponse('no access', false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    await expect(client.listTeamMembers('my-org', 'MyProject', 'team-1')).rejects.toThrow('no access');
+  });
+});
+
+describe('AzureDevOpsClient.getCurrentUserProfile', () => {
+  it('maps the signed-in user to an identity the picker can offer', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Jane Doe', emailAddress: 'jane@example.com' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const profile = await client.getCurrentUserProfile();
+
+    expect(profile).toEqual({ id: 'user-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: null });
+  });
+
+  it('returns null when the profile has no mail address, since an empty uniqueName would unassign', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'user-1', displayName: 'Jane Doe' }));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    expect(await client.getCurrentUserProfile()).toBeNull();
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ message: 'no access' }, false, 403));
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    expect(await client.getCurrentUserProfile()).toBeNull();
+  });
+});
+
 describe('AzureDevOpsClient.getCurrentUserId', () => {
   it('fetches and returns the current user id from the profile endpoint', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'user-1' }));
@@ -1251,7 +1326,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'jane');
 
-    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com' }]);
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Jane Doe', uniqueName: 'jane@example.com', imageUrl: null }]);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://vssps.dev.azure.com/my-org/_apis/IdentityPicker/Identities?api-version=7.1-preview.1',
       expect.objectContaining({
@@ -1261,10 +1336,30 @@ describe('AzureDevOpsClient.searchIdentities', () => {
           identityTypes: ['user'],
           operationScopes: ['ims', 'source'],
           options: { MinResults: 5, MaxResults: 20 },
-          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active', 'Image'],
         }),
       }),
     );
+  });
+
+  it('maps an image when the identity carries one, and null when it does not', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            identities: [
+              { entityId: 'id-1', entityType: 'User', displayName: 'With Picture', mail: 'a@example.com', signInAddress: null, active: true, image: 'https://avatar.example/a.png' },
+              { entityId: 'id-2', entityType: 'User', displayName: 'Without Picture', mail: 'b@example.com', signInAddress: null, active: true },
+            ],
+          },
+        ],
+      }),
+    );
+    const client = new AzureDevOpsClient({ fetchImpl, getToken: async () => 'tok' });
+
+    const results = await client.searchIdentities('my-org', 'p');
+
+    expect(results.map(r => r.imageUrl)).toEqual(['https://avatar.example/a.png', null]);
   });
 
   it('filters out inactive identities and non-user entity types', async () => {
@@ -1285,7 +1380,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'person');
 
-    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com' }]);
+    expect(results).toEqual([{ id: 'id-3', displayName: 'Active Person', uniqueName: 'ok@example.com', imageUrl: null }]);
   });
 
   it('falls back to signInAddress when mail is missing, and drops results with neither', async () => {
@@ -1305,7 +1400,7 @@ describe('AzureDevOpsClient.searchIdentities', () => {
 
     const results = await client.searchIdentities('my-org', 'x');
 
-    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com' }]);
+    expect(results).toEqual([{ id: 'id-1', displayName: 'Has SignIn Only', uniqueName: 'signin@example.com', imageUrl: null }]);
   });
 
   it('returns an empty array for a blank query without calling fetch', async () => {

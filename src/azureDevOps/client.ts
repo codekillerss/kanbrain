@@ -52,10 +52,12 @@ export interface IdentitySearchResult {
   id: string;
   displayName: string;
   uniqueName: string;
+  imageUrl: string | null;
 }
 
 interface RawIdentityRef {
   id?: string;
+  uniqueName?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
@@ -68,6 +70,8 @@ interface RawPickerIdentity {
   mail: string | null;
   signInAddress: string | null;
   active: boolean | null;
+  image?: string | null;
+  imageUrl?: string | null;
 }
 
 interface RawIdentityPickerResponse {
@@ -77,7 +81,7 @@ interface RawIdentityPickerResponse {
 function mapIdentityRef(raw: unknown): AssignedTo {
   const identity = raw as RawIdentityRef | undefined;
   const imageUrl = identity?.imageUrl ?? identity?._links?.avatar?.href ?? null;
-  return { id: identity?.id, displayName: identity?.displayName ?? 'Unknown', imageUrl };
+  return { id: identity?.id, uniqueName: identity?.uniqueName, displayName: identity?.displayName ?? 'Unknown', imageUrl };
 }
 
 const PARENT_FIELD_IDENTIFIERS = new Set(['System.Parent', 'Parent']);
@@ -363,6 +367,20 @@ export class AzureDevOpsClient {
     return data.value.map(t => ({ id: t.id, name: t.name }));
   }
 
+  async listTeamMembers(organization: string, project: string, teamId: string): Promise<IdentitySearchResult[]> {
+    const data = await this.request<{ value: { identity: RawIdentityRef }[] }>(
+      `https://dev.azure.com/${organization}/_apis/projects/${project}/teams/${teamId}/members?api-version=7.1`,
+    );
+    return data.value
+      .map(m => ({
+        id: m.identity?.id ?? '',
+        displayName: m.identity?.displayName ?? 'Unknown',
+        uniqueName: m.identity?.uniqueName ?? '',
+        imageUrl: m.identity?.imageUrl ?? m.identity?._links?.avatar?.href ?? null,
+      }))
+      .filter(m => m.uniqueName);
+  }
+
   async listBoards(organization: string, project: string, team: string): Promise<AzureDevOpsBoard[]> {
     const data = await this.request<{ value: { id: string; name: string }[] }>(
       `https://dev.azure.com/${organization}/${project}/${encodeURIComponent(team)}/_apis/work/boards?api-version=7.1`,
@@ -483,13 +501,33 @@ export class AzureDevOpsClient {
     }
   }
 
-  async getCurrentUserId(): Promise<string | null> {
+  private async fetchProfile(): Promise<{ id: string; displayName?: string; emailAddress?: string } | null> {
     try {
-      const profile = await this.request<{ id: string }>('https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1');
-      return profile.id;
+      return await this.request<{ id: string; displayName?: string; emailAddress?: string }>(
+        'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1',
+      );
     } catch {
       return null;
     }
+  }
+
+  async getCurrentUserProfile(): Promise<IdentitySearchResult | null> {
+    const profile = await this.fetchProfile();
+    // Without a mail address there is nothing to write to System.AssignedTo, and an empty
+    // uniqueName is how the picker clears the field — offering it would unassign instead.
+    if (!profile?.emailAddress) {
+      return null;
+    }
+    return {
+      id: profile.id,
+      displayName: profile.displayName ?? profile.emailAddress,
+      uniqueName: profile.emailAddress,
+      imageUrl: null,
+    };
+  }
+
+  async getCurrentUserId(): Promise<string | null> {
+    return (await this.fetchProfile())?.id ?? null;
   }
 
   async listProjectPullRequests(
@@ -574,7 +612,7 @@ export class AzureDevOpsClient {
           identityTypes: ['user'],
           operationScopes: ['ims', 'source'],
           options: { MinResults: 5, MaxResults: 20 },
-          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active'],
+          properties: ['DisplayName', 'Mail', 'SignInAddress', 'Active', 'Image'],
         }),
       },
     );
@@ -585,6 +623,7 @@ export class AzureDevOpsClient {
         id: i.entityId,
         displayName: i.displayName ?? 'Unknown',
         uniqueName: i.mail ?? i.signInAddress ?? '',
+        imageUrl: i.image ?? i.imageUrl ?? null,
       }))
       .filter(i => i.uniqueName);
   }

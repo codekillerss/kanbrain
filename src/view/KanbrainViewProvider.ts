@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import { classifyPrThreads } from '../azureDevOps/classifyPrThreads';
-import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation } from '../azureDevOps/client';
+import { AzureDevOpsHttpError, type AzureDevOpsClient, type JsonPatchOperation, type IdentitySearchResult } from '../azureDevOps/client';
 import { filterOutRemoved } from '../azureDevOps/filterRemovedWorkItems';
 import { sortChildren, parseChildSortCriteria } from './sortChildren';
 import { validateProjectAccess } from '../azureDevOps/validateProjectAccess';
@@ -24,6 +24,7 @@ import { sidebarCsp } from './sidebarCsp';
 import { skipWhileRunning } from './skipWhileRunning';
 import { render, renderChildrenList } from './render';
 import { renderIdentityOptions } from './renderIdentityOptions';
+import { mergePickerIdentities } from './mergePickerIdentities';
 import { renderSavedQueryOptions } from './renderSavedQueryOptions';
 import { renderSearchResults } from './renderSearchResults';
 import { renderWorkItemHistory } from './renderWorkItemHistory';
@@ -49,6 +50,8 @@ import {
 
 const POLL_INTERVAL_MS = 5000;
 const REVIEWS_POLL_INTERVAL_MS = 10000;
+const TEAM_MEMBER_CACHE_TTL_MS = 5 * 60 * 1000;
+const CURRENT_USER_PROFILE_RETRY_MS = 60 * 1000;
 // The most ids a WIQL request may return; the search snapshot is paged through locally from there.
 const SEARCH_SNAPSHOT_LIMIT = 20000;
 
@@ -86,6 +89,9 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   private currentScreen: 'home' | 'flow' | 'config' | 'brain' | 'reviews' = 'home';
   private connectionStatus: 'unknown' | 'connected' | 'disconnected' = 'unknown';
   private avatarCache = new Map<string, string | null>();
+  private teamMemberCache = new Map<string, { members: IdentitySearchResult[]; fetchedAt: number }>();
+  private currentUserIdentityCache: IdentitySearchResult | null = null;
+  private currentUserProfileAttemptAt = 0;
   private parentCollapsed = false;
   private childrenCollapsed = false;
   private openBrainSegment: 'repositories' | 'skills' | 'workflow' | 'profiles' | null = 'skills';
@@ -280,7 +286,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'select-status') {
         await this.updateWorkItemStatus(Number(message.id), String(message.status ?? ''));
       } else if (message.type === 'search-identities') {
-        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''));
+        await this.searchIdentities(Number(message.workItemId), String(message.query ?? ''), Number(message.requestId ?? 0), { id: String(message.currentId ?? ''), uniqueName: String(message.currentUniqueName ?? '') });
       } else if (message.type === 'select-assignee') {
         await this.updateWorkItemAssignee(Number(message.id), message.uniqueName ? String(message.uniqueName) : null);
       }
@@ -820,10 +826,18 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async resolveCurrentUserId(): Promise<string | null> {
-    if (this.currentUserId === undefined) {
-      this.currentUserId = this.client ? await this.client.getCurrentUserId() : null;
+    if (this.currentUserId !== undefined) {
+      return this.currentUserId;
     }
-    return this.currentUserId ?? null;
+    const id = this.client ? await this.client.getCurrentUserId() : null;
+    // Only a real id is remembered. Storing the null a failed request returns would pin it for the
+    // life of the window, and without an id the signed-in user is never matched inside the team —
+    // which is exactly the fallback this branch added the team lookup to avoid. Leaving the field
+    // undefined also preserves what the Reviews filters read it as: not resolved yet, try later.
+    if (id) {
+      this.currentUserId = id;
+    }
+    return id;
   }
 
   private async resolveAvatars(items: WorkItem[]): Promise<Record<string, string>> {
@@ -1331,7 +1345,93 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     this.invalidateCardCacheFor(id);
   }
 
-  private async searchIdentities(workItemId: number, query: string): Promise<void> {
+  private async resolveAvatarUrls(urls: (string | null)[]): Promise<Record<string, string>> {
+    const unique = [...new Set(urls.filter((u): u is string => !!u))];
+    const uncached = unique.filter(u => !this.avatarCache.has(u));
+    await Promise.all(
+      uncached.map(async url => {
+        this.avatarCache.set(url, this.client ? await this.client.getAuthenticatedImageDataUri(url) : null);
+      }),
+    );
+    const resolved: Record<string, string> = {};
+    for (const url of unique) {
+      const dataUri = this.avatarCache.get(url);
+      if (dataUri) {
+        resolved[url] = dataUri;
+      }
+    }
+    return resolved;
+  }
+
+  private async loadTeamMembers(config: KanbrainConfig): Promise<IdentitySearchResult[]> {
+    const teamName = this.selectedTeam ?? config.defaultTeam;
+    if (!this.client || !teamName) {
+      return [];
+    }
+    // Keyed by project as well as team: two projects can both have a "Backend", and the picker
+    // must not offer the other one's people. Entries go stale so somebody added to the team
+    // during a long session eventually shows up.
+    const key = `${config.organization}/${config.project}/${teamName}`;
+    const cached = this.teamMemberCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < TEAM_MEMBER_CACHE_TTL_MS) {
+      return cached.members;
+    }
+    const teams = await this.client.listTeams(config.organization, config.project);
+    const team = teams.find(t => t.name === teamName);
+    if (!team) {
+      return [];
+    }
+    const members = await this.client.listTeamMembers(config.organization, config.project, team.id);
+    this.teamMemberCache.set(key, { members, fetchedAt: Date.now() });
+    return members;
+  }
+
+  private async currentUserIdentity(teamMembers: IdentitySearchResult[]): Promise<IdentitySearchResult | null> {
+    // The team record is the better source: it carries the identifier the board itself uses for
+    // this person, and a picture, where the profile carries an editable contact address and none.
+    const id = await this.resolveCurrentUserId();
+    const fromTeam = id ? teamMembers.find(m => m.id === id) : undefined;
+    if (fromTeam) {
+      return fromTeam;
+    }
+    // Only reachable when the signed-in user is not in the selected team, which is the one case
+    // the team cannot answer. A failed lookup is not remembered, so it is retried on the next open
+    // rather than hiding "assign to me" until the window reloads.
+    // Not caching the failure means a user who is not in the team and whose profile keeps failing
+    // would re-request it once per keystroke past the debounce. Spacing the attempts keeps a
+    // persistent failure cheap while a transient one still recovers within the minute.
+    const now = Date.now();
+    if (!this.currentUserIdentityCache && now - this.currentUserProfileAttemptAt >= CURRENT_USER_PROFILE_RETRY_MS) {
+      this.currentUserProfileAttemptAt = now;
+      this.currentUserIdentityCache = this.client ? await this.client.getCurrentUserProfile() : null;
+    }
+    return this.currentUserIdentityCache;
+  }
+
+  private async postIdentityOptions(
+    workItemId: number,
+    requestId: number,
+    identities: IdentitySearchResult[],
+    notices: (string | null)[] = [],
+    current: { id: string; uniqueName: string } = { id: '', uniqueName: '' },
+  ): Promise<void> {
+    const avatars = await this.resolveAvatarUrls(identities.map(i => i.imageUrl));
+    // A notice never replaces the options: something that failed must not take away what loaded
+    // fine beside it. The team and the organization search can fail independently, so a reply
+    // carries as many notices as it has bad news.
+    const noticeHtml = notices
+      .filter((n): n is string => !!n)
+      .map(n => `<div class="kb-empty">${escapeHtml(n)}</div>`)
+      .join('');
+    this.view?.webview.postMessage({
+      type: 'identity-results',
+      workItemId,
+      requestId,
+      html: `${noticeHtml}${renderIdentityOptions(identities, workItemId, avatars, current)}`,
+    });
+  }
+
+  private async searchIdentities(workItemId: number, query: string, requestId: number, current: { id: string; uniqueName: string }): Promise<void> {
     if (!this.view || !this.workspaceRoot || !this.client) {
       return;
     }
@@ -1339,16 +1439,50 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     if (!config) {
       return;
     }
+
+    // The team and the signed-in user answer immediately, so the common case — assigning to
+    // someone you work with — never waits on the network. The organization-wide search lands
+    // afterwards and is merged in below them.
+    let teamMembers: IdentitySearchResult[] = [];
+    let teamError: string | null = null;
     try {
-      const results = await this.client.searchIdentities(config.organization, query);
-      this.view.webview.postMessage({ type: 'identity-results', workItemId, html: renderIdentityOptions(results, workItemId) });
+      teamMembers = await this.loadTeamMembers(config);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      teamError = error instanceof Error ? error.message : String(error);
+    }
+    const currentUser = await this.currentUserIdentity(teamMembers);
+    const teamNotice = teamError ? `Could not load the team: ${teamError}` : null;
+    const local = mergePickerIdentities(currentUser, teamMembers, [], query);
+    const searching = query.trim().length > 0;
+    if (local.length > 0 || teamNotice || !searching) {
+      await this.postIdentityOptions(workItemId, requestId, local, [teamNotice], current);
+    } else {
+      // Nobody local matches and a search is on its way. Saying so beats leaving the previous
+      // request's list on screen under a query it does not answer.
       this.view.webview.postMessage({
         type: 'identity-results',
         workItemId,
-        html: `<div class="kb-empty">Error: ${escapeHtml(message)}</div>`,
+        requestId,
+        html: '<div class="kb-empty">Searching…</div>',
       });
+    }
+
+    if (!searching) {
+      return;
+    }
+
+    try {
+      const results = await this.client.searchIdentities(config.organization, query);
+      await this.postIdentityOptions(workItemId, requestId, mergePickerIdentities(currentUser, teamMembers, results, query), [teamNotice], current);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.postIdentityOptions(
+        workItemId,
+        requestId,
+        local,
+        [teamNotice, `Could not search the organization: ${message}`],
+        current,
+      );
     }
   }
 
@@ -1441,7 +1575,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
 
     if (config && this.client && this.currentScreen === 'reviews') {
       if (this.reviewsOwnerFilter !== 'all' && this.currentUserId === undefined) {
-        this.currentUserId = await this.client.getCurrentUserId();
+        await this.resolveCurrentUserId();
       }
       const now = Date.now();
       const filterKey = `${this.reviewsStatusFilters.join(',')}|${this.reviewsOwnerFilter}`;
@@ -1752,13 +1886,24 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
     });
 
     let identitySearchTimer = null;
+    // Each picker tracks the newest request it issued, so a reply that arrives out of order —
+    // the opening list landing after a typed filter, or 'jan' after 'jane' — is dropped instead
+    // of overwriting what the user is currently looking at.
+    const latestIdentityRequest = {};
+
+    function nextIdentityRequestId(workItemId) {
+      const next = (latestIdentityRequest[workItemId] || 0) + 1;
+      latestIdentityRequest[workItemId] = next;
+      return next;
+    }
     document.querySelectorAll('.kb-assignee-search-input').forEach((input) => {
       input.addEventListener('input', () => {
         const workItemId = input.dataset.id;
         const query = input.value;
         clearTimeout(identitySearchTimer);
         identitySearchTimer = setTimeout(() => {
-          vscode.postMessage({ type: 'search-identities', workItemId, query });
+          const picker = input.closest('.kb-assignee-picker');
+          vscode.postMessage({ type: 'search-identities', workItemId, query, requestId: nextIdentityRequestId(workItemId), currentId: picker ? picker.dataset.currentId : '', currentUniqueName: picker ? picker.dataset.currentUniqueName : '' });
         }, 300);
       });
     });
@@ -2453,7 +2598,14 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
             menu.style.minWidth = rect.width + 'px';
             menu.classList.remove('kb-hidden');
             const input = menu.querySelector('.kb-assignee-search-input');
-            if (input) input.focus({ preventScroll: true });
+            if (input) {
+              input.value = '';
+              input.focus({ preventScroll: true });
+            }
+            // Reopening clears the input, so a debounce still pending from the previous session
+            // must not go on to search for a query the user can no longer see.
+            clearTimeout(identitySearchTimer);
+            vscode.postMessage({ type: 'search-identities', workItemId: picker.dataset.id, query: '', requestId: nextIdentityRequestId(picker.dataset.id), currentId: picker.dataset.currentId, currentUniqueName: picker.dataset.currentUniqueName });
           }
         }
       } else if (target.closest && target.closest('[data-action="select-assignee"]')) {
@@ -2725,6 +2877,7 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
         triggerSearch();
         snapshotSearch();
       } else if (event.data.type === 'identity-results') {
+        if (event.data.requestId !== latestIdentityRequest[event.data.workItemId]) return;
         const results = document.querySelector('.kb-assignee-picker[data-id="' + event.data.workItemId + '"] .kb-assignee-picker-results');
         if (results) results.innerHTML = event.data.html;
       } else if (event.data.type === 'skill-file-picked') {
@@ -3082,8 +3235,8 @@ export class KanbrainViewProvider implements vscode.WebviewViewProvider {
       .kb-status-picker-menu.kb-hidden, .kb-assignee-picker-menu.kb-hidden { display: none; }
       .kb-status-picker-option, .kb-assignee-picker-option { display: flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box; text-align: left; padding: 4px 6px; background: none; border: none; border-radius: 2px; color: var(--vscode-dropdown-foreground); cursor: pointer; font-family: var(--vscode-font-family); font-size: 12px; }
       .kb-status-picker-option:hover, .kb-assignee-picker-option:hover { background: var(--vscode-list-hoverBackground); }
-      .kb-status-picker-option-active { font-weight: 600; background: var(--vscode-list-inactiveSelectionBackground); }
-      .kb-status-picker-option-check { margin-left: auto; flex-shrink: 0; }
+      .kb-status-picker-option-active, .kb-assignee-picker-option-active { font-weight: 600; background: var(--vscode-list-inactiveSelectionBackground); }
+      .kb-status-picker-option-check, .kb-assignee-picker-option-check { margin-left: auto; flex-shrink: 0; }
       .kb-assignee-picker-menu .kb-assignee-search-input { margin-bottom: 2px; }
       .kb-input:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
       .kb-config-parent-section { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; background: var(--vscode-sideBarSectionHeader-background, transparent); }

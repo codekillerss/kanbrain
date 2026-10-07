@@ -126,11 +126,11 @@ function renderAssigneePicker(workItem: WorkItem, avatars: Record<string, string
     ? `${renderAvatarOrInitial(workItem.assignedTo.displayName, workItem.assignedTo.imageUrl, avatars)}${escapeHtml(workItem.assignedTo.displayName)}`
     : `<span class="kb-avatar-initial">?</span>Unassigned`;
   return `
-    <div class="kb-assignee-picker" data-id="${workItem.id}">
+    <div class="kb-assignee-picker" data-id="${workItem.id}" data-current-id="${escapeHtml(workItem.assignedTo?.id ?? '')}" data-current-unique-name="${escapeHtml(workItem.assignedTo?.uniqueName ?? '')}">
       <button type="button" class="kb-assignee-row kb-assignee-picker-trigger" data-action="toggle-assignee-picker">${current}</button>
       <div class="kb-assignee-picker-menu kb-hidden">
         <input type="text" class="kb-input kb-assignee-search-input" data-id="${workItem.id}" placeholder="Search people...">
-        <button type="button" class="kb-assignee-picker-option" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned</button>
+        <button type="button" class="kb-assignee-picker-option${workItem.assignedTo ? '' : ' kb-assignee-picker-option-active'}" data-action="select-assignee" data-id="${workItem.id}" data-unique-name="">Unassigned${workItem.assignedTo ? '' : '<span class="kb-assignee-picker-option-check">✓</span>'}</button>
         <div class="kb-assignee-picker-results"></div>
       </div>
     </div>
@@ -152,11 +152,11 @@ export function renderWorkItemCard(
 ): string {
   const { borderStyle, iconHtml } = renderTypeAccent(workItem.type, config);
   const showAssignedTo = resolveShowAssignedTo(config, workItem.type, selectedTeam);
-  // Assignee editing is temporarily disabled — the picker's styling isn't ready yet — so this
-  // always renders the static row for now, regardless of `editable`. The rest of the write path
-  // (renderAssigneePicker, the message handlers, searchIdentities) is left in place to re-enable
-  // later.
-  const assigneeHtml = !showAssignedTo ? '' : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
+  const assigneeHtml = !showAssignedTo
+    ? ''
+    : editable
+      ? renderAssigneePicker(workItem, avatars)
+      : renderAssigneeRow(workItem.assignedTo, avatars, 'kb-assignee-row');
   const statusHtml = editable
     ? renderStatusPicker(workItem, config)
     : `<div class="kb-status-row">${renderStatusDot(workItem.status, config.statusColors ?? {})}${escapeHtml(workItem.status)}</div>`;

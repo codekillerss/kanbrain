@@ -13,6 +13,8 @@ export interface RawWorkItem {
 }
 
 interface RawIdentityRef {
+  id?: string;
+  uniqueName?: string;
   displayName?: string;
   imageUrl?: string;
   _links?: { avatar?: { href?: string } };
@@ -58,7 +60,7 @@ function mapAssignedTo(raw: unknown): AssignedTo | null {
     return null;
   }
   const imageUrl = identity.imageUrl ?? identity._links?.avatar?.href ?? null;
-  return { displayName: identity.displayName, imageUrl };
+  return { id: identity.id, uniqueName: identity.uniqueName, displayName: identity.displayName, imageUrl };
 }
 
 // The backlog's manual order lives in a process-specific field: StackRank on Agile/CMMI/Basic,
